@@ -1,6 +1,11 @@
 package gonsole
 
-import "github.com/jessevdk/go-flags"
+import (
+	"fmt"
+
+	"github.com/jessevdk/go-flags"
+	"github.com/maxlandon/readline"
+)
 
 // SetParserOptions - Set the general options that apply to the root command parser.
 // Default options are:
@@ -23,3 +28,8 @@ func (c *Console) Find(command string) (cmd *flags.Command) {
 func (c *Console) initParser() {
 	c.parser = flags.NewNamedParser("", c.parserOpts)
 }
+
+var (
+	commandError = fmt.Sprintf("%s[Command Error]%s ", readline.RED, readline.RESET) // CommandError - Command input error
+	parserError  = fmt.Sprintf("%s[Parser Error]%s ", readline.RED, readline.RESET)  // ParserError - Failed to parse some tokens in the input
+)

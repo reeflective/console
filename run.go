@@ -20,7 +20,7 @@ func (c *Console) Run() (err error) {
 
 		// Instantiate and bind all commands for the current
 		// context, respecting any filter used to hide some of them.
-		c.bindCommands()
+		c.bindCommandsAlt()
 
 		// Block and read user input. Provides completion, syntax, hints, etc.
 		// Various types of errors might arise from here. We handle them

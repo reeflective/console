@@ -1,4 +1,4 @@
-package completers
+package gonsole
 
 import (
 	"os"

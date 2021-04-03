@@ -1,4 +1,4 @@
-package completers
+package gonsole
 
 import (
 	"fmt"
@@ -13,16 +13,12 @@ import (
 // to build completions for commands, arguments, options and their arguments as well.
 // This completer needs to be instantiated with its constructor, in order to ensure the parser is not nil.
 type CommandCompleter struct {
-	getParser       func() *flags.Parser            // The console yields the command parser for the current context
-	getCommandGroup func(cmd *flags.Command) string // Given a command, the console gives its group.
+	console *Console
 }
 
 // NewCommandCompleter - Instantiate a new tab completer using a github.com/jessevdk/go-flags Command Parser.
-func NewCommandCompleter(getParser func() *flags.Parser, getCommandGroup func(cmd *flags.Command) string) (completer *CommandCompleter) {
-	return &CommandCompleter{
-		getParser:       getParser,
-		getCommandGroup: getCommandGroup,
-	}
+func NewCommandCompleter(c *Console) (completer *CommandCompleter) {
+	return &CommandCompleter{console: c}
 }
 
 // TabCompleter - A default tab completer working with a github.com/jessevdk/go-flags parser.
@@ -49,6 +45,13 @@ func (c *CommandCompleter) TabCompleter(line []rune, pos int, dtc readline.Delay
 
 	// Base command has been identified
 	if commandFound(command) {
+
+		// Get the corresponding *Command from the console, containing user completion functions
+		gCommand := c.console.FindCommand(command.Name)
+		if gCommand == nil {
+			return
+		}
+
 		// Check environment variables again
 		if envVarAsked(args, lastWord) {
 			return completeEnvironmentVariables(lastWord)
@@ -58,7 +61,7 @@ func (c *CommandCompleter) TabCompleter(line []rune, pos int, dtc readline.Delay
 		if len(command.Groups()) > 0 {
 			for _, grp := range command.Groups() {
 				if opt, yes := optionArgRequired(args, last, grp); yes {
-					return completeOptionArguments(command, opt, lastWord)
+					return c.completeOptionArguments(gCommand, command, opt, lastWord)
 				}
 			}
 		}
@@ -70,7 +73,8 @@ func (c *CommandCompleter) TabCompleter(line []rune, pos int, dtc readline.Delay
 
 		// Handle subcommand if found (maybe we should rewrite this function and use it also for base command)
 		if sub, ok := subCommandFound(lastWord, args, command); ok {
-			return handleSubCommand(line, pos, sub)
+			subg := gCommand.FindCommand(sub.Name)
+			return c.handleSubCommand(line, pos, subg, sub)
 		}
 
 		// If user asks for completions with "-" / "--", show command options.
@@ -82,7 +86,7 @@ func (c *CommandCompleter) TabCompleter(line []rune, pos int, dtc readline.Delay
 
 		// Propose argument completion before anything, and if needed
 		if arg, yes := commandArgumentRequired(lastWord, args, command); yes {
-			return completeCommandArguments(command, arg, lastWord)
+			return c.completeCommandArguments(gCommand, command, arg, lastWord)
 		}
 
 	}
@@ -99,13 +103,13 @@ func (c *CommandCompleter) completeMenuCommands(lastWord string, pos int) (prefi
 	prefix = lastWord // We only return the PREFIX for readline to correctly show suggestions.
 
 	// Check their namespace (which should be their "group" (like utils, core, Jobs, etc))
-	for _, cmd := range c.getParser().Commands() {
+	for _, cmd := range c.console.CommandParser().Commands() {
 		// If command matches readline input, and the command is available
 		if strings.HasPrefix(cmd.Name, lastWord) && !cmd.Hidden {
 			// Check command group: add to existing group if found
 			var found bool
 			for _, grp := range completions {
-				if grp.Name == c.getCommandGroup(cmd) {
+				if grp.Name == c.console.GetCommandGroup(cmd) {
 					found = true
 					grp.Suggestions = append(grp.Suggestions, cmd.Name)
 					grp.Descriptions[cmd.Name] = readline.Dim(cmd.ShortDescription)
@@ -114,7 +118,7 @@ func (c *CommandCompleter) completeMenuCommands(lastWord string, pos int) (prefi
 			// Add a new group if not found
 			if !found {
 				grp := &readline.CompletionGroup{
-					Name:        c.getCommandGroup(cmd),
+					Name:        c.console.GetCommandGroup(cmd),
 					Suggestions: []string{cmd.Name},
 					Descriptions: map[string]string{
 						cmd.Name: readline.Dim(cmd.ShortDescription),
@@ -165,7 +169,7 @@ func completeSubCommands(args []string, lastWord string, command *flags.Command)
 
 // handleSubCommand - Handles completion for subcommand options and arguments, + any option value related completion
 // Many categories, from many sources: this function calls the same functions as the ones previously called for completing its parent command.
-func handleSubCommand(line []rune, pos int, command *flags.Command) (lastWord string, completions []*readline.CompletionGroup) {
+func (c *CommandCompleter) handleSubCommand(line []rune, pos int, gCommand *Command, command *flags.Command) (lastWord string, completions []*readline.CompletionGroup) {
 
 	args, last, lastWord := formatInput(line)
 
@@ -178,7 +182,7 @@ func handleSubCommand(line []rune, pos int, command *flags.Command) (lastWord st
 	if len(command.Groups()) > 0 {
 		for _, grp := range command.Groups() {
 			if opt, yes := optionArgRequired(args, last, grp); yes {
-				return completeOptionArguments(command, opt, lastWord)
+				return c.completeOptionArguments(gCommand, command, opt, lastWord)
 			}
 		}
 	}
@@ -190,7 +194,7 @@ func handleSubCommand(line []rune, pos int, command *flags.Command) (lastWord st
 
 	// If command has non-filled arguments, propose them first
 	if arg, yes := commandArgumentRequired(lastWord, args, command); yes {
-		return completeCommandArguments(command, arg, lastWord)
+		return c.completeCommandArguments(gCommand, command, arg, lastWord)
 	}
 
 	return

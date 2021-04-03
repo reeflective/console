@@ -7,6 +7,8 @@ import (
 	"github.com/maxlandon/readline"
 )
 
+type NewCommand func(name, short, long, group, filter string, context string, data interface{}) NewCommand
+
 // AddCommand - Add a command to gonsole. This command is registered within the go-flags parser, and  return so that you
 // can further refine its settings, or pass it to other gonsole functions (ex: for registering argument/option completions)
 // Parameters:
@@ -18,25 +20,20 @@ import (
 // @context - The command is available in the given context. Available in all if empty. See gonsole.Context
 // @data    - The actual command struct PASSED BY VALUE. See wiki/docs on how to declare commands via struct fields.
 //
-// Explanations:
-// The function itself accepts a function because the console will need to re-instantiate new,blank command instances
-// at each execution loop (so that option/argument values are correctly reset).
+// Return values:
+// @NewCommand - A function identical to this AddCommand, for registering subcommands to this command.
 // NOTE: The 'data' interface{} parameter needs to be a struct passed by value, not a pointer.
-func (c *Console) AddCommand(name, short, long, group, filter string, context string, data interface{}) {
+func (c *Console) AddCommand(name, short, long, group, filter string, context string, data interface{}) NewCommand {
 
 	// Check if the context exists, create it if needed
 	var groups []*commandGroup
 	ctx, exist := c.contexts[context]
 	if exist {
-		groups = ctx.commands
+		groups = ctx.groupsAltT
 	} else {
 		c.NewContext(context)
-		groups = c.GetContext(context).commands
+		groups = c.GetContext(context).groupsAltT
 	}
-
-	// The context needs to keep track now of this command,
-	// because maps reorder everything. Lists are used to solve this.
-	ctx.groupNames = append(ctx.groupNames, group)
 
 	// Check if the group exists within this context, or create
 	// it and attach to the specificed context.if needed
@@ -47,12 +44,8 @@ func (c *Console) AddCommand(name, short, long, group, filter string, context st
 		}
 	}
 	if grp == nil {
-		grp = &commandGroup{
-			Name:              group,
-			commandGenerators: map[string]func() *flags.Command{},
-			commandDone:       map[string]*flags.Command{},
-		}
-		ctx.commands = append(groups, grp)
+		grp = &commandGroup{Name: group}
+		ctx.groupsAltT = append(groups, grp)
 	}
 
 	// Store the interface data in a command spawing funtion, which acts as an instantiator.
@@ -64,16 +57,23 @@ func (c *Console) AddCommand(name, short, long, group, filter string, context st
 		if cmd == nil {
 			return nil
 		}
-
-		// The context keeps a reference to this newly generated command.
-		ctx.groups[group] = append(ctx.groups[group], cmd)
-
 		return cmd
 	}
 
-	// Add the command to the list of spawners, mapped to a filter.
-	// This function will be called at each readline execution loop, for binding the command.
-	grp.commandGenerators[name] = spawner
+	// Make a new command struct with everything, and store it in the command tree
+	command := &Command{
+		Name:      name,
+		Short:     short,
+		Long:      long,
+		Context:   context,
+		Group:     group,
+		Filters:   []string{filter},
+		generator: spawner,
+	}
+	grp.cmds = append(grp.cmds, command)
+
+	// Return the function allowing to register subcommands to this command
+	return command.AddCommand
 }
 
 // HideCommands - Commands, in addition to their contexts, can be shown/hidden based
@@ -99,12 +99,24 @@ func (c *Console) GetCommands() (groups map[string][]*flags.Command, groupNames 
 
 	groups = map[string][]*flags.Command{}
 
-	for _, group := range c.current.groupsAlt {
+	for _, group := range c.current.groupsAltT {
 		groupNames = append(groupNames, group.Name)
 
-		for _, cmd := range group.commandDone {
-			groups[group.Name] = append(groups[group.Name], cmd)
+		for _, cmd := range group.cmds {
+			groups[group.Name] = append(groups[group.Name], cmd.cmd)
 		}
+	}
+	return
+}
+
+func (c *Console) FindCommand(name string) (command *Command) {
+	for _, group := range c.current.groupsAltT {
+		for _, cmd := range group.cmds {
+			if cmd.Name == name {
+				return cmd
+			}
+		}
+
 	}
 	return
 }
@@ -120,34 +132,46 @@ func (c *Console) CommandParser() (parser *flags.Parser) {
 // bindCommands - At every readline loop, we reinstantiate and bind new instances for
 // each command. We do not generate those that are filtered with an active filter,
 // so that users of the go-flags parser don't have to perform filtering.
-func (c *Console) bindCommands() {
+func (c *Console) bindCommandsAlt() {
 
 	// First, reinstantiate the console command parser
 	c.initParser()
 
-	// For each command group in the current context
-	for _, groupName := range c.current.groupNames {
-		group := c.current.groupsAlt[groupName]
+	for _, group := range c.current.groupsAltT {
 
-		// erase all references to the currently generated && bound commands.
-		group.commandDone = map[string]*flags.Command{}
+		// For each command in the group, yield a flags.Command
+		for _, cmd := range group.cmds {
 
-		// For each command in this group, no matter the filters
-		for _, cmdName := range group.commandNames {
+			// The generator function has been contextually adapted, to either
+			// bind to the root parser, or to the parent command of this one.
+			cmd.cmd = cmd.generator()
 
-			// Find the function that will generate a new instance
-			commandGenerate := group.commandGenerators[cmdName]
-
-			// Call the generator function for this command:
-			// a new instance will be bound to the parser.
-			command := commandGenerate()
-			group.commandDone[command.Name] = command
+			// Bind any subcommands of this cmd
+			for _, subgroup := range cmd.groups {
+				c.bindCommandGroup(cmd, subgroup)
+			}
 
 			// If there is an active filter on this command, we mark it hidden.
-			cmdFilter, exists := group.commandFilters[cmdName]
-			if exists && c.filters[cmdFilter] == true && command != nil {
-				command.Hidden = true
+			for _, filter := range c.filters {
+				for _, filt := range cmd.Filters {
+					if filt == filter && cmd.cmd != nil {
+						cmd.cmd.Hidden = true
+					}
+				}
 			}
 		}
 	}
+}
+
+func (c *Console) bindCommandGroup(parent *Command, grp *commandGroup) {
+	// For each command in the group, yield a flags.Command
+	for _, cmd := range grp.cmds {
+		cmd.cmd = cmd.generator()
+
+		// Bind any subcommands of this cmd
+		for _, subgroup := range cmd.groups {
+			c.bindCommandGroup(cmd, subgroup)
+		}
+	}
+
 }

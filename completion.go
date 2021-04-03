@@ -1,7 +1,6 @@
 package gonsole
 
 import (
-	"github.com/jessevdk/go-flags"
 	"github.com/maxlandon/readline"
 )
 
@@ -18,10 +17,8 @@ type CompletionFunc func(prefix string) (pref string, comps []*readline.Completi
 // on wheteher list are required, are these arguments optional, etc.
 // The context is needed in order to bind these completions to the good command,
 // because several contexts migh have some being identically named.
-func (c *Console) AddArgumentCompletion(cmd *flags.Command, context, arg string, comps CompletionFunc) {
-	if cmd == nil {
-		return
-	}
+func (c *Command) AddArgumentCompletion(arg string, comps CompletionFunc) {
+	c.argComps[arg] = comps
 	return
 }
 
@@ -32,10 +29,7 @@ func (c *Console) AddArgumentCompletion(cmd *flags.Command, context, arg string,
 // on wheteher list are required, are these arguments optional, etc.
 // The context is needed in order to bind these completions to the good command,
 // because several contexts migh have some being identically named.
-func (c *Console) AddOptionCompletion(cmd *flags.Command, context, option string, comps CompletionFunc) {
-	if cmd == nil {
-		return
-	}
-
+func (c *Command) AddOptionCompletion(option string, comps CompletionFunc) {
+	c.optComps[option] = comps
 	return
 }

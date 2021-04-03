@@ -2,7 +2,6 @@ package gonsole
 
 import (
 	"github.com/jessevdk/go-flags"
-	"github.com/maxlandon/gonsole/completers"
 	"github.com/maxlandon/readline"
 )
 
@@ -25,7 +24,7 @@ type Console struct {
 
 	// A list of tags by which commands may have been registered, and which
 	// can be set to true in order to hide all of the tagged commands.
-	filters map[string]bool
+	filters []string
 
 	// PreLoopHooks - All the functions in this list will be executed,
 	// in their respective orders, before the console starts reading
@@ -68,7 +67,7 @@ func NewConsole() (c *Console) {
 
 	// Setup completers, hints, etc. We pass 2 functions as parameters,
 	// so that the engine can query the commands for the currently active context.
-	engine := completers.NewCommandCompleter(c.CommandParser, c.GetCommandGroup)
+	engine := NewCommandCompleter(c)
 
 	c.Shell.TabCompleter = engine.TabCompleter
 	c.Shell.MaxTabCompleterRows = 50

@@ -1,7 +1,6 @@
 package gonsole
 
 import (
-	"github.com/jessevdk/go-flags"
 	"github.com/maxlandon/readline"
 )
 
@@ -14,15 +13,8 @@ type Context struct {
 	// Prompt - A dedicated prompt with its own callbacks and colors
 	Prompt *Prompt
 
-	// commands - All command groups available in this context.
-	// Because we need to reinstantiate blank commands at each loop,
-	// the user registers yielder functions that are mapped to a given context.
-	commands []*commandGroup
-
 	// All generated commands and structured in equivalent groups.
-	groups     map[string][]*flags.Command
-	groupsAlt  map[string]*commandGroup
-	groupNames []string
+	groupsAltT []*commandGroup
 
 	// Each context can have two specific history sources
 	historyCtrlRName string
@@ -40,8 +32,8 @@ func (c *Console) NewContext(name string) (ctx *Context) {
 			Callbacks: map[string]func() string{},
 			Colors:    defaultColorCallbacks,
 		},
-		commands: make([]*commandGroup, 0),
-		groups:   map[string][]*flags.Command{},
+		// commands: make([]*commandGroup, 0),
+		// groups:   map[string][]*flags.Command{},
 	}
 	c.contexts[name] = ctx
 	return

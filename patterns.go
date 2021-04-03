@@ -1,4 +1,4 @@
-package completers
+package gonsole
 
 import (
 	"os/exec"
@@ -58,7 +58,7 @@ func noCommandOrEmpty(args []string, last []rune, command *flags.Command) bool {
 // detectedCommand - Returns the base command from parser if detected, depending on context
 func (c *CommandCompleter) detectedCommand(args []string) (command *flags.Command) {
 	arg := strings.TrimSpace(args[0])
-	command = c.getParser().Find(arg)
+	command = c.console.CommandParser().Find(arg)
 	return
 }
 
