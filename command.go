@@ -36,8 +36,10 @@ func (c *Console) AddCommand(name, short, long, group, filter string, context st
 
 	// The context needs to keep track now of this command,
 	// because maps reorder everything. Lists are used to solve this.
+	ctx.groupNames = append(ctx.groupNames, group)
 
-	// Check if the group exists within this context, create if needed
+	// Check if the group exists within this context, or create
+	// it and attach to the specificed context.if needed
 	var grp *commandGroup
 	for _, g := range groups {
 		if g.Name == group {
@@ -46,14 +48,15 @@ func (c *Console) AddCommand(name, short, long, group, filter string, context st
 	}
 	if grp == nil {
 		grp = &commandGroup{
-			Name:     group,
-			commands: map[string][]registerCommand{},
+			Name:              group,
+			commandGenerators: map[string]func() *flags.Command{},
+			commandDone:       map[string]*flags.Command{},
 		}
-		groups = append(groups, grp)
+		ctx.commands = append(groups, grp)
 	}
 
 	// Store the interface data in a command spawing funtion, which acts as an instantiator.
-	var spawner = func(name, short, long string, data interface{}) error {
+	var spawner = func() *flags.Command {
 		cmd, err := c.parser.AddCommand(name, short, long, data)
 		if err != nil {
 			fmt.Printf("%s Command bind error:%s %s\n", readline.RED, readline.RESET, err.Error())
@@ -61,12 +64,49 @@ func (c *Console) AddCommand(name, short, long, group, filter string, context st
 		if cmd == nil {
 			return nil
 		}
-		return nil
+
+		// The context keeps a reference to this newly generated command.
+		ctx.groups[group] = append(ctx.groups[group], cmd)
+
+		return cmd
 	}
 
 	// Add the command to the list of spawners, mapped to a filter.
 	// This function will be called at each readline execution loop, for binding the command.
-	grp.commands[filter] = append(grp.commands[filter], spawner)
+	grp.commandGenerators[name] = spawner
+}
+
+// HideCommands - Commands, in addition to their contexts, can be shown/hidden based
+// on a filter string. For example, some commands applying to a Windows host might
+// be scattered around different groups, but, having all the filter "windows".
+// If "windows" is used as the argument here, all windows commands for the current
+// context are subsquently hidden, until ShowCommands("windows") is called.
+func (c *Console) HideCommands(filter string) {
+}
+
+// ShowCommands - Commands, in addition to their contexts, can be shown/hidden based
+// on a filter string. For example, some commands applying to a Windows host might
+// be scattered around different groups, but, having all the filter "windows".
+// Use this function if you have previously called HideCommands("filter") and want
+// these commands to be available back under their respective context.
+func (c *Console) ShowCommands(filter string) {
+
+}
+
+// GetCommands - Callers of this are for example the TabCompleter, which needs to call
+// this regularly in order to have a list of commands belonging to the current context.
+func (c *Console) GetCommands() (groups map[string][]*flags.Command, groupNames []string) {
+
+	groups = map[string][]*flags.Command{}
+
+	for _, group := range c.current.groupsAlt {
+		groupNames = append(groupNames, group.Name)
+
+		for _, cmd := range group.commandDone {
+			groups[group.Name] = append(groups[group.Name], cmd)
+		}
+	}
+	return
 }
 
 // CommandParser - Returns the root command parser of the console.
@@ -77,16 +117,37 @@ func (c *Console) CommandParser() (parser *flags.Parser) {
 	return c.parser
 }
 
-// commandGroup - A group of commands, which might be by any motive: common domain,
-// type, etc, as long as the group name is the same. In addition, commands in the same
-// group have an additional string filter key, which can be used further refine which
-// commands are hidden or not.
-// Please see the Console.Hide(filter string) or Console.Show(filter string)
-// By default, a "" filter name will mean available no matter the filter.
-type commandGroup struct {
-	Name     string
-	commands map[string][]registerCommand
-}
+// bindCommands - At every readline loop, we reinstantiate and bind new instances for
+// each command. We do not generate those that are filtered with an active filter,
+// so that users of the go-flags parser don't have to perform filtering.
+func (c *Console) bindCommands() {
 
-// registerCommand - The command registration functions used to instantiate commands.
-type registerCommand func(name, short, long string, data interface{}) error
+	// First, reinstantiate the console command parser
+	c.initParser()
+
+	// For each command group in the current context
+	for _, groupName := range c.current.groupNames {
+		group := c.current.groupsAlt[groupName]
+
+		// erase all references to the currently generated && bound commands.
+		group.commandDone = map[string]*flags.Command{}
+
+		// For each command in this group, no matter the filters
+		for _, cmdName := range group.commandNames {
+
+			// Find the function that will generate a new instance
+			commandGenerate := group.commandGenerators[cmdName]
+
+			// Call the generator function for this command:
+			// a new instance will be bound to the parser.
+			command := commandGenerate()
+			group.commandDone[command.Name] = command
+
+			// If there is an active filter on this command, we mark it hidden.
+			cmdFilter, exists := group.commandFilters[cmdName]
+			if exists && c.filters[cmdFilter] == true && command != nil {
+				command.Hidden = true
+			}
+		}
+	}
+}

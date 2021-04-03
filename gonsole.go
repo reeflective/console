@@ -2,6 +2,7 @@ package gonsole
 
 import (
 	"github.com/jessevdk/go-flags"
+	"github.com/maxlandon/gonsole/completers"
 	"github.com/maxlandon/readline"
 )
 
@@ -19,7 +20,12 @@ type Console struct {
 	// parser - Contains the whole aspect of command registering, parsing,
 	// processing, and execution. There is only one parser at a time,
 	// because it is recreated & repopulated at each console execution loop.
-	parser *flags.Parser
+	parser     *flags.Parser
+	parserOpts flags.Options
+
+	// A list of tags by which commands may have been registered, and which
+	// can be set to true in order to hide all of the tagged commands.
+	filters map[string]bool
 
 	// PreLoopHooks - All the functions in this list will be executed,
 	// in their respective orders, before the console starts reading
@@ -60,11 +66,14 @@ func NewConsole() (c *Console) {
 	// Setup the prompt (all contexts)
 	c.Shell.MultilinePrompt = " > "
 
-	// Setup completers, hints, etc
-	// c.Shell.TabCompleter = completers.TabCompleter
+	// Setup completers, hints, etc. We pass 2 functions as parameters,
+	// so that the engine can query the commands for the currently active context.
+	engine := completers.NewCommandCompleter(c.CommandParser, c.GetCommandGroup)
+
+	c.Shell.TabCompleter = engine.TabCompleter
 	c.Shell.MaxTabCompleterRows = 50
-	// c.Shell.HintText = completers.CommandCompleter
-	// c.Shell.SyntaxHighlighter = completers.SyntaxHighlighter
+	c.Shell.HintText = engine.HintCompleter
+	c.Shell.SyntaxHighlighter = engine.SyntaxHighlighter
 
 	// Default context, "" (empty name)
 	c.current = c.NewContext("")
@@ -73,26 +82,8 @@ func NewConsole() (c *Console) {
 	// Setup CtrlR history with an in-memory one by default
 	c.current.SetHistoryCtrlR("client history (in-memory)", new(readline.ExampleHistory))
 
-	// Create parser and set default options
-	c.parser = flags.NewNamedParser("", flags.HelpFlag|flags.IgnoreUnknown)
+	// Set default options for the parser
+	c.parserOpts = flags.HelpFlag | flags.IgnoreUnknown
 
 	return
-}
-
-// HideCommands - Commands, in addition to their contexts, can be shown/hidden based
-// on a filter string. For example, some commands applying to a Windows host might
-// be scattered around different groups, but, having all the filter "windows".
-// If "windows" is used as the argument here, all windows commands for the current
-// context are subsquently hidden, until ShowCommands("windows") is called.
-func (c *Console) HideCommands(filter string) {
-
-}
-
-// ShowCommands - Commands, in addition to their contexts, can be shown/hidden based
-// on a filter string. For example, some commands applying to a Windows host might
-// be scattered around different groups, but, having all the filter "windows".
-// Use this function if you have previously called HideCommands("filter") and want
-// these commands to be available back under their respective context.
-func (c *Console) ShowCommands(filter string) {
-
 }

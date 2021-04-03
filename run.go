@@ -1,6 +1,9 @@
 package gonsole
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 // Run - Start the console application (readline loop). Blocking.
 // The error returned will always be an error that the console
@@ -17,6 +20,7 @@ func (c *Console) Run() (err error) {
 
 		// Instantiate and bind all commands for the current
 		// context, respecting any filter used to hide some of them.
+		c.bindCommands()
 
 		// Block and read user input. Provides completion, syntax, hints, etc.
 		// Various types of errors might arise from here. We handle them
@@ -36,10 +40,38 @@ func (c *Console) Run() (err error) {
 
 		// The line might need some sanitization, like removing empty/redundant spaces,
 		// but also in case where there are weird slashes and other kung-fu bombs.
+		args, empty := c.sanitizeInput(line)
+		if empty {
+			continue
+		}
 
 		// We then pass the processed command line to the command parser,
 		// where any error arising from parsing or execution will be handled.
 		// Thus we don't need to handle any error here.
-		// c.execute()
+		c.execute(args)
 	}
+}
+
+// sanitizeInput - Trims spaces and other unwished elements from the input line.
+func (c *Console) sanitizeInput(line string) (sanitized []string, empty bool) {
+
+	// Assume the input is not empty
+	empty = false
+
+	// Trim border spaces
+	trimmed := strings.TrimSpace(line)
+	if len(line) < 1 {
+		empty = true
+		return
+	}
+	unfiltered := strings.Split(trimmed, " ")
+
+	// Catch any eventual empty items
+	for _, arg := range unfiltered {
+		if arg != "" {
+			sanitized = append(sanitized, arg)
+		}
+	}
+
+	return
 }

@@ -21,6 +21,7 @@ type Context struct {
 
 	// All generated commands and structured in equivalent groups.
 	groups     map[string][]*flags.Command
+	groupsAlt  map[string]*commandGroup
 	groupNames []string
 
 	// Each context can have two specific history sources

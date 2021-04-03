@@ -8,7 +8,7 @@ import (
 	"github.com/maxlandon/readline"
 )
 
-// Prompt - Computes all prompts used on the shell.
+// Prompt - Computes all prompts used on the shell for a given context.
 type Prompt struct {
 	Left  string // The leftmost prompt
 	Right string // The rightmost prompt, currently same line as left.

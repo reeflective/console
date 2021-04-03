@@ -1,7 +1,6 @@
 package completers
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 
@@ -14,15 +13,16 @@ import (
 // to build completions for commands, arguments, options and their arguments as well.
 // This completer needs to be instantiated with its constructor, in order to ensure the parser is not nil.
 type CommandCompleter struct {
-	parser *flags.Parser
+	getParser       func() *flags.Parser            // The console yields the command parser for the current context
+	getCommandGroup func(cmd *flags.Command) string // Given a command, the console gives its group.
 }
 
 // NewCommandCompleter - Instantiate a new tab completer using a github.com/jessevdk/go-flags Command Parser.
-func NewCommandCompleter(parser *flags.Parser) (completer *CommandCompleter, err error) {
-	if parser == nil {
-		return nil, errors.New("command completer was instantiated with a nil parser")
+func NewCommandCompleter(getParser func() *flags.Parser, getCommandGroup func(cmd *flags.Command) string) (completer *CommandCompleter) {
+	return &CommandCompleter{
+		getParser:       getParser,
+		getCommandGroup: getCommandGroup,
 	}
-	return &CommandCompleter{parser: parser}, nil
 }
 
 // TabCompleter - A default tab completer working with a github.com/jessevdk/go-flags parser.
@@ -99,13 +99,13 @@ func (c *CommandCompleter) completeMenuCommands(lastWord string, pos int) (prefi
 	prefix = lastWord // We only return the PREFIX for readline to correctly show suggestions.
 
 	// Check their namespace (which should be their "group" (like utils, core, Jobs, etc))
-	for _, cmd := range c.parser.Commands() {
-		// If command matches readline input
-		if strings.HasPrefix(cmd.Name, lastWord) {
+	for _, cmd := range c.getParser().Commands() {
+		// If command matches readline input, and the command is available
+		if strings.HasPrefix(cmd.Name, lastWord) && !cmd.Hidden {
 			// Check command group: add to existing group if found
 			var found bool
 			for _, grp := range completions {
-				if grp.Name == cmd.Aliases[0] {
+				if grp.Name == c.getCommandGroup(cmd) {
 					found = true
 					grp.Suggestions = append(grp.Suggestions, cmd.Name)
 					grp.Descriptions[cmd.Name] = readline.Dim(cmd.ShortDescription)
@@ -114,7 +114,7 @@ func (c *CommandCompleter) completeMenuCommands(lastWord string, pos int) (prefi
 			// Add a new group if not found
 			if !found {
 				grp := &readline.CompletionGroup{
-					Name:        cmd.Aliases[0],
+					Name:        c.getCommandGroup(cmd),
 					Suggestions: []string{cmd.Name},
 					Descriptions: map[string]string{
 						cmd.Name: readline.Dim(cmd.ShortDescription),
@@ -129,7 +129,7 @@ func (c *CommandCompleter) completeMenuCommands(lastWord string, pos int) (prefi
 	for _, grp := range completions {
 		// If the length of suggestions is too long and we have
 		// many groups, use grid display.
-		if len(completions) >= 10 && len(grp.Suggestions) >= 7 {
+		if len(completions) >= 10 && len(grp.Suggestions) >= 10 {
 			grp.DisplayType = readline.TabDisplayGrid
 		} else {
 			// By default, we use a map of command to descriptions
@@ -152,7 +152,7 @@ func completeSubCommands(args []string, lastWord string, command *flags.Command)
 	}
 
 	for _, sub := range command.Commands() {
-		if strings.HasPrefix(sub.Name, lastWord) {
+		if strings.HasPrefix(sub.Name, lastWord) && !sub.Hidden {
 			group.Suggestions = append(group.Suggestions, sub.Name)
 			group.Descriptions[sub.Name] = readline.DIM + sub.ShortDescription + readline.RESET
 		}

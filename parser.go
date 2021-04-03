@@ -7,7 +7,10 @@ import "github.com/jessevdk/go-flags"
 // -h, --h options are available to all registered commands.
 // Ignored option dashes are ignored and passed along the command tree.
 func (c *Console) SetParserOptions(options flags.Options) {
-	c.parser.Options = options
+	c.parserOpts = options
+	if c.parser != nil {
+		c.parser.Options = options
+	}
 	return
 }
 
@@ -15,4 +18,8 @@ func (c *Console) SetParserOptions(options flags.Options) {
 // Can be used for many things: please see the go-flags documentation.
 func (c *Console) Find(command string) (cmd *flags.Command) {
 	return c.parser.Find(command)
+}
+
+func (c *Console) initParser() {
+	c.parser = flags.NewNamedParser("", c.parserOpts)
 }

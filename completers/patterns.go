@@ -58,7 +58,7 @@ func noCommandOrEmpty(args []string, last []rune, command *flags.Command) bool {
 // detectedCommand - Returns the base command from parser if detected, depending on context
 func (c *CommandCompleter) detectedCommand(args []string) (command *flags.Command) {
 	arg := strings.TrimSpace(args[0])
-	command = c.parser.Find(arg)
+	command = c.getParser().Find(arg)
 	return
 }
 
@@ -120,8 +120,9 @@ func subCommandFound(lastWord string, raw []string, command *flags.Command) (sub
 		return nil, false
 	}
 
+	// The command must not be hidden, otherwise we refuse to complete.
 	sub = command.Find(args[1])
-	if sub != nil {
+	if sub != nil && !sub.Hidden {
 		return sub, true
 	}
 
