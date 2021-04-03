@@ -22,6 +22,9 @@ func (c *Console) Run() (err error) {
 		// context, respecting any filter used to hide some of them.
 		c.bindCommandsAlt()
 
+		// Run user-provided pre-loop hooks
+		c.runPreLoopHooks()
+
 		// Block and read user input. Provides completion, syntax, hints, etc.
 		// Various types of errors might arise from here. We handle them
 		// in a special function, where we can specify behavior for certain errors.
@@ -45,11 +48,36 @@ func (c *Console) Run() (err error) {
 			continue
 		}
 
+		// Run user-provided pre-run line hooks, which may modify the input line
+		args = c.runLineHooks(args)
+
+		// Run user-provided pre-run hooks
+		c.runPreRunHooks()
+
 		// We then pass the processed command line to the command parser,
 		// where any error arising from parsing or execution will be handled.
 		// Thus we don't need to handle any error here.
 		c.execute(args)
 	}
+}
+
+func (c *Console) runPreLoopHooks() {
+	for _, hook := range c.PreLoopHooks {
+		hook()
+	}
+}
+
+func (c *Console) runPreRunHooks() {
+	for _, hook := range c.PreRunHooks {
+		hook()
+	}
+}
+
+func (c *Console) runLineHooks(args []string) (processed []string) {
+	for _, hook := range c.PreRunLineHooks {
+		processed, _ = hook(args)
+	}
+	return
 }
 
 // sanitizeInput - Trims spaces and other unwished elements from the input line.

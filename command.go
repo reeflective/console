@@ -8,12 +8,12 @@ import (
 )
 
 type Command struct {
-	Name    string
-	Short   string
-	Long    string
-	Context string
-	Group   string
-	Filters []string
+	name    string
+	short   string
+	long    string
+	context string
+	group   string
+	filters []string
 
 	generator func() *flags.Command
 	cmd       *flags.Command
@@ -56,12 +56,12 @@ func (c *Command) AddCommand(name, short, long, group, filter string, context st
 
 	// Make a new command struct with everything, and store it in the command tree
 	command := &Command{
-		Name:      name,
-		Short:     short,
-		Long:      long,
-		Context:   context,
-		Group:     group,
-		Filters:   []string{filter},
+		name:      name,
+		short:     short,
+		long:      long,
+		context:   context,
+		group:     group,
+		filters:   []string{filter},
 		generator: spawner,
 	}
 	grp.cmds = append(grp.cmds, command)
@@ -72,7 +72,7 @@ func (c *Command) AddCommand(name, short, long, group, filter string, context st
 func (c *Command) FindCommand(name string) (command *Command) {
 	for _, group := range c.groups {
 		for _, cmd := range group.cmds {
-			if cmd.Name == name {
+			if cmd.name == name {
 				return cmd
 			}
 		}
@@ -133,12 +133,12 @@ func (c *Console) AddCommand(name, short, long, group, filter string, context st
 
 	// Make a new command struct with everything, and store it in the command tree
 	command := &Command{
-		Name:      name,
-		Short:     short,
-		Long:      long,
-		Context:   context,
-		Group:     group,
-		Filters:   []string{filter},
+		name:      name,
+		short:     short,
+		long:      long,
+		context:   context,
+		group:     group,
+		filters:   []string{filter},
 		generator: spawner,
 	}
 	grp.cmds = append(grp.cmds, command)
@@ -183,7 +183,7 @@ func (c *Console) GetCommands() (groups map[string][]*flags.Command, groupNames 
 func (c *Console) FindCommand(name string) (command *Command) {
 	for _, group := range c.current.groupsAltT {
 		for _, cmd := range group.cmds {
-			if cmd.Name == name {
+			if cmd.name == name {
 				return cmd
 			}
 		}
@@ -216,7 +216,7 @@ func (c *Console) bindCommandsAlt() {
 
 			// If there is an active filter on this command, we mark it hidden.
 			for _, filter := range c.filters {
-				for _, filt := range cmd.Filters {
+				for _, filt := range cmd.filters {
 					if filt == filter && cmd.cmd != nil {
 						cmd.cmd.Hidden = true
 					}

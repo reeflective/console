@@ -40,7 +40,7 @@ type Console struct {
 	// input line being ultimately provided to the command parser. This might
 	// be used by people who want to apply supplemental, specific processing
 	// on the command input line.
-	PreRunLineHooks []func() (args []string, err error)
+	PreRunLineHooks []func(raw []string) (args []string, err error)
 
 	// True if the console is currently running a command. This is used by
 	// the various asynchronous log/message functions, which need to adapt their
