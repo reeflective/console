@@ -17,7 +17,7 @@ func (c *Console) GetCommandGroup(cmd *flags.Command) string {
 	// Sliver commands are searched for if we are in this context
 	for _, group := range c.current.groupsAltT {
 		for _, c := range group.cmds {
-			if c.Name == cmd.Name {
+			if c.name == cmd.Name {
 				// We don't return the name if the command is not generated
 				if c.cmd != nil {
 					return group.Name
