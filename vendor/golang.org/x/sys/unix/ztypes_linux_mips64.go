@@ -440,4 +440,181 @@ type XDPUmemReg struct {
 }
 
 type CryptoUserAlg struct {
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      
+	Name        [64]int8
+	Driver_name [64]int8
+	Module_name [64]int8
+	Type        uint32
+	Mask        uint32
+	Refcnt      uint32
+	Flags       uint32
+}
+
+type CryptoStatAEAD struct {
+	Type         [64]int8
+	Encrypt_cnt  uint64
+	Encrypt_tlen uint64
+	Decrypt_cnt  uint64
+	Decrypt_tlen uint64
+	Err_cnt      uint64
+}
+
+type CryptoStatAKCipher struct {
+	Type         [64]int8
+	Encrypt_cnt  uint64
+	Encrypt_tlen uint64
+	Decrypt_cnt  uint64
+	Decrypt_tlen uint64
+	Verify_cnt   uint64
+	Sign_cnt     uint64
+	Err_cnt      uint64
+}
+
+type CryptoStatCipher struct {
+	Type         [64]int8
+	Encrypt_cnt  uint64
+	Encrypt_tlen uint64
+	Decrypt_cnt  uint64
+	Decrypt_tlen uint64
+	Err_cnt      uint64
+}
+
+type CryptoStatCompress struct {
+	Type            [64]int8
+	Compress_cnt    uint64
+	Compress_tlen   uint64
+	Decompress_cnt  uint64
+	Decompress_tlen uint64
+	Err_cnt         uint64
+}
+
+type CryptoStatHash struct {
+	Type      [64]int8
+	Hash_cnt  uint64
+	Hash_tlen uint64
+	Err_cnt   uint64
+}
+
+type CryptoStatKPP struct {
+	Type                      [64]int8
+	Setsecret_cnt             uint64
+	Generate_public_key_cnt   uint64
+	Compute_shared_secret_cnt uint64
+	Err_cnt                   uint64
+}
+
+type CryptoStatRNG struct {
+	Type          [64]int8
+	Generate_cnt  uint64
+	Generate_tlen uint64
+	Seed_cnt      uint64
+	Err_cnt       uint64
+}
+
+type CryptoStatLarval struct {
+	Type [64]int8
+}
+
+type CryptoReportLarval struct {
+	Type [64]int8
+}
+
+type CryptoReportHash struct {
+	Type       [64]int8
+	Blocksize  uint32
+	Digestsize uint32
+}
+
+type CryptoReportCipher struct {
+	Type        [64]int8
+	Blocksize   uint32
+	Min_keysize uint32
+	Max_keysize uint32
+}
+
+type CryptoReportBlkCipher struct {
+	Type        [64]int8
+	Geniv       [64]int8
+	Blocksize   uint32
+	Min_keysize uint32
+	Max_keysize uint32
+	Ivsize      uint32
+}
+
+type CryptoReportAEAD struct {
+	Type        [64]int8
+	Geniv       [64]int8
+	Blocksize   uint32
+	Maxauthsize uint32
+	Ivsize      uint32
+}
+
+type CryptoReportComp struct {
+	Type [64]int8
+}
+
+type CryptoReportRNG struct {
+	Type     [64]int8
+	Seedsize uint32
+}
+
+type CryptoReportAKCipher struct {
+	Type [64]int8
+}
+
+type CryptoReportKPP struct {
+	Type [64]int8
+}
+
+type CryptoReportAcomp struct {
+	Type [64]int8
+}
+
+type LoopInfo struct {
+	Number           int32
+	Device           uint32
+	Inode            uint64
+	Rdevice          uint32
+	Offset           int32
+	Encrypt_type     int32
+	Encrypt_key_size int32
+	Flags            int32
+	Name             [64]int8
+	Encrypt_key      [32]uint8
+	Init             [2]uint64
+	Reserved         [4]int8
+	_                [4]byte
+}
+
+type TIPCSubscr struct {
+	Seq     TIPCServiceRange
+	Timeout uint32
+	Filter  uint32
+	Handle  [8]int8
+}
+
+type TIPCSIOCLNReq struct {
+	Peer     uint32
+	Id       uint32
+	Linkname [68]int8
+}
+
+type TIPCSIOCNodeIDReq struct {
+	Peer uint32
+	Id   [16]int8
+}
+
+type PPSKInfo struct {
+	Assert_sequence uint32
+	Clear_sequence  uint32
+	Assert_tu       PPSKTime
+	Clear_tu        PPSKTime
+	Current_mode    int32
+	_               [4]byte
+}
+
+const (
+	PPS_GETPARAMS = 0x400870a1
+	PPS_SETPARAMS = 0x800870a2
+	PPS_GETCAP    = 0x400870a3
+	PPS_FETCH     = 0xc00870a4
+)
