@@ -56,7 +56,9 @@ type Console struct {
 // things, print asynchronous messages, or modify various operating parameters on the fly.
 func NewConsole() (c *Console) {
 
-	c = &Console{}
+	c = &Console{
+		contexts: map[string]*Context{},
+	}
 
 	// Setup the readline instance, and input mode
 	c.Shell = readline.NewInstance()
