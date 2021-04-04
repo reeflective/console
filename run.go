@@ -25,19 +25,27 @@ func (c *Console) Run() (err error) {
 		// Run user-provided pre-loop hooks
 		c.runPreLoopHooks()
 
+		// Leave a newline before redrawing the prompt
+		if c.LeaveNewline {
+			fmt.Println()
+		}
+
 		// Block and read user input. Provides completion, syntax, hints, etc.
 		// Various types of errors might arise from here. We handle them
 		// in a special function, where we can specify behavior for certain errors.
 		line, err := c.Shell.Readline()
 		if err != nil {
+			// Handle readline errors in a specialized function
 
 		}
 
 		// The user has entered an input line command. Any previous errors
 		// have been handled, and we will go all the way toward command execution,
-		// even if the command line is empty. If the context prompt is asked to
-		// leave a newline between prompt and output, we print it now.
-		if c.LeaveNewline {
+		// even if the command line is empty.
+
+		// If the context prompt is asked to leave a newline
+		// between prompt and output, we print it now.
+		if c.PreOutputNewline {
 			fmt.Println()
 		}
 

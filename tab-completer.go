@@ -245,7 +245,7 @@ func completeOptionGroup(lastWord string, grp *flags.Group, title string) (prefi
 	// An optional title for this comp group.
 	// Used by global flag options, added to all commands.
 	if title != "" {
-		compGrp.Name = title
+		compGrp.Name = strings.ToLower(title)
 	}
 
 	// Add each option to completion group

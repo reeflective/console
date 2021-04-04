@@ -20,7 +20,7 @@ func (c *Console) execute(args []string) {
 	}()
 
 	// Execute the command line.
-	result, err := c.parser.ParseArgs(args)
+	_, err := c.parser.ParseArgs(args)
 
 	// Process the errors raised by the parser.
 	// A few of them are not really errors, and trigger some stuff.
@@ -35,7 +35,7 @@ func (c *Console) execute(args []string) {
 
 		// If the error type is a detected -h, --help flag, print custom help.
 		if parserErr.Type == flags.ErrHelp {
-			c.handleHelpFlag(result)
+			c.handleHelpFlag(args)
 			return
 		}
 

@@ -43,6 +43,9 @@ func (p *Prompt) Render() (prompt string) {
 	// Finally, forge the complete prompt string
 	prompt = left + pad + right
 
+	// Don't mess with input line colors
+	prompt += readline.RESET
+
 	return
 }
 

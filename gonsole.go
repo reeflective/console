@@ -48,7 +48,8 @@ type Console struct {
 	isExecuting bool
 
 	// If true, leavs a newline between command line input and their output.
-	LeaveNewline bool
+	LeaveNewline     bool
+	PreOutputNewline bool
 }
 
 // NewConsole - Instantiates a new console application, with sane but powerful defaults.
