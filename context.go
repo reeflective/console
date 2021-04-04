@@ -52,7 +52,11 @@ func (c *Console) GetContext(name string) (ctx *Context) {
 // that belong to this new context. If the context is invalid, i.e that no commands
 // are bound to this context name, the current context is kept.
 func (c *Console) SwitchContext(context string) {
-
+	for _, ctx := range c.contexts {
+		if ctx.Name == context {
+			c.current = ctx
+		}
+	}
 }
 
 // SetHistoryCtrlR - Set the history source triggered with Ctrl-R
