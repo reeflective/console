@@ -10,23 +10,33 @@ import (
 // Command - A struct storing basic command info, functions used for command
 // instantiation, completion generation, and any number of subcommand groups.
 type Command struct {
-	Name             string
+	// Name - The name of the command, as typed in the shell.
+	Name string
+	// ShortDescription - A short string to be used in console completions, hints, etc.
 	ShortDescription string
-	LongDescription  string
-	Group            string
-	Filters          []string
+	// LongDescription - A longer description text to be printed in the help menus.
+	LongDescription string
+	// Group - Commands can be specified a group, by which they will appear in completions, etc.
+	Group string
+	// Filters - A list of filters against which the commands might be shown/hidden.
+	// For example, adding the "windows" filter and calling the console.HideCommands("windows"),
+	// will hide commands from now on, until console.ShowCommands("windows") is called.
+	Filters []string
 
+	// Data - A function that must yield a pointer to a struct (which is, and will become a command instance)
+	// Compatible interfaces must match https://github.com/jessevdk/go-flags.git requirements. Please refer
+	// to either the go-flags documentation, or this library's one.
 	Data      func() interface{}
 	generator func(cParser commandParser) *flags.Command
 	cmd       *flags.Command
 
-	// global opts generator
+	// global options generator. These options are available even when subcommands are being used.
 	opts []*optionGroup
 
 	// subcommands
 	groups []*commandGroup
 
-	// completions
+	// completions functions, used to match either arguments of this command, or its options.
 	argComps map[string]CompletionFunc
 	optComps map[string]CompletionFunc
 }
@@ -111,6 +121,12 @@ func (c *Console) Add(cmd *Command) *Command {
 // If "windows" is used as the argument here, all windows commands for the current
 // context are subsquently hidden, until ShowCommands("windows") is called.
 func (c *Console) HideCommands(filter string) {
+	for _, f := range c.filters {
+		if f == filter {
+			return
+		}
+	}
+	c.filters = append(c.filters, filter)
 }
 
 // ShowCommands - Commands, in addition to their contexts, can be shown/hidden based
@@ -119,7 +135,14 @@ func (c *Console) HideCommands(filter string) {
 // Use this function if you have previously called HideCommands("filter") and want
 // these commands to be available back under their respective context.
 func (c *Console) ShowCommands(filter string) {
-
+	for i, f := range c.filters {
+		if f == filter {
+			// Remove the element at index i from a.
+			copy(c.filters[i:], c.filters[i+1:])     // Shift a[i+1:] left one index.
+			c.filters[len(c.filters)-1] = ""         // Erase last element (write zero value).
+			c.filters = c.filters[:len(c.filters)-1] // Truncate slice.
+		}
+	}
 }
 
 // FindCommand - Find a subcommand of this command, given the command name.
@@ -177,26 +200,32 @@ func (c *Console) bindCommands() {
 		cc.parser.AddGroup(opt.short, opt.long, opt.generator())
 	}
 
-	// For each (root) command group in this context.
+	// For each (root) command group in this context, generate all of its commands,
+	// and all of their subcommands recursively. Also generates options, etc.
 	for _, group := range cc.cmd.groups {
+		c.bindCommandGroup(cc.cmd, group)
+	}
 
-		// For each command in the group, yield a flags.Command
+	// Once all go-flags commands are generated, we can set them hidden if
+	// they match some of the active hide/show filters.
+	c.hideCommands()
+}
+
+func (c *Console) hideCommands() {
+	cc := c.current
+
+	// For each command group
+	for _, group := range cc.cmd.groups {
+	nextCommand:
+		// analyse next command's filters against the console ones.
 		for _, cmd := range group.cmds {
-
-			// The generator function has been contextually adapted, to either
-			// bind to the root parser, or to the parent command of this one.
-			cmd.cmd = cmd.generator(cc.parser)
-
-			// Bind any subcommands of this cmd
-			for _, subgroup := range cmd.groups {
-				c.bindCommandGroup(cmd, subgroup)
-			}
-
-			// If there is an active filter on this command, we mark it hidden.
-			for _, filter := range c.filters {
-				for _, filt := range cmd.Filters {
-					if filt == filter && cmd.cmd != nil {
-						cmd.cmd.Hidden = true
+			if cmd.cmd != nil {
+				for _, cmdFilter := range cmd.Filters {
+					for _, filter := range c.filters {
+						if filter == cmdFilter {
+							cmd.cmd.Hidden = true
+							continue nextCommand
+						}
 					}
 				}
 			}
