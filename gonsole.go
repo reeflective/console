@@ -39,7 +39,6 @@ type Console struct {
 	// parser - Contains the whole aspect of command registering, parsing,
 	// processing, and execution. There is only one parser at a time,
 	// because it is recreated & repopulated at each console execution loop.
-	parser     *flags.Parser
 	parserOpts flags.Options
 
 	// A list of tags by which commands may have been registered, and which

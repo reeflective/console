@@ -11,7 +11,7 @@ import (
 // The user has passed a -h, --help option flag in the input line,
 // so we handle the error raised by the command parser and print the corresponding help.
 func (c *Console) handleHelpFlag(args []string) {
-	cmd := c.findHelpCommand(args, c.parser)
+	cmd := c.findHelpCommand(args, c.current.parser)
 
 	// If command is nil, it means the help was requested as
 	// the menu help: print all commands for the context.
@@ -166,7 +166,7 @@ func (c *Console) printCommandHelp(cmd *flags.Command) {
 
 	// Global options (the parser has options that apply to all commands)
 	// We don't show the help options (showing the -h, --help flag)
-	for _, grp := range c.parser.Groups() {
+	for _, grp := range c.current.parser.Groups() {
 		if grp.ShortDescription != "Help Options" {
 			printOptionGroup(grp)
 		}
