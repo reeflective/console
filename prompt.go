@@ -19,9 +19,9 @@ type Prompt struct {
 	Newline bool // If true, leaves a new line before showing command output.
 }
 
-// render - The core prompt computes all necessary values, forges a prompt string
+// Render - The core prompt computes all necessary values, forges a prompt string
 // and returns it for being printed by the shell.
-func (p *Prompt) render() (prompt string) {
+func (p *Prompt) Render() (prompt string) {
 
 	// We need the terminal width: the prompt sometimes
 	// makes use of both sides for different items.
@@ -49,6 +49,7 @@ func (p *Prompt) render() (prompt string) {
 // computeBase - Computes the base prompt (left-side) with potential custom prompt given.
 // Returns the width of the computed string, for correct aggregation of all strings.
 func (p *Prompt) computeCallbacks(raw string) (ps string, width int) {
+	ps = raw
 
 	// Compute callback values
 	for ok, cb := range p.Callbacks {

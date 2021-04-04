@@ -12,7 +12,7 @@ func (c *Console) Run() (err error) {
 
 	for {
 		// Recompute the prompt for the current context
-		c.Shell.SetPrompt(c.current.Prompt.render())
+		c.Shell.SetPrompt(c.current.Prompt.Render())
 
 		// Set the shell history sources with context ones
 		c.Shell.SetHistoryCtrlR(c.current.historyCtrlRName, c.current.historyCtrlR)
@@ -74,8 +74,12 @@ func (c *Console) runPreRunHooks() {
 }
 
 func (c *Console) runLineHooks(args []string) (processed []string) {
+	// By default, pass args as they are
+	processed = args
+
+	// Or modify them again
 	for _, hook := range c.PreRunLineHooks {
-		processed, _ = hook(args)
+		processed, _ = hook(processed)
 	}
 	return
 }
