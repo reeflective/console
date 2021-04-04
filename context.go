@@ -42,6 +42,11 @@ func (c *Context) initParser(opts flags.Options) {
 	c.parser = flags.NewNamedParser(c.Name, opts)
 }
 
+// AddGlobalOptions - Add global options for this context command parser. Will appear in all commands.
+func (c *Context) AddGlobalOptions(shortDescription, longDescription string, data func() interface{}) {
+	c.cmd.AddGlobalOptions(shortDescription, longDescription, data)
+}
+
 // AddCommand - Add a command to this context. This command will be available when this context is active.
 func (c *Context) AddCommand(name, short, long, group, filter string, data func() interface{}) *Command {
 	return c.cmd.AddCommand(name, short, long, group, filter, data)
