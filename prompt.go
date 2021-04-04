@@ -53,10 +53,10 @@ func (p *Prompt) computeCallbacks(raw string) (ps string, width int) {
 
 	// Compute callback values
 	for ok, cb := range p.Callbacks {
-		ps = strings.Replace(raw, ok, cb(), 1)
+		ps = strings.Replace(ps, ok, cb(), 1)
 	}
 	for tok, color := range p.Colors {
-		ps = strings.Replace(raw, tok, color, -1)
+		ps = strings.Replace(ps, tok, color, -1)
 	}
 
 	width = getRealLength(ps)
