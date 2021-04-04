@@ -26,7 +26,7 @@ type Command struct {
 	optComps map[string]CompletionFunc
 }
 
-func (c *Command) AddCommand(name, short, long, group, filter string, context string, data interface{}) *Command {
+func (c *Command) AddCommand(name, short, long, group, filter string, context string, data func() interface{}) *Command {
 
 	// Check if the group exists within this context, or create
 	// it and attach to the specificed context.if needed
@@ -44,7 +44,7 @@ func (c *Command) AddCommand(name, short, long, group, filter string, context st
 	// Store the interface data in a command spawing funtion, which acts as an instantiator.
 	// We use the command's go-flags struct, as opposed to the console root parser.
 	var spawner = func() *flags.Command {
-		cmd, err := c.cmd.AddCommand(name, short, long, data)
+		cmd, err := c.cmd.AddCommand(name, short, long, data())
 		if err != nil {
 			fmt.Printf("%s Command bind error:%s %s\n", readline.RED, readline.RESET, err.Error())
 		}
@@ -94,7 +94,7 @@ func (c *Command) FindCommand(name string) (command *Command) {
 // Return values:
 // @NewCommand - A function identical to this AddCommand, for registering subcommands to this command.
 // NOTE: The 'data' interface{} parameter needs to be a struct passed by value, not a pointer.
-func (c *Console) AddCommand(name, short, long, group, filter string, context string, data interface{}) *Command {
+func (c *Console) AddCommand(name, short, long, group, filter string, context string, data func() interface{}) *Command {
 
 	// Check if the context exists, create it if needed
 	var groups []*commandGroup
@@ -121,7 +121,7 @@ func (c *Console) AddCommand(name, short, long, group, filter string, context st
 
 	// Store the interface data in a command spawing funtion, which acts as an instantiator.
 	var spawner = func() *flags.Command {
-		cmd, err := c.parser.AddCommand(name, short, long, data)
+		cmd, err := c.parser.AddCommand(name, short, long, data())
 		if err != nil {
 			fmt.Printf("%s Command bind error:%s %s\n", readline.RED, readline.RESET, err.Error())
 		}
