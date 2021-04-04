@@ -104,9 +104,9 @@ func (c *Command) Add(cmd *Command) *Command {
 	return c.AddCommand(cmd.Name, cmd.ShortDescription, cmd.LongDescription, cmd.Group, cmd.Filters[0], cmd.Data)
 }
 
-// AddCommandT - Add a command to the default console context, named "". Please check gonsole.CurrentContext().AddCommand(),
+// AddCommand - Add a command to the default console context, named "". Please check gonsole.CurrentContext().AddCommand(),
 // if you intend to use multiple contexts, for more detailed explanations
-func (c *Console) AddCommandT(name, short, long, group, filter string, context string, data func() interface{}) *Command {
+func (c *Console) AddCommand(name, short, long, group, filter string, data func() interface{}) *Command {
 	return c.current.cmd.AddCommand(name, short, long, group, filter, data)
 }
 
@@ -203,7 +203,7 @@ func (c *Console) bindCommands() {
 	// For each (root) command group in this context, generate all of its commands,
 	// and all of their subcommands recursively. Also generates options, etc.
 	for _, group := range cc.cmd.groups {
-		c.bindCommandGroup(cc.cmd, group)
+		c.bindCommandGroup(cc.parser, group)
 	}
 
 	// Once all go-flags commands are generated, we can set them hidden if

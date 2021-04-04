@@ -28,15 +28,15 @@ func (c *Console) GetCommandGroup(cmd *flags.Command) string {
 	return ""
 }
 
-func (c *Console) bindCommandGroup(parent *Command, grp *commandGroup) {
+func (c *Console) bindCommandGroup(parent commandParser, grp *commandGroup) {
 
 	// For each command in the group, yield a flags.Command
 	for _, cmd := range grp.cmds {
-		cmd.cmd = cmd.generator(parent.cmd)
+		cmd.cmd = cmd.generator(parent)
 
 		// Bind any subcommands of this cmd
 		for _, subgroup := range cmd.groups {
-			c.bindCommandGroup(cmd, subgroup)
+			c.bindCommandGroup(parent, subgroup)
 		}
 	}
 }
