@@ -15,9 +15,9 @@ type commandGroup struct {
 func (c *Console) GetCommandGroup(cmd *flags.Command) string {
 
 	// Sliver commands are searched for if we are in this context
-	for _, group := range c.current.groupsAltT {
+	for _, group := range c.current.cmd.groups {
 		for _, c := range group.cmds {
-			if c.name == cmd.Name {
+			if c.Name == cmd.Name {
 				// We don't return the name if the command is not generated
 				if c.cmd != nil {
 					return group.Name
@@ -29,9 +29,10 @@ func (c *Console) GetCommandGroup(cmd *flags.Command) string {
 }
 
 func (c *Console) bindCommandGroup(parent *Command, grp *commandGroup) {
+
 	// For each command in the group, yield a flags.Command
 	for _, cmd := range grp.cmds {
-		cmd.cmd = cmd.generator()
+		cmd.cmd = cmd.generator(parent.cmd)
 
 		// Bind any subcommands of this cmd
 		for _, subgroup := range cmd.groups {

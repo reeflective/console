@@ -236,7 +236,7 @@ func completeCommandOptions(args []string, lastWord string, cmd *flags.Command) 
 func completeOptionGroup(lastWord string, grp *flags.Group, title string) (prefix string, compGrp *readline.CompletionGroup) {
 
 	compGrp = &readline.CompletionGroup{
-		Name:         grp.ShortDescription,
+		Name:         strings.ToLower(grp.ShortDescription),
 		Descriptions: map[string]string{},
 		DisplayType:  readline.TabDisplayList,
 		Aliases:      map[string]string{},

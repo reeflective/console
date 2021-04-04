@@ -20,7 +20,7 @@ func (c *Console) Run() (err error) {
 
 		// Instantiate and bind all commands for the current
 		// context, respecting any filter used to hide some of them.
-		c.bindCommandsAlt()
+		c.bindCommands()
 
 		// Run user-provided pre-loop hooks
 		c.runPreLoopHooks()

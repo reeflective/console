@@ -11,21 +11,6 @@ type Console struct {
 	// including but not limited to: inputs, completions, hints, history.
 	Shell *readline.Instance
 
-	// Contexts - The various contexts hold a list of command instantiators
-	// structured by groups. These groups are needed for completions and helps.
-	contexts map[string]*Context
-	current  *Context // The name of the current context
-
-	// parser - Contains the whole aspect of command registering, parsing,
-	// processing, and execution. There is only one parser at a time,
-	// because it is recreated & repopulated at each console execution loop.
-	parser     *flags.Parser
-	parserOpts flags.Options
-
-	// A list of tags by which commands may have been registered, and which
-	// can be set to true in order to hide all of the tagged commands.
-	filters []string
-
 	// PreLoopHooks - All the functions in this list will be executed,
 	// in their respective orders, before the console starts reading
 	// any user input (ie, before redrawing the prompt).
@@ -42,14 +27,29 @@ type Console struct {
 	// on the command input line.
 	PreRunLineHooks []func(raw []string) (args []string, err error)
 
+	// If true, leavs a newline between command line input and their output.
+	LeaveNewline     bool
+	PreOutputNewline bool
+
+	// Contexts - The various contexts hold a list of command instantiators
+	// structured by groups. These groups are needed for completions and helps.
+	contexts map[string]*Context
+	current  *Context // The name of the current context
+
+	// parser - Contains the whole aspect of command registering, parsing,
+	// processing, and execution. There is only one parser at a time,
+	// because it is recreated & repopulated at each console execution loop.
+	parser     *flags.Parser
+	parserOpts flags.Options
+
+	// A list of tags by which commands may have been registered, and which
+	// can be set to true in order to hide all of the tagged commands.
+	filters []string
+
 	// True if the console is currently running a command. This is used by
 	// the various asynchronous log/message functions, which need to adapt their
 	// behavior (do we reprint the prompt, where, etc) based on this.
 	isExecuting bool
-
-	// If true, leavs a newline between command line input and their output.
-	LeaveNewline     bool
-	PreOutputNewline bool
 }
 
 // NewConsole - Instantiates a new console application, with sane but powerful defaults.
