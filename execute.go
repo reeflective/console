@@ -19,8 +19,8 @@ func (c *Console) execute(args []string) {
 		c.isExecuting = false
 	}()
 
-	// Execute the command line.
-	_, err := c.parser.ParseArgs(args)
+	// Execute the command line, with the current context' parser.
+	_, err := c.current.parser.ParseArgs(args)
 
 	// Process the errors raised by the parser.
 	// A few of them are not really errors, and trigger some stuff.
