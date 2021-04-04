@@ -68,7 +68,8 @@ func (c *Console) NewContext(name string) (ctx *Context) {
 	return
 }
 
-// GetContext - Given a name, return the appropriate context. Returns nil if invalid.
+// GetContext - Given a name, return the appropriate context.
+// If the context does not exists, it returns nil
 func (c *Console) GetContext(name string) (ctx *Context) {
 	if context, exists := c.contexts[name]; exists {
 		return context

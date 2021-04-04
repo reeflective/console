@@ -20,6 +20,9 @@ type Command struct {
 	generator func(cParser commandParser) *flags.Command
 	cmd       *flags.Command
 
+	// global opts generator
+	opts []*optionGroup
+
 	// subcommands
 	groups []*commandGroup
 
@@ -169,6 +172,12 @@ func (c *Console) bindCommands() {
 	// First, reset the parser for the current context.
 	cc.initParser(c.parserOpts)
 
+	// Generate all global options if there are some.
+	for _, opt := range cc.cmd.opts {
+		cc.parser.AddGroup(opt.short, opt.long, opt.generator())
+	}
+
+	// For each (root) command group in this context.
 	for _, group := range cc.cmd.groups {
 
 		// For each command in the group, yield a flags.Command

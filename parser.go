@@ -44,3 +44,22 @@ func (c *Console) CommandParser() (parser *flags.Parser) {
 func (c *Console) Find(command string) (cmd *flags.Command) {
 	return c.current.parser.Find(command)
 }
+
+// optionGroup - Used to generate global option structs, bound to commands/parsers.
+type optionGroup struct {
+	short     string
+	long      string
+	generator func() interface{}
+}
+
+// AddGlobalOptions - Global options are available in all child commands of this command
+// (or all commands of the parser). The data interface is a struct declared the same way
+// as you'd declare a go-flags parsable option struct.
+func (c *Command) AddGlobalOptions(shortDescription, longDescription string, data func() interface{}) {
+	optGroup := &optionGroup{
+		short:     shortDescription,
+		long:      longDescription,
+		generator: data,
+	}
+	c.opts = append(c.opts, optGroup)
+}
