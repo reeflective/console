@@ -32,6 +32,36 @@ func (c *Console) RefreshPromptLog(log string) {
 	}
 }
 
+// RefreshPromptCustom - Refresh the console prompt with custom values. This works differently from
+// RefreshPromptLog, in that it does mandatorily erases the current (full) prompt if offset to one.
+// However, like RefreshPromptLog, it will not reprint the prompt if the console is currently executing a command.
+//
+// @log         => An optional log message to print before refreshing the prompt. Does nothing if nil
+// @prompt      => If not nil (""), will use this prompt instead of the currently set prompt.
+// @offset      => Used to set the number of lines to go upward, before reprinting. Set to 0 if not used.
+func (c *Console) RefreshPromptCustom(log string, prompt string, offset int) {
+	if c.isExecuting {
+		fmt.Print(log)
+	} else {
+		fmt.Print(log)
+		c.Shell.RefreshPromptCustom(prompt, offset, false)
+	}
+}
+
+// RefreshPromptInPlace - Refreshes the prompt in the very same place he is.
+// Like other Refresh functions, it will not reprint the prompt if the console
+// is currently executing a command.
+// @log         => An optional log message to print before refreshing the prompt.
+// @prompt      => If not nil (""), will use this prompt instead of the currently set prompt.
+func (c *Console) RefreshPromptInPlace(log string, prompt string) {
+	if c.isExecuting {
+		fmt.Print(log)
+	} else {
+		fmt.Print(log)
+		c.Shell.RefreshPromptInPlace(prompt)
+	}
+}
+
 // Render - The core prompt computes all necessary values, forges a prompt string
 // and returns it for being printed by the shell.
 func (p *Prompt) Render() (prompt string) {
