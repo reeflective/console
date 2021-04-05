@@ -42,6 +42,25 @@ func (c *Context) initParser(opts flags.Options) {
 	c.parser = flags.NewNamedParser(c.Name, opts)
 }
 
+// Commands - Returns the list of child gonsole.Commands for this command. You can set
+// anything to them, these changes will persist for the lifetime of the application,
+// or until you deregister this command or one of its childs.
+func (c *Context) Commands() (cmds []*Command) {
+	return c.cmd.Commands()
+}
+
+// CommandGroups - Returns the command's child commands, structured in their respective groups.
+// Commands having been assigned no specific group are the group named "".
+func (c *Context) CommandGroups() (grps []*commandGroup) {
+	return c.cmd.groups
+}
+
+// OptionGroups - Returns all groups of options that are bound to this command. These
+// groups (and their options) are available for use even in the command's child commands.
+func (c *Context) OptionGroups() (grps []*optionGroup) {
+	return c.cmd.opts
+}
+
 // AddGlobalOptions - Add global options for this context command parser. Will appear in all commands.
 func (c *Context) AddGlobalOptions(shortDescription, longDescription string, data func() interface{}) {
 	c.cmd.AddGlobalOptions(shortDescription, longDescription, data)
