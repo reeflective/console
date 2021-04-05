@@ -36,7 +36,7 @@ func (c *Console) bindCommandGroup(parent commandParser, grp *commandGroup) {
 
 		// Bind any subcommands of this cmd
 		for _, subgroup := range cmd.groups {
-			c.bindCommandGroup(parent, subgroup)
+			c.bindCommandGroup(cmd.cmd, subgroup)
 		}
 	}
 }
