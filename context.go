@@ -12,11 +12,11 @@ type Context struct {
 	Name   string  // This name is just used for retrieving usage
 	Prompt *Prompt // A dedicated prompt with its own callbacks and colors
 
-	// Each context can have two specific history sources
-	historyCtrlRName string
-	historyCtrlR     readline.History
-	historyCtrlEName string
-	historyCtrlE     readline.History
+	// UnknownCommandHandler - The user can specify a function that will
+	// be executed if the error raised by the application parser is a
+	// ErrUnknownCommand error. This might be used for executing the
+	// input line directly via a system shell, or any os.Exec mean...
+	UnknownCommandHandler func(args []string) error
 
 	// Each context has its own command parser, which executes dispatched commands
 	parser *flags.Parser
@@ -25,7 +25,11 @@ type Context struct {
 	// can more explicitly register commands to a given context.
 	cmd *Command
 
-	UnknownCommandHandler func(args []string) error
+	// Each context can have two specific history sources
+	historyCtrlRName string
+	historyCtrlR     readline.History
+	historyCtrlEName string
+	historyCtrlE     readline.History
 }
 
 func newContext() *Context {

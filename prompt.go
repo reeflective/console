@@ -1,6 +1,7 @@
 package gonsole
 
 import (
+	"fmt"
 	"strings"
 
 	ansi "github.com/acarl005/stripansi"
@@ -17,6 +18,18 @@ type Prompt struct {
 	Colors    map[string]string        // Users can also register colors
 
 	Newline bool // If true, leaves a new line before showing command output.
+}
+
+// RefreshPromptLog - A simple function to print a string message (a log, or more broadly,
+// an asynchronous event) without bothering the user, and by "pushing" the prompt below the message.
+// If this function is called while a command is running, the console will simply print the log
+// below the current line, and will not print the prompt. In any other case this function will work normally.
+func (c *Console) RefreshPromptLog(log string) {
+	if c.isExecuting {
+		fmt.Print(log)
+	} else {
+		c.Shell.RefreshPromptLog(log)
+	}
 }
 
 // Render - The core prompt computes all necessary values, forges a prompt string
