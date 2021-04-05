@@ -25,11 +25,20 @@ func (c *Console) execute(args []string) {
 	// Process the errors raised by the parser.
 	// A few of them are not really errors, and trigger some stuff.
 	if err != nil {
-		if err == nil {
-			return
-		}
+
+		// Cast the error raised by the parser.
 		parserErr, ok := err.(*flags.Error)
 		if !ok {
+			return
+		}
+
+		// If the command was not recognized and the current
+		// context has a user-specified unknown command handler, execute it.
+		if parserErr.Type == flags.ErrUnknownCommand {
+			err = c.current.UnknownCommandHandler(args)
+			if err != nil {
+				fmt.Println(err.Error())
+			}
 			return
 		}
 

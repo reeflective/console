@@ -24,6 +24,8 @@ type Context struct {
 	// Command - The context embeds a command so that users
 	// can more explicitly register commands to a given context.
 	cmd *Command
+
+	UnknownCommandHandler func(args []string) error
 }
 
 func newContext() *Context {
