@@ -62,6 +62,7 @@ func NewConsole() (c *Console) {
 
 	// Setup the readline instance, and input mode
 	c.Shell = readline.NewInstance()
+	c.Shell.InputMode = readline.Vim
 	c.Shell.Multiline = true
 	c.Shell.ShowVimMode = true
 	c.Shell.VimModeColorize = true

@@ -105,6 +105,44 @@ func (c *Command) AddCommand(name, short, long, group, filter string, data func(
 	return command
 }
 
+// GoFlagsCommands - Returns the list of all GO-FLAGS subcommands for this command.
+// This means that these commands in the list are temporary ones, they will be respawned
+// at the next execution readline loop. Do NOT bind/assign anything to them, it will NOT persist.
+func (c *Command) GoFlagsCommands() (cmds []*flags.Command) {
+	for _, group := range c.groups {
+		for _, cmd := range group.cmds {
+			if cmd.cmd != nil {
+				cmds = append(cmds, cmd.cmd)
+			}
+		}
+	}
+	return
+}
+
+// Commands - Returns the list of child gonsole.Commands for this command. You can set
+// anything to them, these changes will persist for the lifetime of the application,
+// or until you deregister this command or one of its childs.
+func (c *Command) Commands() (cmds []*Command) {
+	for _, group := range c.groups {
+		for _, cmd := range group.cmds {
+			cmds = append(cmds, cmd)
+		}
+	}
+	return
+}
+
+// CommandGroups - Returns the command's child commands, structured in their respective groups.
+// Commands having been assigned no specific group are the group named "".
+func (c *Command) CommandGroups() (grps []*commandGroup) {
+	return c.groups
+}
+
+// OptionGroups - Returns all groups of options that are bound to this command. These
+// groups (and their options) are available for use even in the command's child commands.
+func (c *Command) OptionGroups() (grps []*optionGroup) {
+	return c.opts
+}
+
 // Add - Same as AddCommand("", "", ...), but passing a populated Command struct.
 func (c *Command) Add(cmd *Command) *Command {
 	return c.AddCommand(cmd.Name, cmd.ShortDescription, cmd.LongDescription, cmd.Group, cmd.Filters[0], cmd.Data)

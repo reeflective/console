@@ -1,5 +1,5 @@
 
-Gonsole - Integrated Console Application library, 
+Gonsole - Integrated Console Application library
 =========
 
 This package rests on a [readline](https://github.com/maxlandon/readline) console library, (giving advanced completion, hint, input and history system), 
