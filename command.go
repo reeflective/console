@@ -23,6 +23,9 @@ type Command struct {
 	// will hide commands from now on, until console.ShowCommands("windows") is called.
 	Filters []string
 
+	// SubcommandsOptional - If this is false, the help usage will be printed for this command.
+	SubcommandsOptional bool
+
 	// Data - A function that must yield a pointer to a struct (which is, and will become a command instance)
 	// Compatible interfaces must match https://github.com/jessevdk/go-flags.git requirements. Please refer
 	// to either the go-flags documentation, or this library's one.
@@ -81,6 +84,9 @@ func (c *Command) AddCommand(name, short, long, group, filter string, data func(
 		}
 		if cmd == nil {
 			return nil
+		}
+		if c.SubcommandsOptional {
+			cmd.SubcommandsOptional = true
 		}
 		return cmd
 	}
