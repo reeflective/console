@@ -99,6 +99,8 @@ func (c *Command) AddCommand(name, short, long, group, filter string, data func(
 		Group:            group,
 		Filters:          []string{filter},
 		generator:        spawner,
+		argComps:         map[string]CompletionFunc{},
+		optComps:         map[string]CompletionFunc{},
 	}
 	grp.cmds = append(grp.cmds, command)
 
