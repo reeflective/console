@@ -92,18 +92,6 @@ func CompleteLocalPath(last string) (string, *readline.CompletionGroup) {
 	return string(lastPath), completion
 }
 
-func addSpaceTokens(in string) (path string) {
-	items := strings.Split(in, " ")
-	for i := range items {
-		if len(items) == i+1 { // If last one, no char, add and return
-			path += items[i]
-			return
-		}
-		path += items[i] + "\\ " // By default add space char and roll
-	}
-	return
-}
-
 // CompleteLocalPath - Provides completion for the client console filesystem.
 // This yields all files and directories, including dot hidden ones.
 func CompleteLocalPathAndFiles(last string) (string, *readline.CompletionGroup) {
