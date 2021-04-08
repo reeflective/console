@@ -366,6 +366,12 @@ func (rl *Instance) Readline() (string, error) {
 		default:
 			rl.resetVirtualComp()
 
+			// If we were waiting for completion confirm, abort
+			if rl.compConfirmWait {
+				rl.compConfirmWait = false
+				rl.renderHelpers()
+			}
+
 			// Not sure that CompletionFind is useful, nor one of the other two
 			if rl.modeAutoFind || rl.modeTabFind {
 				rl.updateTabFind(r[:i])
@@ -512,7 +518,7 @@ func (rl *Instance) escapeSeq(r []rune) {
 		if rl.modeTabFind {
 			rl.backspaceTabFind()
 		} else {
-			rl.delete()
+			rl.deleteBackspace()
 		}
 	case seqHome, seqHomeSc:
 		if rl.modeTabCompletion {
@@ -579,13 +585,13 @@ func (rl *Instance) editorInput(r []rune) {
 
 	case vimReplaceOnce:
 		rl.modeViMode = vimKeys
-		rl.delete()
+		rl.deleteX()
 		rl.insert([]rune{r[0]})
 		rl.refreshVimStatus()
 
 	case vimReplaceMany:
 		for _, char := range r {
-			rl.delete()
+			rl.deleteX()
 			rl.insert([]rune{char})
 		}
 		rl.refreshVimStatus()
