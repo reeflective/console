@@ -6,5 +6,5 @@ require (
 	github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d
 	github.com/evilsocket/islazy v1.10.6
 	github.com/jessevdk/go-flags v1.5.0
-	github.com/maxlandon/readline v0.1.0-beta.0.20210408152347-81b2e82137db
+	github.com/maxlandon/readline v0.1.0-beta.0.20210409144441-3dc77755880c
 )

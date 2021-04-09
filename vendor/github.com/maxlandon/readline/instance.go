@@ -155,9 +155,8 @@ type Instance struct {
 	viIteration      string
 	viUndoHistory    []undoItem
 	viUndoSkipAppend bool
-	viYankBuffer     string
-	yankBuffer       []rune
 	viIsYanking      bool
+	registers        *registers // All memory text registers, can be consulted with Ctrl"
 
 	//
 	// Other -------------------------------------------------------------------------------------
@@ -206,6 +205,9 @@ func NewInstance() *Instance {
 	rl.HintFormatting = seqFgBlue
 	rl.evtKeyPress = make(map[string]func(string, []rune, int) *EventReturn)
 	rl.TempDirectory = os.TempDir()
+
+	// Registers
+	rl.initRegisters()
 
 	return rl
 }
