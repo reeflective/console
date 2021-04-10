@@ -8,7 +8,7 @@ github.com/evilsocket/islazy/tui
 # github.com/jessevdk/go-flags v1.5.0
 ## explicit
 github.com/jessevdk/go-flags
-# github.com/maxlandon/readline v0.1.0-beta.0.20210410204130-ee26ff9dc3d9
+# github.com/maxlandon/readline v0.1.0-beta.0.20210410214614-fd6528ce17ad
 ## explicit
 github.com/maxlandon/readline
 # github.com/olekukonko/ts v0.0.0-20171002115256-78ecb04241c0
