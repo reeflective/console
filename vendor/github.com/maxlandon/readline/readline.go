@@ -362,6 +362,8 @@ func (rl *Instance) Readline() (string, error) {
 				}
 			}
 
+			// Once helpers of all sorts are cleared, we can process
+			// the change of input modes, etc.
 			rl.escapeSeq(r[:i])
 
 		default:
@@ -591,6 +593,7 @@ func (rl *Instance) editorInput(r []rune) {
 
 	case vimDelete:
 		rl.vimDelete(r)
+		// rl.vimDelete(r[0])
 		rl.refreshVimStatus()
 
 	case vimReplaceOnce:
