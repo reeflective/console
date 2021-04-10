@@ -8,3 +8,5 @@ require (
 	github.com/jessevdk/go-flags v1.5.0
 	github.com/maxlandon/readline v0.1.0-beta.0.20210410214614-fd6528ce17ad
 )
+
+replace github.com/maxlandon/readline => /home/user/projects/readline
