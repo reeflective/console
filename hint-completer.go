@@ -43,7 +43,9 @@ func (c *CommandCompleter) HintCompleter(line []rune, pos int) (hint []rune) {
 
 		// If options are asked for root command, return commpletions.
 		if len(command.Groups()) > 0 {
-			for _, grp := range command.Groups() {
+			var groups = command.Groups()
+			groups = append(groups, c.console.CommandParser().Groups()...)
+			for _, grp := range groups {
 				if opt, yes := optionArgRequired(args, last, grp); yes {
 					hint = OptionArgumentHint(args, last, opt)
 				}
@@ -62,7 +64,7 @@ func (c *CommandCompleter) HintCompleter(line []rune, pos int) (hint []rune) {
 
 		// Handle subcommand if found
 		if sub, ok := subCommandFound(lastWord, args, command); ok {
-			return HandleSubcommandHints(args, last, sub)
+			return c.HandleSubcommandHints(args, last, command, sub)
 		}
 
 	}
@@ -81,7 +83,7 @@ func CommandHint(command *flags.Command) (hint []rune) {
 }
 
 // HandleSubcommandHints - Handles hints for a subcommand and its arguments, options, etc.
-func HandleSubcommandHints(args []string, last []rune, command *flags.Command) (hint []rune) {
+func (c *CommandCompleter) HandleSubcommandHints(args []string, last []rune, rootCommand, command *flags.Command) (hint []rune) {
 
 	// If command has args, hint for args
 	if arg, yes := commandArgumentRequired(string(last), args, command); yes {
@@ -96,9 +98,14 @@ func HandleSubcommandHints(args []string, last []rune, command *flags.Command) (
 
 	// If the last word in input is an option --name, yield argument hint if needed
 	if len(command.Groups()) > 0 {
-		for _, grp := range command.Groups() {
-			if opt, yes := optionArgRequired(args, last, grp); yes {
-				hint = OptionArgumentHint(args, last, opt)
+		if len(command.Groups()) > 0 {
+			var groups = command.Groups()
+			groups = append(groups, c.console.CommandParser().Groups()...)
+			groups = append(groups, rootCommand.Groups()...)
+			for _, grp := range groups {
+				if opt, yes := optionArgRequired(args, last, grp); yes {
+					hint = OptionArgumentHint(args, last, opt)
+				}
 			}
 		}
 	}
