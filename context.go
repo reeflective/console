@@ -28,8 +28,8 @@ type Context struct {
 	// Each context can have two specific history sources
 	historyCtrlRName string
 	historyCtrlR     readline.History
-	historyCtrlEName string
-	historyCtrlE     readline.History
+	historyAltRName  string
+	historyAltR      readline.History
 }
 
 func newContext() *Context {
@@ -83,10 +83,10 @@ func (c *Context) SetHistoryCtrlR(name string, hist readline.History) {
 	c.historyCtrlR = hist
 }
 
-// SetHistoryCtrlE - Set the history source triggered with Ctrl-E
-func (c *Context) SetHistoryCtrlE(name string, hist readline.History) {
-	c.historyCtrlEName = name
-	c.historyCtrlE = hist
+// SetHistoryAltR - Set the history source triggered with Alt-r
+func (c *Context) SetHistoryAltR(name string, hist readline.History) {
+	c.historyAltRName = name
+	c.historyAltR = hist
 }
 
 // NewContext - Create a new command context, to which the user

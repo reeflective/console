@@ -16,7 +16,7 @@ func (c *Console) Run() (err error) {
 
 		// Set the shell history sources with context ones
 		c.Shell.SetHistoryCtrlR(c.current.historyCtrlRName, c.current.historyCtrlR)
-		c.Shell.SetHistoryCtrlE(c.current.historyCtrlEName, c.current.historyCtrlE)
+		c.Shell.SetHistoryAltR(c.current.historyAltRName, c.current.historyAltR)
 
 		// Instantiate and bind all commands for the current
 		// context, respecting any filter used to hide some of them.
