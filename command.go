@@ -40,14 +40,17 @@ type Command struct {
 	groups []*commandGroup
 
 	// completions functions, used to match either arguments of this command, or its options.
-	argComps map[string]CompletionFunc
-	optComps map[string]CompletionFunc
+	argComps        map[string]CompletionFunc
+	argCompsDynamic map[string]CompletionFuncDynamic
+
+	optComps        map[string]CompletionFunc
+	optCompsDynamic map[string]CompletionFuncDynamic
 }
 
 func newCommand() *Command {
 	c := &Command{
-		argComps: map[string]CompletionFunc{},
-		optComps: map[string]CompletionFunc{},
+		argCompsDynamic: map[string]CompletionFuncDynamic{},
+		optCompsDynamic: map[string]CompletionFuncDynamic{},
 	}
 	return c
 }
@@ -99,8 +102,8 @@ func (c *Command) AddCommand(name, short, long, group string, filters []string, 
 		Group:            group,
 		Filters:          filters,
 		generator:        spawner,
-		argComps:         map[string]CompletionFunc{},
-		optComps:         map[string]CompletionFunc{},
+		argCompsDynamic:  map[string]CompletionFuncDynamic{},
+		optCompsDynamic:  map[string]CompletionFuncDynamic{},
 	}
 	grp.cmds = append(grp.cmds, command)
 

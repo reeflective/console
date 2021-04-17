@@ -31,11 +31,16 @@ func (c *CommandCompleter) completeOptionArguments(gcmd *Command, cmd *flags.Com
 		return
 	}
 
-	// Check if the option name has a user-defined completion generator
+	// Simple completers (no prefix)
 	for optName, completer := range gcmd.optComps {
 		if strings.Contains(opt.Field().Name, optName) {
+			completions = append(completions, completer()...)
+		}
+	}
 
-			// Call this generator and add to the completions
+	// Dynamic prefix completers
+	for optName, completer := range gcmd.optCompsDynamic {
+		if strings.Contains(opt.Field().Name, optName) {
 			pref, comps := completer(lastWord)
 			prefix = pref
 			completions = append(completions, comps...)

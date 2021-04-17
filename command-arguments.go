@@ -17,11 +17,16 @@ func (c *CommandCompleter) completeCommandArguments(gcmd *Command, cmd *flags.Co
 	prefix = lastWord
 	found := argumentByName(cmd, arg)
 
-	// Check if the argument name has a user-defined completion generator
+	// Simple completers (no prefix)
 	for argName, completer := range gcmd.argComps {
 		if strings.Contains(found.Name, argName) {
+			completions = append(completions, completer()...)
+		}
+	}
 
-			// Call this generator and add to the completions
+	// Dynamic prefix completers
+	for argName, completer := range gcmd.argCompsDynamic {
+		if strings.Contains(found.Name, argName) {
 			pref, comps := completer(lastWord)
 			prefix = pref
 			completions = append(completions, comps...)
