@@ -32,7 +32,18 @@ func (c *Console) bindCommandGroup(parent commandParser, grp *commandGroup) {
 
 	// For each command in the group, yield a flags.Command
 	for _, cmd := range grp.cmds {
-		cmd.cmd = cmd.generator(parent)
+	nextCommand:
+		for _, cmdFilter := range cmd.Filters {
+			// Do not generate the command if one of its
+			// filters is active.
+			for _, filter := range c.filters {
+				if filter == cmdFilter {
+					continue nextCommand
+				}
+			}
+			// Else, generate
+			cmd.cmd = cmd.generator(parent, cmd.SubcommandsOptional)
+		}
 
 		// Bind any subcommands of this cmd
 		for _, subgroup := range cmd.groups {

@@ -35,10 +35,13 @@ func (c *Console) execute(args []string) {
 		// If the command was not recognized and the current
 		// context has a user-specified unknown command handler, execute it.
 		if parserErr.Type == flags.ErrUnknownCommand {
-			err = c.current.UnknownCommandHandler(args)
-			if err != nil {
-				fmt.Println(err.Error())
+			if c.current.UnknownCommandHandler != nil {
+				err = c.current.UnknownCommandHandler(args)
+				if err != nil {
+					fmt.Println(err.Error())
+				}
 			}
+			fmt.Println(commandError + parserErr.Error())
 			return
 		}
 

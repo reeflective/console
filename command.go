@@ -30,7 +30,7 @@ type Command struct {
 	// Compatible interfaces must match https://github.com/jessevdk/go-flags.git requirements. Please refer
 	// to either the go-flags documentation, or this library's one.
 	Data      func() interface{}
-	generator func(cParser commandParser) *flags.Command
+	generator func(cParser commandParser, subOptional bool) *flags.Command
 	cmd       *flags.Command
 
 	// global options generator. These options are available even when subcommands are being used.
@@ -56,7 +56,7 @@ func newCommand() *Command {
 // calling this function directly like gonsole.Console.AddCommand(), be aware that this will bind the command to the
 // default context named "". If you don't intend to use multiple contexts this is fine, but if you do, you should
 // create and name each of your contexts, and add commands to them, like Console.NewContext("name").AddCommand("", "", ...)
-func (c *Command) AddCommand(name, short, long, group, filter string, data func() interface{}) *Command {
+func (c *Command) AddCommand(name, short, long, group string, filters []string, data func() interface{}) *Command {
 
 	if data == nil {
 		return nil
@@ -77,7 +77,7 @@ func (c *Command) AddCommand(name, short, long, group, filter string, data func(
 
 	// Store the interface data in a command spawing funtion, which acts as an instantiator.
 	// We use the command's go-flags struct, as opposed to the console root parser.
-	var spawner = func(cmdParser commandParser) *flags.Command {
+	var spawner = func(cmdParser commandParser, subOptional bool) *flags.Command {
 		cmd, err := cmdParser.AddCommand(name, short, long, data())
 		if err != nil {
 			fmt.Printf("%s Command bind error:%s %s\n", readline.RED, readline.RESET, err.Error())
@@ -85,7 +85,7 @@ func (c *Command) AddCommand(name, short, long, group, filter string, data func(
 		if cmd == nil {
 			return nil
 		}
-		if c.SubcommandsOptional {
+		if subOptional {
 			cmd.SubcommandsOptional = true
 		}
 		return cmd
@@ -97,7 +97,7 @@ func (c *Command) AddCommand(name, short, long, group, filter string, data func(
 		ShortDescription: short,
 		LongDescription:  long,
 		Group:            group,
-		Filters:          []string{filter},
+		Filters:          filters,
 		generator:        spawner,
 		argComps:         map[string]CompletionFunc{},
 		optComps:         map[string]CompletionFunc{},
@@ -147,18 +147,18 @@ func (c *Command) OptionGroups() (grps []*optionGroup) {
 
 // Add - Same as AddCommand("", "", ...), but passing a populated Command struct.
 func (c *Command) Add(cmd *Command) *Command {
-	return c.AddCommand(cmd.Name, cmd.ShortDescription, cmd.LongDescription, cmd.Group, cmd.Filters[0], cmd.Data)
+	return c.AddCommand(cmd.Name, cmd.ShortDescription, cmd.LongDescription, cmd.Group, cmd.Filters, cmd.Data)
 }
 
 // AddCommand - Add a command to the default console context, named "". Please check gonsole.CurrentContext().AddCommand(),
 // if you intend to use multiple contexts, for more detailed explanations
-func (c *Console) AddCommand(name, short, long, group, filter string, data func() interface{}) *Command {
-	return c.current.cmd.AddCommand(name, short, long, group, filter, data)
+func (c *Console) AddCommand(name, short, long, group string, filters []string, data func() interface{}) *Command {
+	return c.current.cmd.AddCommand(name, short, long, group, filters, data)
 }
 
 // Add - Same as AddCommand("", "", ...), but passing a populated Command struct.
 func (c *Console) Add(cmd *Command) *Command {
-	return c.current.AddCommand(cmd.Name, cmd.ShortDescription, cmd.LongDescription, cmd.Group, cmd.Filters[0], cmd.Data)
+	return c.current.AddCommand(cmd.Name, cmd.ShortDescription, cmd.LongDescription, cmd.Group, cmd.Filters, cmd.Data)
 }
 
 // HideCommands - Commands, in addition to their contexts, can be shown/hidden based

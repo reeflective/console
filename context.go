@@ -73,8 +73,8 @@ func (c *Context) AddGlobalOptions(shortDescription, longDescription string, dat
 }
 
 // AddCommand - Add a command to this context. This command will be available when this context is active.
-func (c *Context) AddCommand(name, short, long, group, filter string, data func() interface{}) *Command {
-	return c.cmd.AddCommand(name, short, long, group, filter, data)
+func (c *Context) AddCommand(name, short, long, group string, filters []string, data func() interface{}) *Command {
+	return c.cmd.AddCommand(name, short, long, group, filters, data)
 }
 
 // SetHistoryCtrlR - Set the history source triggered with Ctrl-R
