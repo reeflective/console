@@ -34,7 +34,24 @@ func (c *CommandCompleter) completeOptionArguments(gcmd *Command, cmd *flags.Com
 	// Simple completers (no prefix)
 	for optName, completer := range gcmd.optComps {
 		if strings.Contains(opt.Field().Name, optName) {
-			completions = append(completions, completer()...)
+			comps := completer()
+
+			for _, grp := range comps {
+				var suggs []string
+				var descs = map[string]string{}
+
+				for _, sugg := range grp.Suggestions {
+					if strings.HasPrefix(sugg, lastWord) {
+						suggs = append(suggs, sugg)
+						if desc, found := grp.Descriptions[sugg]; found {
+							descs[sugg] = desc
+						}
+					}
+				}
+				grp.Suggestions = suggs
+				grp.Descriptions = descs
+			}
+			completions = append(completions, comps...)
 		}
 	}
 

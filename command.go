@@ -49,7 +49,9 @@ type Command struct {
 
 func newCommand() *Command {
 	c := &Command{
+		argComps:        map[string]CompletionFunc{},
 		argCompsDynamic: map[string]CompletionFuncDynamic{},
+		optComps:        map[string]CompletionFunc{},
 		optCompsDynamic: map[string]CompletionFuncDynamic{},
 	}
 	return c
@@ -102,7 +104,9 @@ func (c *Command) AddCommand(name, short, long, group string, filters []string, 
 		Group:            group,
 		Filters:          filters,
 		generator:        spawner,
+		argComps:         map[string]CompletionFunc{},
 		argCompsDynamic:  map[string]CompletionFuncDynamic{},
+		optComps:         map[string]CompletionFunc{},
 		optCompsDynamic:  map[string]CompletionFuncDynamic{},
 	}
 	grp.cmds = append(grp.cmds, command)

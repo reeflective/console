@@ -20,7 +20,25 @@ func (c *CommandCompleter) completeCommandArguments(gcmd *Command, cmd *flags.Co
 	// Simple completers (no prefix)
 	for argName, completer := range gcmd.argComps {
 		if strings.Contains(found.Name, argName) {
-			completions = append(completions, completer()...)
+
+			comps := completer()
+
+			for _, grp := range comps {
+				var suggs []string
+				var descs = map[string]string{}
+
+				for _, sugg := range grp.Suggestions {
+					if strings.HasPrefix(sugg, lastWord) {
+						suggs = append(suggs, sugg)
+						if desc, found := grp.Descriptions[sugg]; found {
+							descs[sugg] = desc
+						}
+					}
+				}
+				grp.Suggestions = suggs
+				grp.Descriptions = descs
+			}
+			completions = append(completions, comps...)
 		}
 	}
 
