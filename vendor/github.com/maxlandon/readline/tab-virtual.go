@@ -102,7 +102,7 @@ func (rl *Instance) updateVirtualComp() {
 // resetVirtualComp - This function is called before most of our readline key handlers,
 // and makes sure that the current completion (virtually inserted) is either inserted or dropped,
 // and that all related parameters are reinitialized.
-func (rl *Instance) resetVirtualComp() {
+func (rl *Instance) resetVirtualComp(drop bool) {
 
 	// If we don't have a current virtual completion, there's nothing to do.
 	// IMPORTANT: this MUST be first, to avoid nil problems with empty comps.
@@ -125,6 +125,14 @@ func (rl *Instance) resetVirtualComp() {
 
 	// We will only insert the net difference between prefix and completion.
 	prefix := len(rl.tcPrefix)
+
+	// If we are asked to drop the completion, move it away from the line and return.
+	if drop {
+		rl.pos -= len([]rune(completion[prefix:]))
+		rl.lineComp = rl.line
+		rl.clearVirtualComp()
+		return
+	}
 
 	// Insert the current candidate. A bit of processing happens:
 	// - We trim the trailing slash if needed
@@ -200,7 +208,6 @@ func (rl *Instance) viDeleteByAdjustVirtual(adjust int) {
 	}
 
 	if backOne {
-		// moveCursorBackwards(1)
 		rl.pos--
 	}
 }
@@ -235,15 +242,11 @@ func (rl *Instance) deleteVirtual() {
 		return
 	case rl.pos == 0:
 		rl.lineComp = rl.lineComp[1:]
-		// moveCursorBackwards(1)
 	case rl.pos > len(rl.lineComp):
-		// rl.backspace()
 	case rl.pos == len(rl.lineComp):
 		rl.lineComp = rl.lineComp[:rl.pos]
-		// moveCursorBackwards(1)
 	default:
 		rl.lineComp = append(rl.lineComp[:rl.pos], rl.lineComp[rl.pos+1:]...)
-		// moveCursorBackwards(1)
 	}
 }
 

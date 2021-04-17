@@ -37,12 +37,11 @@ var (
 	// registerFreeKeys - Some Vim keys don't act on/ aren't affected by registers,
 	// and using these keys will automatically cancel any active register.
 	// NOTE: Don't forget to update if you add Vim bindings !!
-	registerFreeKeys = []rune{'a', 'A', 'h', 'i', 'I', 'j', 'k', 'l', 'r', 'R', 'u', 'v'}
+	registerFreeKeys = []rune{'a', 'A', 'h', 'i', 'I', 'j', 'k', 'l', 'r', 'R', 'u', 'v', '$', '%', '[', ']'}
+
+	// validRegisterKeys - All valid register IDs (keys) for read/write Vim registers
+	validRegisterKeys = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/-\""
 )
-
-func (rl *Instance) viRegisterActions(r rune) {
-
-}
 
 // vi - Apply a key to a Vi action. Note that as in the rest of the code, all cursor movements
 // have been moved away, and only the rl.pos is adjusted: when echoing the input line, the shell
@@ -50,11 +49,10 @@ func (rl *Instance) viRegisterActions(r rune) {
 func (rl *Instance) vi(r rune) {
 
 	// Check if we are in register mode. If yes, and for some characters,
-	// We select the register and exit this func immediately.
+	// we select the register and exit this func immediately.
 	if rl.registers.registerSelectWait {
-		validRegs := []string{"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/-\""}
-		for _, char := range validRegs {
-			if string(r) == char {
+		for _, char := range validRegisterKeys {
+			if r == char {
 				rl.registers.setActiveRegister(r)
 				return
 			}
@@ -93,7 +91,7 @@ func (rl *Instance) vi(r rune) {
 	case 'b':
 		if rl.viIsYanking {
 			vii := rl.getViIterations()
-			rl.saveToRegister(rl.viJumpB(tokeniseLine), vii)
+			rl.saveToRegisterTokenize(tokeniseLine, rl.viJumpB, vii)
 			rl.viIsYanking = false
 			return
 		}
@@ -106,7 +104,7 @@ func (rl *Instance) vi(r rune) {
 	case 'B':
 		if rl.viIsYanking {
 			vii := rl.getViIterations()
-			rl.saveToRegister(rl.viJumpB(tokeniseSplitSpaces), vii)
+			rl.saveToRegisterTokenize(tokeniseSplitSpaces, rl.viJumpB, vii)
 			rl.viIsYanking = false
 			return
 		}
@@ -121,8 +119,9 @@ func (rl *Instance) vi(r rune) {
 		rl.viUndoSkipAppend = true
 
 	case 'D':
-		rl.saveBufToRegister(rl.line[:rl.pos])
+		rl.saveBufToRegister(rl.line[rl.pos-1:])
 		rl.line = rl.line[:rl.pos]
+		// Only go back if there is an input
 		if len(rl.line) > 0 {
 			rl.pos--
 		}
@@ -133,7 +132,7 @@ func (rl *Instance) vi(r rune) {
 	case 'e':
 		if rl.viIsYanking {
 			vii := rl.getViIterations()
-			rl.saveToRegister(rl.viJumpE(tokeniseLine), vii)
+			rl.saveToRegisterTokenize(tokeniseLine, rl.viJumpE, vii)
 			rl.viIsYanking = false
 			return
 		}
@@ -147,7 +146,7 @@ func (rl *Instance) vi(r rune) {
 	case 'E':
 		if rl.viIsYanking {
 			vii := rl.getViIterations()
-			rl.saveToRegister(rl.viJumpE(tokeniseSplitSpaces), vii)
+			rl.saveToRegisterTokenize(tokeniseSplitSpaces, rl.viJumpE, vii)
 			rl.viIsYanking = false
 			return
 		}
@@ -168,6 +167,7 @@ func (rl *Instance) vi(r rune) {
 		rl.modeViMode = vimInsert
 		rl.viIteration = ""
 		rl.viUndoSkipAppend = true
+		rl.registers.resetRegister()
 
 	case 'I':
 		rl.modeViMode = vimInsert
@@ -235,14 +235,24 @@ func (rl *Instance) vi(r rune) {
 			multiline = rl.GetMultiLine(rl.line)
 		}
 
+		// Keep the previous cursor position
+		prev := rl.pos
+
 		new, err := rl.launchEditor(multiline)
 		if err != nil || len(new) == 0 || string(new) == string(multiline) {
 			fmt.Println(err)
 			rl.viUndoSkipAppend = true
 			return
 		}
+
+		// Clean the shell and put the new buffer, with adjusted pos if needed.
 		rl.clearLine()
 		rl.line = new
+		if prev > len(rl.line) {
+			rl.pos = len(rl.line) - 1
+		} else {
+			rl.pos = prev
+		}
 
 	case 'w':
 		// If we were not yanking
@@ -256,7 +266,7 @@ func (rl *Instance) vi(r rune) {
 		// and return without moving the cursor.
 		if rl.viIsYanking {
 			vii := rl.getViIterations()
-			rl.saveToRegister(rl.viJumpW(tokeniseLine), vii)
+			rl.saveToRegisterTokenize(tokeniseLine, rl.viJumpW, vii)
 			rl.viIsYanking = false
 			return
 		}
@@ -276,7 +286,7 @@ func (rl *Instance) vi(r rune) {
 
 		if rl.viIsYanking {
 			vii := rl.getViIterations()
-			rl.saveToRegister(rl.viJumpW(tokeniseSplitSpaces), vii)
+			rl.saveToRegisterTokenize(tokeniseSplitSpaces, rl.viJumpW, vii)
 			rl.viIsYanking = false
 			return
 		}
@@ -289,7 +299,7 @@ func (rl *Instance) vi(r rune) {
 		vii := rl.getViIterations()
 
 		// We might be on an active register, but not yanking...
-		rl.saveToRegister(vii, 0)
+		rl.saveToRegister(vii)
 
 		// Delete the chars in the line anyway
 		for i := 1; i <= vii; i++ {
@@ -300,6 +310,10 @@ func (rl *Instance) vi(r rune) {
 		}
 
 	case 'y':
+		if rl.viIsYanking {
+			rl.saveBufToRegister(rl.line)
+			rl.viIsYanking = false
+		}
 		rl.viIsYanking = true
 		rl.viUndoSkipAppend = true
 
@@ -309,7 +323,7 @@ func (rl *Instance) vi(r rune) {
 
 	case '[':
 		if rl.viIsYanking {
-			rl.saveToRegister(rl.viJumpPreviousBrace(), 1)
+			rl.saveToRegister(rl.viJumpPreviousBrace())
 			rl.viIsYanking = false
 			return
 		}
@@ -318,7 +332,7 @@ func (rl *Instance) vi(r rune) {
 
 	case ']':
 		if rl.viIsYanking {
-			rl.saveToRegister(rl.viJumpNextBrace(), 1)
+			rl.saveToRegister(rl.viJumpNextBrace())
 			rl.viIsYanking = false
 			return
 		}
@@ -327,7 +341,7 @@ func (rl *Instance) vi(r rune) {
 
 	case '$':
 		if rl.viIsYanking {
-			rl.saveToRegister(len(rl.line)-rl.pos, 1)
+			rl.saveBufToRegister(rl.line[rl.pos:])
 			rl.viIsYanking = false
 			return
 		}
@@ -336,7 +350,7 @@ func (rl *Instance) vi(r rune) {
 
 	case '%':
 		if rl.viIsYanking {
-			rl.saveToRegister(rl.viJumpBracket(), 1)
+			rl.saveToRegister(rl.viJumpBracket())
 			rl.viIsYanking = false
 			return
 		}
@@ -395,7 +409,7 @@ func (rl *Instance) viHintMessage() {
 	rl.renderHelpers()
 }
 
-func (rl *Instance) viJumpB(tokeniser func([]rune, int) ([]string, int, int)) (adjust int) {
+func (rl *Instance) viJumpB(tokeniser tokeniser) (adjust int) {
 	split, index, pos := tokeniser(rl.line, rl.pos)
 	switch {
 	case len(split) == 0:
@@ -410,7 +424,7 @@ func (rl *Instance) viJumpB(tokeniser func([]rune, int) ([]string, int, int)) (a
 	return adjust * -1
 }
 
-func (rl *Instance) viJumpE(tokeniser func([]rune, int) ([]string, int, int)) (adjust int) {
+func (rl *Instance) viJumpE(tokeniser tokeniser) (adjust int) {
 	split, index, pos := tokeniser(rl.line, rl.pos)
 	if len(split) == 0 {
 		return
@@ -433,7 +447,7 @@ func (rl *Instance) viJumpE(tokeniser func([]rune, int) ([]string, int, int)) (a
 	return
 }
 
-func (rl *Instance) viJumpW(tokeniser func([]rune, int) ([]string, int, int)) (adjust int) {
+func (rl *Instance) viJumpW(tokeniser tokeniser) (adjust int) {
 	split, index, pos := tokeniser(rl.line, rl.pos)
 	switch {
 	case len(split) == 0:
@@ -444,7 +458,6 @@ func (rl *Instance) viJumpW(tokeniser func([]rune, int) ([]string, int, int)) (a
 			adjust = len(rl.line) - rl.pos
 		} else {
 			// Otherwise add it
-			// adjust = len(rl.line) - rl.pos
 			adjust = len(rl.line) - 1 - rl.pos
 		}
 	default:

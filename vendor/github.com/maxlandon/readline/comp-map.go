@@ -65,6 +65,7 @@ func (g *CompletionGroup) moveTabMapHighlight(rl *Instance, x, y int) (done bool
 	}
 
 	if g.tcOffset+g.tcPosY > len(g.Suggestions) {
+		g.tcOffset--
 		return true, true
 	}
 	return false, false
@@ -76,7 +77,7 @@ func (g *CompletionGroup) writeMap(rl *Instance) (comp string) {
 	comp += "\n"
 	if g.Name != "" {
 		// Print group title (changes with line returns depending on type)
-		comp += fmt.Sprintf(" %s%s%s %s", BOLD, YELLOW, g.Name, RESET)
+		comp += fmt.Sprintf(" %s%s%s %s\n", BOLD, YELLOW, g.Name, RESET)
 		rl.tcUsedY++
 	}
 

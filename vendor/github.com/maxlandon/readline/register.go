@@ -3,6 +3,8 @@ package readline
 import (
 	"sort"
 	"strconv"
+	"strings"
+	"sync"
 
 	"github.com/evilsocket/islazy/tui"
 )
@@ -16,7 +18,8 @@ type registers struct {
 	ro                 map[string][]rune // read-only registers ( . % : )
 	registerSelectWait bool              // The user wants to use a still unidentified register
 	onRegister         bool              // We have identified the register, and acting on it.
-	currentRegister    rune              // Any of the numbered registers
+	currentRegister    rune              // Any of the read/write registers ("/num/alpha)
+	mutex              *sync.Mutex
 }
 
 func (rl *Instance) initRegisters() {
@@ -24,22 +27,25 @@ func (rl *Instance) initRegisters() {
 		num:   make(map[int][]rune, 10),
 		alpha: make(map[string][]rune, 52),
 		ro:    map[string][]rune{},
+		mutex: &sync.Mutex{},
 	}
 }
 
 // saveToRegister - Passing a function that will move around the line in the desired way, we get
-// the number of Vim iterations adn we save the resulting string to the appropriate buffer.
-func (rl *Instance) saveToRegister(adjust int, vii int) {
-
-	// When exiting this function the currently selected register is dropped,
-	defer rl.registers.resetRegister()
+// the number of Vim iterations and we save the resulting string to the appropriate buffer.
+// It's the same as saveToRegisterTokenize, but without the need to generate tokenized &
+// cursor-pos-actualized versions of the input line.
+func (rl *Instance) saveToRegister(adjust int) {
 
 	// Get the current cursor position and go the length specified.
-	begin := rl.pos
-	for i := 1; i <= vii; i++ {
-		rl.moveCursorByAdjust(adjust)
+	var begin = rl.pos
+	var end = rl.pos
+	end += adjust
+	if end > len(rl.line)-1 {
+		end = len(rl.line)
+	} else if end < 0 {
+		end = 0
 	}
-	end := rl.pos
 
 	var buffer []rune
 	if end < begin {
@@ -47,52 +53,80 @@ func (rl *Instance) saveToRegister(adjust int, vii int) {
 	} else {
 		buffer = rl.line[begin:end]
 	}
-	// Get a copy of the text subset, and immediately replace cursor
-	rl.pos = begin
+
+	// Make an immutable copy of the buffer before saving it
+	buf := string(buffer)
 
 	// Put the buffer in the appropriate registers.
 	// By default, always in the unnamed one first.
-	rl.registers.unnamed = buffer
+	rl.saveBufToRegister([]rune(buf))
+}
 
-	// Or additionally on a specific one.
-	// Check if its a numbered of lettered register, and put it in.
-	if rl.registers.registerSelectWait {
-		num, err := strconv.Atoi(string(rl.registers.currentRegister))
-		if err == nil && num < 10 {
-			rl.registers.writeNumberedRegister(num, buffer)
-		}
-		if err != nil {
-			rl.registers.alpha[string(rl.registers.currentRegister)] = buffer
-		}
+// saveToRegisterTokenize - Passing a function that will move around the line in the desired way, we get
+// the number of Vim iterations and we save the resulting string to the appropriate buffer. Because we
+// need the cursor position to be really moved around between calls to the jumper, we also need the tokeniser.
+func (rl *Instance) saveToRegisterTokenize(tokeniser tokeniser, jumper func(tokeniser) int, vii int) {
+
+	// The register is going to have to heavily manipulate the cursor position.
+	// Remember the original one first, for the end.
+	var beginPos = rl.pos
+
+	// Get the current cursor position and go the length specified.
+	var begin = rl.pos
+	for i := 1; i <= vii; i++ {
+		rl.moveCursorByAdjust(jumper(tokeniser))
+	}
+	var end = rl.pos
+	rl.pos = beginPos
+
+	if end > len(rl.line)-1 {
+		end = len(rl.line)
+	} else if end < 0 {
+		end = 0
 	}
 
-	// Once the buffer is saved, we cannot be acting on the currently
-	// selected register, in case there is one. Instead of letting
-	// the caller take charge of cancelling, we reset the registers now.
-	rl.registers.resetRegister()
+	var buffer []rune
+	if end < begin {
+		buffer = rl.line[end:begin]
+	} else {
+		buffer = rl.line[begin:end]
+	}
+
+	// Make an immutable copy of the buffer before saving it
+	buf := string(buffer)
+
+	// Put the buffer in the appropriate registers.
+	// By default, always in the unnamed one first.
+	rl.saveBufToRegister([]rune(buf))
 }
 
 // saveBufToRegister - Instead of computing the buffer ourselves based on an adjust,
 // let the caller pass directly this buffer, yet relying on the register system to
 // determine which register will store the buffer.
 func (rl *Instance) saveBufToRegister(buffer []rune) {
+
+	// We must make an immutable version of the buffer first.
+	buf := string(buffer)
+
 	// When exiting this function the currently selected register is dropped,
 	defer rl.registers.resetRegister()
 
 	// Put the buffer in the appropriate registers.
 	// By default, always in the unnamed one first.
-	rl.registers.unnamed = buffer
+	rl.registers.unnamed = []rune(buf)
 
-	// Or additionally on a specific one.
+	// If there is an active register, directly give it the buffer.
 	// Check if its a numbered of lettered register, and put it in.
-	if rl.registers.registerSelectWait {
+	if rl.registers.onRegister {
 		num, err := strconv.Atoi(string(rl.registers.currentRegister))
 		if err == nil && num < 10 {
-			rl.registers.writeNumberedRegister(num, buffer)
+			rl.registers.writeNumberedRegister(num, []rune(buf), false)
+		} else if err != nil {
+			rl.registers.writeAlphaRegister([]rune(buf))
 		}
-		if err != nil {
-			rl.registers.alpha[string(rl.registers.currentRegister)] = buffer
-		}
+	} else {
+		// Or, if no active register and if there is room on the numbered ones,
+		rl.registers.writeNumberedRegister(0, []rune(buf), true)
 	}
 }
 
@@ -104,7 +138,7 @@ func (rl *Instance) pasteFromRegister() (buffer []rune) {
 	defer rl.registers.resetRegister()
 
 	// If no actively selected register, return the unnamed buffer
-	if !rl.registers.registerSelectWait {
+	if !rl.registers.registerSelectWait && !rl.registers.onRegister {
 		return rl.registers.unnamed
 	}
 	activeRegister := string(rl.registers.currentRegister)
@@ -138,6 +172,12 @@ func (rl *Instance) pasteFromRegister() (buffer []rune) {
 // if we are about to copy to/from it, so we just set as active, so that when
 // the action to perform on it will be asked, we know which one to use.
 func (r *registers) setActiveRegister(reg rune) {
+	defer func() {
+		// We now have an active, identified register
+		r.registerSelectWait = false
+		r.onRegister = true
+	}()
+
 	// Numbered
 	num, err := strconv.Atoi(string(reg))
 	if err == nil && num < 10 {
@@ -153,46 +193,91 @@ func (r *registers) setActiveRegister(reg rune) {
 
 	// Else, lettered
 	r.currentRegister = reg
-
-	// We now have an active, identified register
-	r.registerSelectWait = false
-	r.onRegister = true
 }
 
+// writeNumberedRegister - Add a buffer to one of the numbered registers
+// Pass a number above 10 to indicate we just push it on the num stack.
+func (r *registers) writeNumberedRegister(idx int, buf []rune, push bool) {
+	// No numbered register above 10
+	if len(r.num) > 10 {
+		return
+	}
+	// No push to the stack if we are already using 9
+	var max int
+	if push {
+		for i := range r.num {
+			if i > max {
+				max = i
+			}
+		}
+		if max < 9 {
+			r.num[max+1] = buf
+		}
+	} else {
+		// Add to the stack with the specified register
+		r.num[idx] = buf
+	}
+}
+
+// writeAlphaRegister - Either adds a buffer to a new/existing letterd register,
+// or appends to this new/existing register if the currently active register is
+// the uppercase letter for this register.
+func (r *registers) writeAlphaRegister(buffer []rune) {
+	appendRegs := "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	appended := false
+	for _, char := range appendRegs {
+		if char == r.currentRegister {
+			real := strings.ToLower(string(r.currentRegister))
+			_, exists := r.alpha[real]
+			if exists {
+				r.alpha[real] = append(r.alpha[real], buffer...)
+			} else {
+				r.alpha[real] = buffer
+			}
+			appended = true
+		}
+	}
+	if !appended {
+		r.alpha[string(r.currentRegister)] = buffer
+	}
+}
+
+// resetRegister - there is no currently active register anymore,
+// nor we are currently setting one as active.
 func (r *registers) resetRegister() {
 	r.currentRegister = ' '
 	r.registerSelectWait = false
 	r.onRegister = false
 }
 
-// writeNumberedRegister - Add a buffer to one of the numbered registers
-func (r *registers) writeNumberedRegister(idx int, buf []rune) {
-	if len(r.num) > 10 {
-		return
-	}
-	r.num[idx] = buf
-}
-
 // The user can show registers completions and insert, no matter the cursor position.
-func (rl *Instance) completeRegisters() []*CompletionGroup {
+func (rl *Instance) completeRegisters() (groups []*CompletionGroup) {
 
 	// We set the hint exceptionally
-	hint := YELLOW + " :registers" + RESET
+	hint := BLUE + "-- registers --" + RESET
 	rl.hintText = []rune(hint)
 
 	// Make the groups
-	regs := &CompletionGroup{
-		Name:         tui.DIM + "([0-9], [a-z], [A-Z])" + tui.RESET,
+	anonRegs := &CompletionGroup{
 		DisplayType:  TabDisplayMap,
 		MaxLength:    20,
 		Descriptions: map[string]string{},
 	}
 
-	// Unnamed
-	regs.Suggestions = append(regs.Suggestions, "\"")
-	regs.Descriptions["\""] = string(rl.registers.unnamed)
+	// Unnamed (the added space is because we must have a unique key.
+	// This space is trimmed when the buffer is being passed to users)
+	anonRegs.Suggestions = append(anonRegs.Suggestions, string(rl.registers.unnamed))
+	anonRegs.Descriptions[string(rl.registers.unnamed)] = DIM + "\"" + "\"" + RESET
+
+	groups = append(groups, anonRegs)
 
 	// Numbered registers
+	numRegs := &CompletionGroup{
+		Name:         tui.DIM + "num ([0-9])" + tui.RESET,
+		DisplayType:  TabDisplayMap,
+		MaxLength:    20,
+		Descriptions: map[string]string{},
+	}
 	var nums []int
 	for reg := range rl.registers.num {
 		nums = append(nums, reg)
@@ -200,11 +285,21 @@ func (rl *Instance) completeRegisters() []*CompletionGroup {
 	sort.Ints(nums)
 	for _, reg := range nums {
 		buf := rl.registers.num[reg]
-		regs.Suggestions = append(regs.Suggestions, string(buf))
-		regs.Descriptions[string(buf)] = "\033[38;5;237m" + strconv.Itoa(reg) + RESET
+		numRegs.Suggestions = append(numRegs.Suggestions, string(buf))
+		numRegs.Descriptions[string(buf)] = DIM + "\"" + strconv.Itoa(reg) + RESET
+	}
+
+	if len(numRegs.Suggestions) > 0 {
+		groups = append(groups, numRegs)
 	}
 
 	// Letter registers
+	alphaRegs := &CompletionGroup{
+		Name:         tui.DIM + "alpha ([a-z], [A-Z])" + tui.RESET,
+		DisplayType:  TabDisplayMap,
+		MaxLength:    20,
+		Descriptions: map[string]string{},
+	}
 	var lett []string
 	for reg := range rl.registers.alpha {
 		lett = append(lett, reg)
@@ -212,9 +307,13 @@ func (rl *Instance) completeRegisters() []*CompletionGroup {
 	sort.Strings(lett)
 	for _, reg := range lett {
 		buf := rl.registers.alpha[reg]
-		regs.Suggestions = append(regs.Suggestions, string(buf))
-		regs.Descriptions[string(buf)] = "\033[38;5;237m" + reg + RESET
+		alphaRegs.Suggestions = append(alphaRegs.Suggestions, string(buf))
+		alphaRegs.Descriptions[string(buf)] = DIM + "\"" + reg + RESET
 	}
 
-	return []*CompletionGroup{regs}
+	if len(alphaRegs.Suggestions) > 0 {
+		groups = append(groups, alphaRegs)
+	}
+
+	return
 }

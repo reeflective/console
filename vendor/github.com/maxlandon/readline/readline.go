@@ -152,7 +152,9 @@ func (rl *Instance) Readline() (string, error) {
 		// Errors & Returns --------------------------------------------------------------------------------
 		case charCtrlC:
 			if rl.modeTabCompletion {
-				rl.resetVirtualComp()
+				rl.resetVirtualComp(true)
+				rl.resetHelpers()
+				rl.renderHelpers()
 				continue
 			}
 			rl.clearHelpers()
@@ -178,17 +180,45 @@ func (rl *Instance) Readline() (string, error) {
 		// Line Editing ------------------------------------------------------------------------------------
 		case charCtrlU:
 			// Delete everything from the beginning of the line to the cursor position
+			rl.saveBufToRegister(rl.line[:rl.pos])
 			rl.deleteToBeginning()
 			rl.resetHelpers()
 			rl.updateHelpers()
 
 		case charBackspace, charBackspace2:
+			// When currently in history completion, we refresh and automatically
+			// insert the first (filtered) candidate, virtually
+			if rl.modeAutoFind && rl.searchMode == HistoryFind {
+				rl.resetVirtualComp(true)
+				rl.backspaceTabFind()
+
+				// Then update the printing, with the new candidate
+				rl.updateVirtualComp()
+				rl.renderHelpers()
+				rl.viUndoSkipAppend = true
+				continue
+			}
+
+			// Normal completion search does only refresh the search pattern and the comps
 			if rl.modeTabFind || rl.modeAutoFind {
 				rl.backspaceTabFind()
 				rl.viUndoSkipAppend = true
 			} else {
-				rl.resetVirtualComp()
+				// Always cancel any virtual completion
+				rl.resetVirtualComp(false)
 
+				// Vim mode has different behaviors
+				if rl.InputMode == Vim {
+					if rl.modeViMode == vimInsert {
+						rl.backspace()
+					} else {
+						rl.pos--
+					}
+					rl.renderHelpers()
+					continue
+				}
+
+				// Else emacs deletes a character
 				rl.backspace()
 				rl.renderHelpers()
 			}
@@ -196,30 +226,68 @@ func (rl *Instance) Readline() (string, error) {
 		// Emacs Bindings ----------------------------------------------------------------------------------
 		case charCtrlW:
 			if rl.modeTabCompletion {
-				rl.resetVirtualComp()
+				rl.resetVirtualComp(false)
 			}
+			// This is only available in Insert mode
+			if rl.modeViMode != vimInsert {
+				continue
+			}
+			rl.saveToRegister(rl.viJumpB(tokeniseLine))
 			rl.viDeleteByAdjust(rl.viJumpB(tokeniseLine))
 			rl.updateHelpers()
 
 		case charCtrlY:
-
-		// Command History ---------------------------------------------------------------------------------
-		case charCtrlR:
-			rl.resetVirtualComp()
-
-			rl.mainHist = true // false before
-			rl.searchMode = HistoryFind
-			rl.modeAutoFind = true
-			rl.modeTabCompletion = true
-
-			rl.modeTabFind = true
-			rl.updateTabFind([]rune{})
+			if rl.modeTabCompletion {
+				rl.resetVirtualComp(false)
+			}
+			// paste after the cursor position
 			rl.viUndoSkipAppend = true
+			buffer := rl.pasteFromRegister()
+			rl.insert(buffer)
+			rl.updateHelpers()
 
 		case charCtrlE:
-			rl.resetVirtualComp()
+			if rl.modeTabCompletion {
+				rl.resetVirtualComp(false)
+			}
+			// This is only available in Insert mode
+			if rl.modeViMode != vimInsert {
+				continue
+			}
+			if len(rl.line) > 0 {
+				rl.pos = len(rl.line)
+			}
+			rl.viUndoSkipAppend = true
+			rl.updateHelpers()
 
-			rl.mainHist = false // true before
+		case charCtrlA:
+			if rl.modeTabCompletion {
+				rl.resetVirtualComp(false)
+			}
+			// This is only available in Insert mode
+			if rl.modeViMode != vimInsert {
+				continue
+			}
+			rl.viUndoSkipAppend = true
+			rl.pos = 0
+			rl.updateHelpers()
+
+		// Command History ---------------------------------------------------------------------------------
+
+		// NOTE: The alternative history source is triggered by Alt+r,
+		// but because this is a sequence, the alternative history code
+		// trigger is in the below rl.escapeSeq(r) function.
+		case charCtrlR:
+			rl.resetVirtualComp(false)
+			// For some modes only, if we are in vim Keys mode,
+			// we toogle back to insert mode. For others, we return
+			// without getting the completions.
+			if rl.modeViMode != vimInsert {
+				rl.modeViMode = vimInsert
+				rl.computePrompt()
+			}
+
+			rl.mainHist = true // false before
 			rl.searchMode = HistoryFind
 			rl.modeAutoFind = true
 			rl.modeTabCompletion = true
@@ -247,13 +315,13 @@ func (rl *Instance) Readline() (string, error) {
 				rl.getTabCompletion()
 
 				// If too many completions and no yet confirmed, ask user for completion
-				comps, lines := rl.getCompletionCount()
-				if ((lines > GetTermLength()) || (lines > rl.MaxTabCompleterRows)) && !rl.compConfirmWait {
-					sentence := fmt.Sprintf("%s show all %d completions (%d lines) ? tab to confirm",
-						FOREWHITE, comps, lines)
-					rl.promptCompletionConfirm(sentence)
-					continue
-				}
+				// comps, lines := rl.getCompletionCount()
+				// if ((lines > GetTermLength()) || (lines > rl.MaxTabCompleterRows)) && !rl.compConfirmWait {
+				//         sentence := fmt.Sprintf("%s show all %d completions (%d lines) ? tab to confirm",
+				//                 FOREWHITE, comps, lines)
+				//         rl.promptCompletionConfirm(sentence)
+				//         continue
+				// }
 
 				rl.compConfirmWait = false
 				rl.modeTabCompletion = true
@@ -278,10 +346,14 @@ func (rl *Instance) Readline() (string, error) {
 			}
 
 		case charCtrlF:
-			rl.resetVirtualComp()
+			rl.resetVirtualComp(true)
 
 			if !rl.modeTabCompletion {
 				rl.modeTabCompletion = true
+			}
+
+			if rl.compConfirmWait {
+				rl.resetHelpers()
 			}
 
 			// Both these settings apply to when we already
@@ -298,6 +370,14 @@ func (rl *Instance) Readline() (string, error) {
 			rl.viUndoSkipAppend = true
 
 		case charCtrlG:
+			if rl.modeAutoFind && rl.searchMode == HistoryFind {
+				rl.resetVirtualComp(false)
+				rl.resetTabFind()
+				rl.resetHelpers()
+				rl.renderHelpers()
+				continue
+			}
+
 			if rl.modeAutoFind {
 				rl.resetTabFind()
 				rl.resetHelpers()
@@ -328,10 +408,15 @@ func (rl *Instance) Readline() (string, error) {
 				}
 
 				// Else, we insert the completion candidate in the real input line.
-				// This is in fact nothing more than assigning the virtual input line.
 				// By default we add a space, unless completion group asks otherwise.
 				rl.compAddSpace = true
-				rl.resetVirtualComp()
+				rl.resetVirtualComp(false)
+
+				// If we were in history completion, immediately execute the line.
+				if rl.modeAutoFind && rl.searchMode == HistoryFind {
+					rl.carridgeReturn()
+					return string(rl.line), nil
+				}
 
 				// Reset completions and update input line
 				rl.clearHelpers()
@@ -358,7 +443,7 @@ func (rl *Instance) Readline() (string, error) {
 				if string(r[:i]) != seqShiftTab &&
 					string(r[:i]) != seqForwards && string(r[:i]) != seqBackwards &&
 					string(r[:i]) != seqUp && string(r[:i]) != seqDown {
-					rl.resetVirtualComp()
+					rl.resetVirtualComp(false)
 				}
 			}
 
@@ -366,20 +451,34 @@ func (rl *Instance) Readline() (string, error) {
 			// the change of input modes, etc.
 			rl.escapeSeq(r[:i])
 
+		// Dispatch --------------------------------------------------------------------------------------
 		default:
-			rl.resetVirtualComp()
 
 			// If we were waiting for completion confirm, abort
 			if rl.compConfirmWait {
+				rl.resetVirtualComp(false)
 				rl.compConfirmWait = false
 				rl.renderHelpers()
 			}
 
+			// When currently in history completion, we refresh and automatically
+			// insert the first (filtered) candidate, virtually
+			if rl.modeAutoFind && rl.searchMode == HistoryFind {
+				rl.resetVirtualComp(true)
+				rl.updateTabFind(r[:i])
+				rl.updateVirtualComp()
+				rl.renderHelpers()
+				rl.viUndoSkipAppend = true
+				continue
+			}
+
 			// Not sure that CompletionFind is useful, nor one of the other two
 			if rl.modeAutoFind || rl.modeTabFind {
+				rl.resetVirtualComp(false)
 				rl.updateTabFind(r[:i])
 				rl.viUndoSkipAppend = true
 			} else {
+				rl.resetVirtualComp(false)
 				rl.editorInput(r[:i])
 				if len(rl.multiline) > 0 && rl.modeViMode == vimKeys {
 					rl.skipStdinRead = true
@@ -387,10 +486,67 @@ func (rl *Instance) Readline() (string, error) {
 			}
 		}
 
-		// if !rl.viUndoSkipAppend {
-		//         rl.viUndoHistory = append(rl.viUndoHistory, rl.line)
-		// }
 		rl.undoAppendHistory()
+	}
+}
+
+// editorInput is an unexported function used to determine what mode of text
+// entry readline is currently configured for and then update the line entries
+// accordingly.
+func (rl *Instance) editorInput(r []rune) {
+	switch rl.modeViMode {
+	case vimKeys:
+		rl.vi(r[0])
+		rl.refreshVimStatus()
+
+	case vimDelete:
+		rl.viDelete(r[0])
+		rl.refreshVimStatus()
+
+	case vimReplaceOnce:
+		rl.modeViMode = vimKeys
+		rl.deleteX()
+		rl.insert([]rune{r[0]})
+		rl.refreshVimStatus()
+
+	case vimReplaceMany:
+		for _, char := range r {
+			rl.deleteX()
+			rl.insert([]rune{char})
+		}
+		rl.refreshVimStatus()
+
+	default:
+		// For some reason Ctrl+k messes with the input line, so ignore it.
+		if r[0] == 11 {
+			return
+		}
+		// We reset the history nav counter each time we come here:
+		// We don't need it when inserting text.
+		rl.histNavIdx = 0
+		rl.insert(r)
+	}
+
+	if len(rl.multisplit) == 0 {
+		rl.syntaxCompletion()
+	}
+}
+
+// viEscape - In case th user is using Vim input, and the escape sequence has not
+// been handled by other cases, we dispatch it to Vim and handle a few cases here.
+func (rl *Instance) viEscape(r []rune) {
+
+	// Sometimes the escape sequence is interleaved with another one,
+	// but key strokes might be in the wrong order, so we double check
+	// and escape the Insert mode only if needed.
+	if rl.modeViMode == vimInsert && len(r) == 1 && r[0] == 27 {
+		if len(rl.line) > 0 && rl.pos > 0 {
+			rl.pos--
+		}
+		rl.modeViMode = vimKeys
+		rl.viIteration = ""
+		rl.refreshVimStatus()
+		return
 	}
 }
 
@@ -416,28 +572,26 @@ func (rl *Instance) escapeSeq(r []rune) {
 			rl.renderHelpers()
 
 		default:
+			// No matter the input mode, we exit
+			// any completion confirm if there's one.
+			if rl.compConfirmWait {
+				rl.compConfirmWait = false
+				rl.clearHelpers()
+				rl.renderHelpers()
+				return
+			}
+
 			// If we are in Vim mode, the escape key has its usage.
 			// Otherwise in emacs mode the escape key does nothing.
 			if rl.InputMode == Vim {
-
-				// Exception: If we are in a prompt completion confirm,
-				// we don't switch the input mode
-				if rl.compConfirmWait {
-					rl.compConfirmWait = false
-				} else {
-					if rl.pos == len(rl.line) && len(rl.line) > 0 {
-						rl.pos--
-					}
-					rl.modeViMode = vimKeys
-					rl.viIteration = ""
-					rl.refreshVimStatus()
-				}
-
-				// This refreshed and actually prints the new Vim status
-				// if we have indeed change the Vim mode.
-				rl.clearHelpers()
-				rl.renderHelpers()
+				rl.viEscape(r)
+				return
 			}
+
+			// This refreshed and actually prints the new Vim status
+			// if we have indeed change the Vim mode.
+			rl.clearHelpers()
+			rl.renderHelpers()
 
 		}
 		rl.viUndoSkipAppend = true
@@ -507,6 +661,19 @@ func (rl *Instance) escapeSeq(r []rune) {
 		}
 		rl.viUndoSkipAppend = true
 
+	// Registers -------------------------------------------------------------------------------
+	case seqAltQuote:
+		if rl.modeViMode != vimInsert {
+			return
+		}
+		rl.modeTabCompletion = true
+		rl.modeAutoFind = true
+		rl.searchMode = RegisterFind
+		// Else we might be asked to confirm printing (if too many suggestions), or not.
+		rl.getTabCompletion()
+		rl.viUndoSkipAppend = true
+		rl.renderHelpers()
+
 	// Movement -------------------------------------------------------------------------------
 	case seqCtrlLeftArrow:
 		rl.moveCursorByAdjust(rl.viJumpB(tokeniseLine))
@@ -539,15 +706,23 @@ func (rl *Instance) escapeSeq(r []rune) {
 		rl.pos = len(rl.line)
 		rl.viUndoSkipAppend = true
 
-		// Movement -------------------------------------------------------------------------------
-	case seqAltQuote:
-		rl.modeTabCompletion = true
+	case seqAltR:
+		rl.resetVirtualComp(false)
+		// For some modes only, if we are in vim Keys mode,
+		// we toogle back to insert mode. For others, we return
+		// without getting the completions.
+		if rl.modeViMode != vimInsert {
+			rl.modeViMode = vimInsert
+		}
+
+		rl.mainHist = false // true before
+		rl.searchMode = HistoryFind
 		rl.modeAutoFind = true
-		rl.searchMode = RegisterFind
-		// Else we might be asked to confirm printing (if too many suggestions), or not.
-		rl.getTabCompletion()
+		rl.modeTabCompletion = true
+
+		rl.modeTabFind = true
+		rl.updateTabFind([]rune{})
 		rl.viUndoSkipAppend = true
-		rl.renderHelpers()
 
 	default:
 		if rl.modeTabFind {
@@ -556,7 +731,6 @@ func (rl *Instance) escapeSeq(r []rune) {
 		// alt+numeric append / delete
 		if len(r) == 2 && '1' <= r[1] && r[1] <= '9' {
 			if rl.modeViMode == vimDelete {
-				// rl.vimDelete(r)
 				rl.viDelete(r[1])
 				return
 			}
@@ -581,45 +755,6 @@ func (rl *Instance) escapeSeq(r []rune) {
 		} else {
 			rl.viUndoSkipAppend = true
 		}
-	}
-}
-
-// editorInput is an unexported function used to determine what mode of text
-// entry readline is currently configured for and then update the line entries
-// accordingly.
-func (rl *Instance) editorInput(r []rune) {
-	switch rl.modeViMode {
-	case vimKeys:
-		rl.vi(r[0])
-		rl.refreshVimStatus()
-
-	case vimDelete:
-		rl.vimDelete(r)
-		// rl.vimDelete(r[0])
-		rl.refreshVimStatus()
-
-	case vimReplaceOnce:
-		rl.modeViMode = vimKeys
-		rl.deleteX()
-		rl.insert([]rune{r[0]})
-		rl.refreshVimStatus()
-
-	case vimReplaceMany:
-		for _, char := range r {
-			rl.deleteX()
-			rl.insert([]rune{char})
-		}
-		rl.refreshVimStatus()
-
-	default:
-		// We reset the history nav counter each time we come here:
-		// We don't need it when inserting text.
-		rl.histNavIdx = 0
-		rl.insert(r)
-	}
-
-	if len(rl.multisplit) == 0 {
-		rl.syntaxCompletion()
 	}
 }
 
