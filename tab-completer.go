@@ -16,13 +16,13 @@ type CommandCompleter struct {
 	console *Console
 }
 
-// NewCommandCompleter - Instantiate a new tab completer using a github.com/jessevdk/go-flags Command Parser.
-func NewCommandCompleter(c *Console) (completer *CommandCompleter) {
+// newCommandCompleter - Instantiate a new tab completer using a github.com/jessevdk/go-flags Command Parser.
+func newCommandCompleter(c *Console) (completer *CommandCompleter) {
 	return &CommandCompleter{console: c}
 }
 
-// TabCompleter - A default tab completer working with a github.com/jessevdk/go-flags parser.
-func (c *CommandCompleter) TabCompleter(line []rune, pos int, dtc readline.DelayedTabContext) (lastWord string, completions []*readline.CompletionGroup) {
+// tabCompleter - A default tab completer working with a github.com/jessevdk/go-flags parser.
+func (c *CommandCompleter) tabCompleter(line []rune, pos int, dtc readline.DelayedTabContext) (lastWord string, completions []*readline.CompletionGroup) {
 
 	// Format and sanitize input
 	// @args     => All items of the input line
@@ -313,8 +313,8 @@ func completeOptionGroup(args []string, lastWord string, grp *flags.Group, title
 	return
 }
 
-// RecursiveGroupCompletion - Handles recursive completion for nested option groups
+// recursiveGroupCompletion - Handles recursive completion for nested option groups
 // Many categories, one source (a command's root option group). Called by the function just above.
-func RecursiveGroupCompletion(args []string, last []rune, group *flags.Group) (lastWord string, completions []*readline.CompletionGroup) {
+func recursiveGroupCompletion(args []string, last []rune, group *flags.Group) (lastWord string, completions []*readline.CompletionGroup) {
 	return
 }

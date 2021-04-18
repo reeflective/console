@@ -11,6 +11,12 @@ type Console struct {
 	// including but not limited to: inputs, completions, hints, history.
 	Shell *readline.Instance
 
+	// Completer - The completion engine is available to the user for registering
+	// default completion generators. A list of them is available to be bound
+	// to either or both command/option argument completions. Console contexts
+	// are not relevant here, the user should not worry.
+	Completer *CommandCompleter
+
 	// PreLoopHooks - All the functions in this list will be executed,
 	// in their respective orders, before the console starts reading
 	// any user input (ie, before redrawing the prompt).
@@ -72,12 +78,15 @@ func NewConsole() (c *Console) {
 
 	// Setup completers, hints, etc. We pass 2 functions as parameters,
 	// so that the engine can query the commands for the currently active context.
-	engine := NewCommandCompleter(c)
+	engine := newCommandCompleter(c)
 
-	c.Shell.TabCompleter = engine.TabCompleter
+	c.Shell.TabCompleter = engine.tabCompleter
 	c.Shell.MaxTabCompleterRows = 50
-	c.Shell.HintText = engine.HintCompleter
-	c.Shell.SyntaxHighlighter = engine.SyntaxHighlighter
+	c.Shell.HintText = engine.hintCompleter
+	c.Shell.SyntaxHighlighter = engine.syntaxHighlighter
+
+	// Available to the user for default completers.
+	c.Completer = engine
 
 	// Default context, "" (empty name)
 	c.current = c.NewContext("")

@@ -8,8 +8,8 @@ import (
 	"github.com/maxlandon/readline"
 )
 
-// HintCompleter - Entrypoint to all hints in the Wiregost console
-func (c *CommandCompleter) HintCompleter(line []rune, pos int) (hint []rune) {
+// hintCompleter - Entrypoint to all hints in the Wiregost console
+func (c *CommandCompleter) hintCompleter(line []rune, pos int) (hint []rune) {
 
 	// Format and sanitize input
 	// @args     => All items of the input line
@@ -22,7 +22,7 @@ func (c *CommandCompleter) HintCompleter(line []rune, pos int) (hint []rune) {
 
 	// Menu hints (command line is empty, or nothing recognized)
 	if noCommandOrEmpty(args, last, command) {
-		hint = MenuHint(args, last)
+		hint = menuHint(args, last)
 	}
 
 	// Check environment variables
@@ -34,7 +34,7 @@ func (c *CommandCompleter) HintCompleter(line []rune, pos int) (hint []rune) {
 	if commandFound(command) {
 
 		// Command hint by default (no space between cursor and last command character)
-		hint = CommandHint(command)
+		hint = commandHint(command)
 
 		// Check environment variables
 		if c.envVarAsked(args, lastWord) {
@@ -47,24 +47,24 @@ func (c *CommandCompleter) HintCompleter(line []rune, pos int) (hint []rune) {
 			groups = append(groups, c.console.CommandParser().Groups()...)
 			for _, grp := range groups {
 				if opt, yes := optionArgRequired(args, last, grp); yes {
-					hint = OptionArgumentHint(args, last, opt)
+					hint = optionArgumentHint(args, last, opt)
 				}
 			}
 		}
 
 		// If command has args, hint for args
 		if arg, yes := commandArgumentRequired(lastWord, args, command); yes {
-			hint = []rune(CommandArgumentHints(args, last, command, arg))
+			hint = []rune(commandArgumentHints(args, last, command, arg))
 		}
 
 		// Brief subcommand hint
 		if lastIsSubCommand(lastWord, command) {
-			hint = []rune(commandHint + command.Find(string(last)).ShortDescription)
+			hint = []rune(cmdHint + command.Find(string(last)).ShortDescription)
 		}
 
 		// Handle subcommand if found
 		if sub, ok := subCommandFound(lastWord, args, command); ok {
-			return c.HandleSubcommandHints(args, last, command, sub)
+			return c.handleSubcommandHints(args, last, command, sub)
 		}
 
 	}
@@ -77,17 +77,17 @@ func (c *CommandCompleter) HintCompleter(line []rune, pos int) (hint []rune) {
 	return
 }
 
-// CommandHint - Yields the hint of a Wiregost command
-func CommandHint(command *flags.Command) (hint []rune) {
-	return []rune(commandHint + command.ShortDescription)
+// commandHint - Yields the hint of a Wiregost command
+func commandHint(command *flags.Command) (hint []rune) {
+	return []rune(cmdHint + command.ShortDescription)
 }
 
-// HandleSubcommandHints - Handles hints for a subcommand and its arguments, options, etc.
-func (c *CommandCompleter) HandleSubcommandHints(args []string, last []rune, rootCommand, command *flags.Command) (hint []rune) {
+// handleSubcommandHints - Handles hints for a subcommand and its arguments, options, etc.
+func (c *CommandCompleter) handleSubcommandHints(args []string, last []rune, rootCommand, command *flags.Command) (hint []rune) {
 
 	// If command has args, hint for args
 	if arg, yes := commandArgumentRequired(string(last), args, command); yes {
-		hint = []rune(CommandArgumentHints(args, last, command, arg))
+		hint = []rune(commandArgumentHints(args, last, command, arg))
 		return
 	}
 
@@ -104,7 +104,7 @@ func (c *CommandCompleter) HandleSubcommandHints(args []string, last []rune, roo
 			groups = append(groups, rootCommand.Groups()...)
 			for _, grp := range groups {
 				if opt, yes := optionArgRequired(args, last, grp); yes {
-					hint = OptionArgumentHint(args, last, opt)
+					hint = optionArgumentHint(args, last, opt)
 				}
 			}
 		}
@@ -113,14 +113,14 @@ func (c *CommandCompleter) HandleSubcommandHints(args []string, last []rune, roo
 	// If user asks for completions with "-" or "--".
 	// (Note: This takes precedence on any argument hints, as it is evaluated after them)
 	if commandOptionsAsked(args, string(last), command) {
-		return OptionHints(args, last, command)
+		return optionHints(args, last, command)
 	}
 
 	return
 }
 
-// CommandArgumentHints - Yields hints for arguments to commands if they have some
-func CommandArgumentHints(args []string, last []rune, command *flags.Command, arg string) (hint []rune) {
+// commandArgumentHints - Yields hints for arguments to commands if they have some
+func commandArgumentHints(args []string, last []rune, command *flags.Command, arg string) (hint []rune) {
 
 	found := argumentByName(command, arg)
 	// Base Hint is just a description of the command argument
@@ -129,23 +129,23 @@ func CommandArgumentHints(args []string, last []rune, command *flags.Command, ar
 	return
 }
 
-// OptionHints - Yields hints for proposed options lists/groups
-func OptionHints(args []string, last []rune, command *flags.Command) (hint []rune) {
+// optionHints - Yields hints for proposed options lists/groups
+func optionHints(args []string, last []rune, command *flags.Command) (hint []rune) {
 	return
 }
 
-// OptionArgumentHint - Yields hints for arguments to an option (generally the last word in input)
-func OptionArgumentHint(args []string, last []rune, opt *flags.Option) (hint []rune) {
+// optionArgumentHint - Yields hints for arguments to an option (generally the last word in input)
+func optionArgumentHint(args []string, last []rune, opt *flags.Option) (hint []rune) {
 	return []rune(valueHint + opt.Description)
 }
 
-// MenuHint - Returns the Hint for a given menu context
-func MenuHint(args []string, current []rune) (hint []rune) {
+// menuHint - Returns the Hint for a given menu context
+func menuHint(args []string, current []rune) (hint []rune) {
 	return
 }
 
-// SpecialCommandHint - Shows hints for Wiregost special commands
-func SpecialCommandHint(args []string, current []rune) (hint []rune) {
+// specialCommandHint - Shows hints for Wiregost special commands
+func specialCommandHint(args []string, current []rune) (hint []rune) {
 	return current
 }
 
@@ -177,9 +177,9 @@ func (c *CommandCompleter) envVarHint(args []string, last []rune) (hint []rune) 
 
 var (
 	// Hint signs
-	menuHint    = readline.RESET + readline.DIM + readline.BOLD + " menu  " + readline.RESET                                      // Dim
+	menuHintStr = readline.RESET + readline.DIM + readline.BOLD + " menu  " + readline.RESET                                      // Dim
 	envHint     = readline.RESET + readline.GREEN + readline.BOLD + " env  " + readline.RESET + readline.DIM + readline.GREEN     // Green
-	commandHint = readline.RESET + readline.DIM + readline.BOLD + " command  " + readline.RESET + readline.DIM + "\033[38;5;244m" // Cream
+	cmdHint     = readline.RESET + readline.DIM + readline.BOLD + " command  " + readline.RESET + readline.DIM + "\033[38;5;244m" // Cream
 	exeHint     = readline.RESET + readline.DIM + readline.BOLD + " shell " + readline.RESET + readline.DIM                       // Dim
 	optionHint  = "\033[38;5;222m" + readline.BOLD + " options  " + readline.RESET + readline.DIM + "\033[38;5;222m"              // Cream-Yellow
 	valueHint   = readline.RESET + readline.DIM + readline.BOLD + " value  " + readline.RESET + readline.DIM + "\033[38;5;244m"   // Dim

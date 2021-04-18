@@ -9,8 +9,8 @@ import (
 	"github.com/maxlandon/readline"
 )
 
-// SyntaxHighlighter - Entrypoint to all input syntax highlighting in the Wiregost console
-func (c *CommandCompleter) SyntaxHighlighter(input []rune) (line string) {
+// syntaxHighlighter - Entrypoint to all input syntax highlighting in the Wiregost console
+func (c *CommandCompleter) syntaxHighlighter(input []rune) (line string) {
 
 	// Format and sanitize input
 	args, last, lastWord := formatInputHighlighter(input)
