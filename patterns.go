@@ -316,13 +316,47 @@ func isOptionDash(args []string, last []rune) bool {
 }
 
 // optionIsAlreadySet - Detects in input if an option is already set
-func optionIsAlreadySet(args []string, lastWord string, opt *flags.Option) bool {
-	return false
+func optionIsAlreadySet(args []string, lastWord string, opt *flags.Option) (yes bool, occurences int) {
+	for _, arg := range args {
+		if arg == "--"+opt.LongName || arg == "-"+string(opt.ShortName) {
+			yes = true
+			occurences++
+		}
+	}
+	if occurences > 0 {
+		return true, occurences
+	}
+	return false, 0
 }
 
 // Check if option type allows for repetition
 func optionNotRepeatable(opt *flags.Option) bool {
-	return true
+	switch opt.Field().Type.Kind() {
+
+	// Fields for which we cannot call twice the --option, but to which we
+	// might pass comma-separated values to a single --option.
+	case reflect.Bool:
+		return true
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return true
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return true
+	case reflect.Float32, reflect.Float64:
+		return true
+	case reflect.String:
+		return true
+	case reflect.Func:
+		return true
+
+	// Fields that can be set both with comma-separated or multiple --option
+	// calls, in any combination wished.
+	case reflect.Array:
+		return false
+	case reflect.Map:
+		return false
+	default:
+		return false
+	}
 }
 
 // [ Option Values ]-------------------------------------------------------------------------------------

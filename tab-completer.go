@@ -218,7 +218,7 @@ func completeCommandOptions(args []string, lastWord string, cmd *flags.Command, 
 	// For each group, build completions
 	for _, grp := range groups {
 
-		_, comp := completeOptionGroup(lastWord, grp, "")
+		_, comp := completeOptionGroup(args, lastWord, grp, "")
 
 		// No need to add empty groups, will screw the completion system.
 		if len(comp.Suggestions) > 0 {
@@ -230,7 +230,7 @@ func completeCommandOptions(args []string, lastWord string, cmd *flags.Command, 
 	// For each group, build completions
 	for _, grp := range globalOpts {
 
-		_, comp := completeOptionGroup(lastWord, grp, "")
+		_, comp := completeOptionGroup(args, lastWord, grp, "")
 
 		// No need to add empty groups, will screw the completion system.
 		if len(comp.Suggestions) > 0 {
@@ -239,7 +239,7 @@ func completeCommandOptions(args []string, lastWord string, cmd *flags.Command, 
 	}
 
 	// Do the same for global options, which are not part of any group "per-se"
-	_, gcomp := completeOptionGroup(lastWord, cmd.Group, "global options")
+	_, gcomp := completeOptionGroup(args, lastWord, cmd.Group, "global options")
 	if len(gcomp.Suggestions) > 0 {
 		completions = append(completions, gcomp)
 	}
@@ -248,7 +248,7 @@ func completeCommandOptions(args []string, lastWord string, cmd *flags.Command, 
 }
 
 // completeOptionGroup - make completions for a single group of options. Title is optional, not used if empty.
-func completeOptionGroup(lastWord string, grp *flags.Group, title string) (prefix string, compGrp *readline.CompletionGroup) {
+func completeOptionGroup(args []string, lastWord string, grp *flags.Group, title string) (prefix string, compGrp *readline.CompletionGroup) {
 
 	compGrp = &readline.CompletionGroup{
 		Name:         strings.ToLower(grp.ShortDescription),
@@ -266,10 +266,15 @@ func completeOptionGroup(lastWord string, grp *flags.Group, title string) (prefi
 	// Add each option to completion group
 	for _, opt := range grp.Options() {
 
-		// Check if option is already set, next option if yes
-		// if optionNotRepeatable(opt) && optionIsAlreadySet(args, lastWord, opt) {
-		//         continue
-		// }
+		set, _ := optionIsAlreadySet(args, lastWord, opt)
+
+		// Check that we must indeed show the option completion, given that:
+		// - it might be a non-array type and already be set in the input
+		if optionNotRepeatable(opt) && set {
+			continue
+		}
+		// - have a min/max number of required occurences, because the type is an array/map, or unknown.
+		// NOTE: to implement: hide when maximum required is hit.
 
 		// Depending on the current last word, either build a group with option longs only, or with shorts
 		if strings.HasPrefix("--"+opt.LongName, lastWord) {
