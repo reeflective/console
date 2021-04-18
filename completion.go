@@ -4,6 +4,15 @@ import (
 	"github.com/maxlandon/readline"
 )
 
+// Console Context Expansion Completions ----------------------------------------------------------------------
+
+// AddExpansionCompletion - Add a completion generator that is triggered when the expansion
+// string paramater is detected (anywhere, even in other completions) in the input line.
+// Ex: you can pass '$' as an expansion, and a function that will yield environment variables.
+func (c *Context) AddExpansionCompletion(expansion rune, comps CompletionFunc) {
+	c.expansionComps[expansion] = comps
+}
+
 // Static Completion generators ------------------------------------------------------------------------------
 
 // CompletionFunc - Function yielding one or more completions groups.
@@ -47,7 +56,6 @@ type CompletionFuncDynamic func(prefix string) (pref string, comps []*readline.C
 // because several contexts migh have some being identically named.
 func (c *Command) AddArgumentCompletionDynamic(arg string, comps CompletionFuncDynamic) {
 	c.argCompsDynamic[arg] = comps
-	return
 }
 
 // AddOptionCompletionDynamic - Given a registered command and an option LONG name, add one or
@@ -59,5 +67,4 @@ func (c *Command) AddArgumentCompletionDynamic(arg string, comps CompletionFuncD
 // because several contexts migh have some being identically named.
 func (c *Command) AddOptionCompletionDynamic(option string, comps CompletionFuncDynamic) {
 	c.optCompsDynamic[option] = comps
-	return
 }

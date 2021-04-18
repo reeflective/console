@@ -30,6 +30,10 @@ type Context struct {
 	historyCtrlR     readline.History
 	historyAltRName  string
 	historyAltR      readline.History
+
+	// expansionComps - A list of completion generators that are triggered when
+	// the given string is detected (anywhere, even in other completions) in the input line.
+	expansionComps map[rune]CompletionFunc
 }
 
 func newContext() *Context {
@@ -38,7 +42,8 @@ func newContext() *Context {
 			Callbacks: map[string]func() string{},
 			Colors:    defaultColorCallbacks,
 		},
-		cmd: newCommand(),
+		cmd:            newCommand(),
+		expansionComps: map[rune]CompletionFunc{},
 	}
 	return ctx
 }

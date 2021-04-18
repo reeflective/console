@@ -26,8 +26,8 @@ func (c *CommandCompleter) HintCompleter(line []rune, pos int) (hint []rune) {
 	}
 
 	// Check environment variables
-	if envVarAsked(args, lastWord) {
-		return envVarHint(args, last)
+	if c.envVarAsked(args, lastWord) {
+		return c.envVarHint(args, last)
 	}
 
 	// Command Hint
@@ -37,8 +37,8 @@ func (c *CommandCompleter) HintCompleter(line []rune, pos int) (hint []rune) {
 		hint = CommandHint(command)
 
 		// Check environment variables
-		if envVarAsked(args, lastWord) {
-			return envVarHint(args, last)
+		if c.envVarAsked(args, lastWord) {
+			return c.envVarHint(args, last)
 		}
 
 		// If options are asked for root command, return commpletions.
@@ -92,8 +92,8 @@ func (c *CommandCompleter) HandleSubcommandHints(args []string, last []rune, roo
 	}
 
 	// Environment variables
-	if envVarAsked(args, string(last)) {
-		hint = envVarHint(args, last)
+	if c.envVarAsked(args, string(last)) {
+		hint = c.envVarHint(args, last)
 	}
 
 	// If the last word in input is an option --name, yield argument hint if needed
@@ -129,11 +129,6 @@ func CommandArgumentHints(args []string, last []rune, command *flags.Command, ar
 	return
 }
 
-// ModuleOptionHints - If the option being set has a description, show it
-func ModuleOptionHints(opt string) (hint []rune) {
-	return
-}
-
 // OptionHints - Yields hints for proposed options lists/groups
 func OptionHints(args []string, last []rune, command *flags.Command) (hint []rune) {
 	return
@@ -155,7 +150,7 @@ func SpecialCommandHint(args []string, current []rune) (hint []rune) {
 }
 
 // envVarHint - Yields hints for environment variables
-func envVarHint(args []string, last []rune) (hint []rune) {
+func (c *CommandCompleter) envVarHint(args []string, last []rune) (hint []rune) {
 	// Trim last in case its a path with multiple vars
 	allVars := strings.Split(string(last), "/")
 	lastVar := allVars[len(allVars)-1]
@@ -163,14 +158,20 @@ func envVarHint(args []string, last []rune) (hint []rune) {
 	// Base hint
 	hint = []rune(envHint + lastVar)
 
-	envVar := strings.TrimPrefix(lastVar, "$")
-
-	if v, ok := clientEnv[envVar]; ok {
-		if v != "" {
-			hintStr := string(hint) + " => " + clientEnv[envVar]
-			hint = []rune(hintStr)
+	for exp, comp := range c.console.CurrentContext().expansionComps {
+		if strings.HasPrefix(lastVar, string(exp)) {
+			envVar := strings.TrimPrefix(lastVar, string(exp))
+			grps := comp()
+			for _, grp := range grps {
+				if value, exists := grp.Descriptions[envVar]; exists {
+					hintStr := string(hint) + " => " + value
+					hint = []rune(hintStr)
+					break
+				}
+			}
 		}
 	}
+
 	return
 }
 
@@ -181,7 +182,7 @@ var (
 	commandHint = readline.RESET + readline.DIM + readline.BOLD + " command  " + readline.RESET + readline.DIM + "\033[38;5;244m" // Cream
 	exeHint     = readline.RESET + readline.DIM + readline.BOLD + " shell " + readline.RESET + readline.DIM                       // Dim
 	optionHint  = "\033[38;5;222m" + readline.BOLD + " options  " + readline.RESET + readline.DIM + "\033[38;5;222m"              // Cream-Yellow
-	valueHint   = readline.RESET + readline.DIM + readline.BOLD + " value  " + readline.RESET + readline.DIM + "\033[38;5;244m"   // Pink-Cream
+	valueHint   = readline.RESET + readline.DIM + readline.BOLD + " value  " + readline.RESET + readline.DIM + "\033[38;5;244m"   // Dim
 	// valueHint   = "\033[38;5;217m" + readline.BOLD + " Value  " + readline.RESET + readline.DIM + "\033[38;5;244m"         // Pink-Cream
 	argHint = readline.DIM + "\033[38;5;217m" + readline.BOLD + " arg  " + readline.RESET + readline.DIM + "\033[38;5;244m" // Pink-Cream
 )

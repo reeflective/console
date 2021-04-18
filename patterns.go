@@ -397,33 +397,40 @@ func optionArgRequired(args []string, last []rune, group *flags.Group) (opt *fla
 	return nil, false
 }
 
-// [ Other ]-------------------------------------------------------------------------------------
+// [ Other ]-----------------------------------------------------------------------------------------------------//
 // Does the user asks for Environment variables ?
-func envVarAsked(args []string, lastWord string) bool {
+func (c *CommandCompleter) envVarAsked(args []string, lastWord string) bool {
+	cc := c.console.CurrentContext()
 
-	// Check if the current word is an environment variable, or if the last part of it is a variable
-	if len(lastWord) > 1 && strings.HasPrefix(lastWord, "$") {
-		if strings.LastIndex(lastWord, "/") < strings.LastIndex(lastWord, "$") {
+	// For each of the expansion runes for which the user has given a completion generator
+	for exp := range cc.expansionComps {
+
+		// If we are at the beginning of an env var
+		if len(lastWord) > 0 && lastWord[len(lastWord)-1] == byte(exp) {
 			return true
 		}
-		return false
-	}
 
-	// Check if env var is asked in a path or something
-	if len(lastWord) > 1 {
-		// If last is a path, it cannot be an env var anymore
-		if lastWord[len(lastWord)-1] == '/' {
+		// Check if env var is asked in a path or something
+		if len(lastWord) > 1 {
+
+			// If last is a path, it cannot be an env var anymore
+			if lastWord[len(lastWord)-1] == '/' {
+				return false
+			}
+
+			if lastWord[len(lastWord)-1] == byte(exp) {
+				return true
+			}
+		}
+
+		// Check if the current word is an environment variable, or if the last part of it is a variable
+		if len(lastWord) > 1 && strings.HasPrefix(lastWord, string(exp)) {
+			if strings.LastIndex(lastWord, "/") < strings.LastIndex(lastWord, string(exp)) {
+				return true
+			}
 			return false
 		}
 
-		if lastWord[len(lastWord)-1] == '$' {
-			return true
-		}
-	}
-
-	// If we are at the beginning of an env var
-	if len(lastWord) > 0 && lastWord[len(lastWord)-1] == '$' {
-		return true
 	}
 
 	return false
@@ -466,7 +473,7 @@ func filterOptions(args []string, command *flags.Command) (processed []string) {
 	return
 }
 
-// Other Functions -------------------------------------------------------------------------------------------------------------//
+// Other Functions -----------------------------------------------------------------------------------------------//
 
 // formatInput - Formats & sanitize the command line input
 func formatInput(line []rune) (args []string, last []rune, lastWord string) {

@@ -12,7 +12,7 @@ import (
 
 // CompleteLocalPath - Provides completion for the client console filesystem
 // Yields only directories, so use this commands that do not need file completions.
-func CompleteLocalPath(last string) (string, *readline.CompletionGroup) {
+func (c *CommandCompleter) CompleteLocalPath(last string) (string, *readline.CompletionGroup) {
 
 	// Completions
 	completion := &readline.CompletionGroup{
@@ -24,7 +24,7 @@ func CompleteLocalPath(last string) (string, *readline.CompletionGroup) {
 	var suggestions []string
 
 	// Any parsing error is silently ignored, for not messing the prompt
-	processedPath, _ := ParseEnvironmentVariables([]string{last})
+	processedPath, _ := c.console.parseExpansionVariables([]string{last})
 
 	// Check if processed input is empty
 	var inputPath string
@@ -92,9 +92,9 @@ func CompleteLocalPath(last string) (string, *readline.CompletionGroup) {
 	return string(lastPath), completion
 }
 
-// CompleteLocalPath - Provides completion for the client console filesystem.
+// CompleteLocalPathAndFiles - Provides completion for the client console filesystem.
 // This yields all files and directories, including dot hidden ones.
-func CompleteLocalPathAndFiles(last string) (string, *readline.CompletionGroup) {
+func (c *CommandCompleter) CompleteLocalPathAndFiles(last string) (string, *readline.CompletionGroup) {
 
 	// Completions
 	completion := &readline.CompletionGroup{
@@ -106,7 +106,7 @@ func CompleteLocalPathAndFiles(last string) (string, *readline.CompletionGroup) 
 	var suggestions []string
 
 	// Any parsing error is silently ignored, for not messing the prompt
-	processedPath, _ := ParseEnvironmentVariables([]string{last})
+	processedPath, _ := c.console.parseExpansionVariables([]string{last})
 
 	// Check if processed input is empty
 	var inputPath string
@@ -178,4 +178,16 @@ func CompleteLocalPathAndFiles(last string) (string, *readline.CompletionGroup) 
 
 	completion.Suggestions = suggestions
 	return string(lastPath), completion
+}
+
+func addSpaceTokens(in string) (path string) {
+	items := strings.Split(in, " ")
+	for i := range items {
+		if len(items) == i+1 { // If last one, no char, add and return
+			path += items[i]
+			return
+		}
+		path += items[i] + "\\ " // By default add space char and roll
+	}
+	return
 }
