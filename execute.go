@@ -40,6 +40,7 @@ func (c *Console) execute(args []string) {
 				if err != nil {
 					fmt.Println(err.Error())
 				}
+				return
 			}
 			fmt.Println(commandError + parserErr.Error())
 			return

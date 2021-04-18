@@ -3,6 +3,7 @@ package gonsole
 import (
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/jessevdk/go-flags"
 
@@ -14,11 +15,13 @@ import (
 // This completer needs to be instantiated with its constructor, in order to ensure the parser is not nil.
 type CommandCompleter struct {
 	console *Console
+	args    []string
+	mutex   *sync.Mutex
 }
 
 // newCommandCompleter - Instantiate a new tab completer using a github.com/jessevdk/go-flags Command Parser.
 func newCommandCompleter(c *Console) (completer *CommandCompleter) {
-	return &CommandCompleter{console: c}
+	return &CommandCompleter{console: c, mutex: &sync.Mutex{}}
 }
 
 // tabCompleter - A default tab completer working with a github.com/jessevdk/go-flags parser.
@@ -29,6 +32,9 @@ func (c *CommandCompleter) tabCompleter(line []rune, pos int, dtc readline.Delay
 	// @last     => The last word detected in input line as []rune
 	// @lastWord => The last word detected in input as string
 	args, last, lastWord := formatInput(line)
+	c.mutex.Lock()
+	c.args = args
+	c.mutex.Unlock()
 
 	// Detect base command automatically
 	var command = c.detectedCommand(args)
@@ -134,7 +140,8 @@ func (c *CommandCompleter) completeMenuCommands(lastWord string, pos int) (prefi
 	for _, grp := range completions {
 		// If the length of suggestions is too long and we have
 		// many groups, use grid display.
-		if len(completions) >= 10 && len(grp.Suggestions) >= 10 {
+		if len(completions) >= 10 {
+			// if len(completions) >= 10 && len(grp.Suggestions) >= 10 {
 			grp.DisplayType = readline.TabDisplayGrid
 		} else {
 			// By default, we use a map of command to descriptions

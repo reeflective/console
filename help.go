@@ -37,10 +37,29 @@ func (c *Console) printMenuHelp(context string) {
 
 	// Print help for each command group
 	for _, group := range groups {
+		if _, found := cmds[group]; !found {
+			continue
+		} else if len(cmds[group]) == 0 {
+			continue
+		}
+		// Commands might have been "ungenerated" due to active command filters
+		allNils := true
+		for _, cmd := range cmds[group] {
+			if cmd != nil {
+				allNils = false
+			}
+		}
+		if allNils {
+			continue
+		}
+
 		fmt.Println(readline.Yellow(" " + group)) // Title category
 
 		maxLen := 0
 		for _, cmd := range cmds[group] {
+			if cmd == nil {
+				continue
+			}
 			cmdLen := len(cmd.Name)
 			if cmdLen > maxLen {
 				maxLen = cmdLen
@@ -48,6 +67,9 @@ func (c *Console) printMenuHelp(context string) {
 		}
 
 		for _, cmd := range cmds[group] {
+			if cmd == nil {
+				continue
+			}
 			pad := fmt.Sprintf("%-"+strconv.Itoa(maxLen)+"s", cmd.Name)
 			fmt.Printf("    "+pad+"  %s\n", readline.Dim(cmd.ShortDescription))
 		}
@@ -173,9 +195,10 @@ func (c *Console) printCommandHelp(cmd *flags.Command) {
 	}
 
 	// Then additional descriptions
-	// if additional := GetHelpFor(cmd.Name); additional != "" {
-	//         fmt.Println("\n" + GetHelpFor(cmd.Name))
-	// }
+	if cmd.LongDescription != "" {
+		fmt.Println("\n" + cmd.LongDescription)
+	}
+
 	return
 }
 

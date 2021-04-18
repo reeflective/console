@@ -21,7 +21,7 @@ The purpose of this library is to offer a complete off-the-shelf console applica
 
 TODO
 - Recursive option completion (`-sP`, `-oL`, etc)
-- Much better syntax highlighting support (command, strings, expanded variables, available colors, etc)
+- Much better syntax highlighting support (commands, options, strings, expanded variables, brackets, available colors, etc)
 
 
 ## License

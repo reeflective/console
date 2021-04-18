@@ -10,6 +10,16 @@ import (
 var (
 	commandError = fmt.Sprintf("%s[Command Error]%s ", readline.RED, readline.RESET)
 	parserError  = fmt.Sprintf("%s[Parser Error]%s ", readline.RED, readline.RESET)
+
+	info     = fmt.Sprintf("%s[-]%s ", readline.BLUE, readline.RESET)   // Info - All normal messages
+	warn     = fmt.Sprintf("%s[!]%s ", readline.YELLOW, readline.RESET) // Warn - Errors in parameters, notifiable events in modules/sessions
+	errorStr = fmt.Sprintf("%s[!]%s ", readline.RED, readline.RESET)    // Error - Error in commands, filters, modules and implants.
+	Success  = fmt.Sprintf("%s[*]%s ", readline.GREEN, readline.RESET)  // Success - Success events
+
+	infof   = fmt.Sprintf("%s[-] ", readline.BLUE)   // Infof - formatted
+	warnf   = fmt.Sprintf("%s[!] ", readline.YELLOW) // Warnf - formatted
+	errorf  = fmt.Sprintf("%s[!] ", readline.RED)    // Errorf - formatted
+	sucessf = fmt.Sprintf("%s[*] ", readline.GREEN)  // Sucessf - formatted
 )
 
 // commandParser - Both flags.Command and flags.Parser can add commands in the same way,
