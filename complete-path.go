@@ -10,9 +10,8 @@ import (
 	"github.com/maxlandon/readline"
 )
 
-// CompleteLocalPath - Provides completion for the client console filesystem
-// Yields only directories, so use this commands that do not need file completions.
-func (c *CommandCompleter) CompleteLocalPath(last string) (string, *readline.CompletionGroup) {
+// CompleteLocalPath - Provides completion for the client console filesystem, (directories only)
+func (c *CommandCompleter) CompleteLocalPath(last string) (string, []*readline.CompletionGroup) {
 
 	// Completions
 	completion := &readline.CompletionGroup{
@@ -89,12 +88,23 @@ func (c *CommandCompleter) CompleteLocalPath(last string) (string, *readline.Com
 	}
 
 	completion.Suggestions = suggestions
-	return string(lastPath), completion
+	return string(lastPath), []*readline.CompletionGroup{completion}
 }
 
-// CompleteLocalPathAndFiles - Provides completion for the client console filesystem.
-// This yields all files and directories, including dot hidden ones.
-func (c *CommandCompleter) CompleteLocalPathAndFiles(last string) (string, *readline.CompletionGroup) {
+func addSpaceTokens(in string) (path string) {
+	items := strings.Split(in, " ")
+	for i := range items {
+		if len(items) == i+1 { // If last one, no char, add and return
+			path += items[i]
+			return
+		}
+		path += items[i] + "\\ " // By default add space char and roll
+	}
+	return
+}
+
+// CompleteLocalPathAndFiles - Provides completion for the client console filesystem, (directories and files)
+func (c *CommandCompleter) CompleteLocalPathAndFiles(last string) (string, []*readline.CompletionGroup) {
 
 	// Completions
 	completion := &readline.CompletionGroup{
@@ -177,17 +187,5 @@ func (c *CommandCompleter) CompleteLocalPathAndFiles(last string) (string, *read
 	}
 
 	completion.Suggestions = suggestions
-	return string(lastPath), completion
-}
-
-func addSpaceTokens(in string) (path string) {
-	items := strings.Split(in, " ")
-	for i := range items {
-		if len(items) == i+1 { // If last one, no char, add and return
-			path += items[i]
-			return
-		}
-		path += items[i] + "\\ " // By default add space char and roll
-	}
-	return
+	return string(lastPath), []*readline.CompletionGroup{completion}
 }
