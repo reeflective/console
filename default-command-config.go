@@ -422,6 +422,7 @@ func (p *PromptSet) Execute(args []string) (err error) {
 	// TODO: should be changed because not handy to use like this
 	if p.Options.NewlineAfter {
 		cc.Prompt.Newline = true
+		cc.console.PreOutputNewline = true
 		conf.Prompts[cc.Name].Newline = true
 	}
 

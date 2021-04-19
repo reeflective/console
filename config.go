@@ -1,6 +1,10 @@
 package gonsole
 
-import "github.com/maxlandon/readline"
+import (
+	"fmt"
+
+	"github.com/maxlandon/readline"
+)
 
 var (
 	highlightingItemsComps = map[string]string{
@@ -14,27 +18,17 @@ var (
 
 // ConsoleConfig - The console configuration (prompts, hints, modes, etc)
 type ConsoleConfig struct {
-	InputMode           readline.InputMode `json:"input_mode"`
-	Prompts             map[string]*prompt `json:"prompts"`
-	Hints               bool               `json:"hints"`
-	MaxTabCompleterRows int                `json:"max_tab_completer_rows"`
-	Highlighting        map[string]string  `json:"highlighting"`
+	InputMode           readline.InputMode       `json:"input_mode"`
+	Prompts             map[string]*PromptConfig `json:"prompts"`
+	Hints               bool                     `json:"hints"`
+	MaxTabCompleterRows int                      `json:"max_tab_completer_rows"`
+	Highlighting        map[string]string        `json:"highlighting"`
 }
 
-// prompt - Contains all the information needed for the prompt of a given context.
-type prompt struct {
-	Left            string `json:"left"`
-	Right           string `json:"right"`
-	Newline         bool   `json:"newline"`
-	Multiline       bool   `json:"multiline"`
-	MultilinePrompt string `json:"multiline_prompt"`
-}
-
-// loadDefaultConfig - Sane defaults for the gonsole Console.
-func (c *Console) loadDefaultConfig() {
-	c.config = &ConsoleConfig{
+func newDefaultConfig() *ConsoleConfig {
+	return &ConsoleConfig{
 		InputMode:           readline.Vim,
-		Prompts:             map[string]*prompt{},
+		Prompts:             map[string]*PromptConfig{},
 		Hints:               true,
 		MaxTabCompleterRows: 50,
 		Highlighting: map[string]string{
@@ -44,16 +38,43 @@ func (c *Console) loadDefaultConfig() {
 			"{option-argument}":  readline.FOREWHITE,
 		},
 	}
+}
 
-	// Make a default prompt for this application
-	c.config.Prompts[""] = &prompt{
-		Left:            "gonsole",
+// PromptConfig - Contains all the information needed for the PromptConfig of a given context.
+type PromptConfig struct {
+	Left            string `json:"left"`
+	Right           string `json:"right"`
+	Newline         bool   `json:"newline"`
+	Multiline       bool   `json:"multiline"`
+	MultilinePrompt string `json:"multiline_prompt"`
+}
+
+// newDefaultPromptConfig - Newly created contexts have a default prompt configuration
+func newDefaultPromptConfig(context string) *PromptConfig {
+	return &PromptConfig{
+		Left:            fmt.Sprintf("gonsole (%s)", context),
 		Right:           "",
 		Newline:         true,
 		Multiline:       true,
 		MultilinePrompt: " > ",
 	}
+}
 
+// loadDefaultConfig - Sane defaults for the gonsole Console.
+func (c *Console) loadDefaultConfig() {
+	c.config = newDefaultConfig()
+	// Make a default prompt for this application
+	c.config.Prompts[""] = newDefaultPromptConfig("")
+}
+
+func (c *Console) reloadConfig() {
+
+	// Setup the prompt, and input mode
+	c.current.Prompt.loadFromConfig(c.config.Prompts[c.current.Name])
+	c.Shell.MultilinePrompt = c.config.Prompts[c.current.Name].MultilinePrompt
+	c.Shell.Multiline = c.config.Prompts[c.current.Name].Multiline
+	c.Shell.InputMode = c.config.InputMode
+	c.PreOutputNewline = c.config.Prompts[c.current.Name].Newline
 }
 
 // ExportConfig - The console exports its configuration in a JSON struct.
@@ -64,17 +85,23 @@ func (c *Console) ExportConfig() (conf *ConsoleConfig) {
 // LoadConfig - Loads a config struct, but does immediately refresh the prompt.
 // Settings will apply as they are needed by the console.
 func (c *Console) LoadConfig(conf *ConsoleConfig) {
+	if conf == nil {
+		return
+	}
+
 	// Ensure no fields are nil
 	if conf.Prompts == nil {
-		p := &prompt{
+		p := &PromptConfig{
 			Left:            "gonsole",
 			Right:           "",
 			Newline:         true,
 			Multiline:       true,
 			MultilinePrompt: " > ",
 		}
-		conf.Prompts = map[string]*prompt{"": p}
+		conf.Prompts = map[string]*PromptConfig{"": p}
 	}
+
+	// Users might forget to load default highlighting maps.
 	if conf.Highlighting == nil {
 		conf.Highlighting = map[string]string{
 			"{command}":          readline.BOLD,
@@ -83,8 +110,11 @@ func (c *Console) LoadConfig(conf *ConsoleConfig) {
 			"{option-argument}":  readline.FOREWHITE,
 		}
 	}
-	// Then load
+	// Then load and apply all componenets that need a refresh now
 	c.config = conf
+
+	// Setup the prompt, and input mode
+	c.reloadConfig()
 
 	return
 }

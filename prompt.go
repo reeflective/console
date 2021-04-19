@@ -112,7 +112,7 @@ func (p *Prompt) computeCallbacks(raw string) (ps string, width int) {
 
 // The prompt takes its values from the configuration. This allows to have
 // a synchronized/actualized configuration file to export at any time.
-func (p *Prompt) loadFromConfig(promptConf *prompt) {
+func (p *Prompt) loadFromConfig(promptConf *PromptConfig) {
 	if promptConf == nil {
 		return
 	}

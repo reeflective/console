@@ -104,6 +104,9 @@ func (c *Console) NewContext(name string) (ctx *Context) {
 	ctx = newContext(c)
 	ctx.Name = name
 	c.contexts[name] = ctx
+
+	// Load default prompt configuration
+	c.config.Prompts[ctx.Name] = newDefaultPromptConfig(ctx.Name)
 	return
 }
 
@@ -126,6 +129,9 @@ func (c *Console) SwitchContext(context string) {
 			c.current = ctx
 		}
 	}
+
+	// Contexts have some specific configuration values, reload them.
+	c.reloadConfig()
 }
 
 // CurrentContext - Return the current console context. Because the Context
