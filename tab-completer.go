@@ -14,9 +14,11 @@ import (
 // to build completions for commands, arguments, options and their arguments as well.
 // This completer needs to be instantiated with its constructor, in order to ensure the parser is not nil.
 type CommandCompleter struct {
-	console *Console
-	args    []string
-	mutex   *sync.Mutex
+	console  *Console
+	args     []string
+	last     []rune
+	lastWord string
+	mutex    *sync.Mutex
 }
 
 // newCommandCompleter - Instantiate a new tab completer using a github.com/jessevdk/go-flags Command Parser.
@@ -25,27 +27,29 @@ func newCommandCompleter(c *Console) (completer *CommandCompleter) {
 }
 
 // tabCompleter - A default tab completer working with a github.com/jessevdk/go-flags parser.
-func (c *CommandCompleter) tabCompleter(line []rune, pos int, dtc readline.DelayedTabContext) (lastWord string, completions []*readline.CompletionGroup) {
+func (c *CommandCompleter) tabCompleter(line []rune, pos int, dtc readline.DelayedTabContext) (lastWord string, comps []*readline.CompletionGroup) {
 
 	// Format and sanitize input
 	// @args     => All items of the input line
 	// @last     => The last word detected in input line as []rune
 	// @lastWord => The last word detected in input as string
-	args, last, lastWord := formatInput(line)
 	c.mutex.Lock()
-	c.args = args
+	c.args, c.last, c.lastWord = formatInput(line)
 	c.mutex.Unlock()
 
+	// The prefix is always what has been given by the shell, by default.
+	lastWord = c.lastWord
+
 	// Detect base command automatically
-	var command = c.detectedCommand(args)
+	var command = c.detectedCommand(c.args)
 
 	// Propose commands
-	if noCommandOrEmpty(args, last, command) {
+	if noCommandOrEmpty(c.args, c.last, command) {
 		return c.completeMenuCommands(lastWord, pos)
 	}
 
 	// Check environment variables
-	if c.envVarAsked(args, lastWord) {
+	if c.envVarAsked(c.args, lastWord) {
 		c.completeExpansionCompletions(lastWord)
 	}
 
@@ -59,40 +63,40 @@ func (c *CommandCompleter) tabCompleter(line []rune, pos int, dtc readline.Delay
 		}
 
 		// Check environment variables again
-		if c.envVarAsked(args, lastWord) {
+		if c.envVarAsked(c.args, lastWord) {
 			return c.completeExpansionCompletions(lastWord)
 		}
 
 		// If options are asked for root command, return commpletions.
 		if len(command.Groups()) > 0 {
 			for _, grp := range command.Groups() {
-				if opt, yes := optionArgRequired(args, last, grp); yes {
+				if opt, yes := optionArgRequired(c.args, c.last, grp); yes {
 					return c.completeOptionArguments(gCommand, command, opt, lastWord)
 				}
 			}
 		}
 
 		// Then propose subcommands. We don't return from here, otherwise it always skips the next steps.
-		if hasSubCommands(command, args) {
-			completions = completeSubCommands(args, lastWord, command)
+		if hasSubCommands(command, c.args) {
+			comps = completeSubCommands(c.args, lastWord, command)
 		}
 
 		// Handle subcommand if found (maybe we should rewrite this function and use it also for base command)
-		if sub, ok := subCommandFound(lastWord, args, command); ok {
+		if sub, ok := subCommandFound(lastWord, c.args, command); ok {
 			subg := gCommand.FindCommand(sub.Name)
-			return c.handleSubCommand(line, pos, command, subg, sub)
+			return c.handleSubCommand(c.args[1:], command, sub, subg)
 		}
 
 		// If user asks for completions with "-" / "--", show command options.
 		// We ask this here, after having ensured there is no subcommand invoked.
 		// This prevails over command arguments, even if they are required.
-		if commandOptionsAsked(args, lastWord, command) {
+		if commandOptionsAsked(c.args, lastWord, command) {
 			globalOpts := c.console.CommandParser().Groups()
-			return completeCommandOptions(args, lastWord, command, globalOpts)
+			return completeCommandOptions(c.args, lastWord, command, globalOpts)
 		}
 
 		// Propose argument completion before anything, and if needed
-		if arg, yes := commandArgumentRequired(lastWord, args, command); yes {
+		if arg, yes := commandArgumentRequired(lastWord, c.args, command); yes {
 			return c.completeCommandArguments(gCommand, command, arg, lastWord)
 		}
 
@@ -177,9 +181,9 @@ func completeSubCommands(args []string, lastWord string, command *flags.Command)
 
 // handleSubCommand - Handles completion for subcommand options and arguments, + any option value related completion
 // Many categories, from many sources: this function calls the same functions as the ones previously called for completing its parent command.
-func (c *CommandCompleter) handleSubCommand(line []rune, pos int, rootCommand *flags.Command, gCommand *Command, command *flags.Command) (lastWord string, completions []*readline.CompletionGroup) {
+func (c *CommandCompleter) handleSubCommand(args []string, parent, command *flags.Command, gCommand *Command) (lastWord string, comps []*readline.CompletionGroup) {
 
-	args, last, lastWord := formatInput(line)
+	lastWord = c.lastWord
 
 	// Check environment variables
 	if c.envVarAsked(args, lastWord) {
@@ -189,16 +193,30 @@ func (c *CommandCompleter) handleSubCommand(line []rune, pos int, rootCommand *f
 	// Check argument options
 	if len(command.Groups()) > 0 {
 		for _, grp := range command.Groups() {
-			if opt, yes := optionArgRequired(args, last, grp); yes {
+			if opt, yes := optionArgRequired(args, c.last, grp); yes {
 				return c.completeOptionArguments(gCommand, command, opt, lastWord)
 			}
 		}
 	}
 
+	// Then propose subcommands. We don't return from here, otherwise it always skips the next steps.
+	if hasSubCommands(command, args) {
+		comps = completeSubCommands(args, lastWord, command)
+	}
+
+	// Handle subcommand if found (maybe we should rewrite this function and use it also for base command)
+	if sub, ok := subCommandFound(lastWord, args, command); ok {
+		subgCommand := gCommand.FindCommand(sub.Name)
+		if gCommand == nil {
+			return
+		}
+		return c.handleSubCommand(args[1:], command, sub, subgCommand)
+	}
+
 	// If user asks for completions with "-" or "--". This must take precedence on arguments.
-	if subCommandOptionsAsked(args, lastWord, command) {
+	if commandOptionsAsked(args, lastWord, command) {
 		globalOpts := c.console.CommandParser().Groups()
-		globalOpts = append(globalOpts, rootCommand.Groups()...)
+		globalOpts = append(globalOpts, parent.Groups()...)
 		return completeCommandOptions(args, lastWord, command, globalOpts)
 	}
 
@@ -212,7 +230,7 @@ func (c *CommandCompleter) handleSubCommand(line []rune, pos int, rootCommand *f
 
 // completeCommandOptions - Yields completion for options of a command, with various decorators
 // Many categories, from one source (a command)
-func completeCommandOptions(args []string, lastWord string, cmd *flags.Command, globalOpts []*flags.Group) (prefix string, completions []*readline.CompletionGroup) {
+func completeCommandOptions(args []string, lastWord string, cmd *flags.Command, globalOpts []*flags.Group) (prefix string, comps []*readline.CompletionGroup) {
 
 	prefix = lastWord // We only return the PREFIX for readline to correctly show suggestions.
 
@@ -229,7 +247,7 @@ func completeCommandOptions(args []string, lastWord string, cmd *flags.Command, 
 
 		// No need to add empty groups, will screw the completion system.
 		if len(comp.Suggestions) > 0 {
-			completions = append(completions, comp)
+			comps = append(comps, comp)
 		}
 	}
 
@@ -241,14 +259,14 @@ func completeCommandOptions(args []string, lastWord string, cmd *flags.Command, 
 
 		// No need to add empty groups, will screw the completion system.
 		if len(comp.Suggestions) > 0 {
-			completions = append(completions, comp)
+			comps = append(comps, comp)
 		}
 	}
 
 	// Do the same for global options, which are not part of any group "per-se"
 	_, gcomp := completeOptionGroup(args, lastWord, cmd.Group, "global options")
 	if len(gcomp.Suggestions) > 0 {
-		completions = append(completions, gcomp)
+		comps = append(comps, gcomp)
 	}
 
 	return
@@ -322,6 +340,6 @@ func completeOptionGroup(args []string, lastWord string, grp *flags.Group, title
 
 // recursiveGroupCompletion - Handles recursive completion for nested option groups
 // Many categories, one source (a command's root option group). Called by the function just above.
-func recursiveGroupCompletion(args []string, last []rune, group *flags.Group) (lastWord string, completions []*readline.CompletionGroup) {
+func recursiveGroupCompletion(args []string, last []rune, group *flags.Group) (lastWord string, comps []*readline.CompletionGroup) {
 	return
 }

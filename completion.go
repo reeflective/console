@@ -10,7 +10,17 @@ import (
 // string paramater is detected (anywhere, even in other completions) in the input line.
 // Ex: you can pass '$' as an expansion, and a function that will yield environment variables.
 func (c *Context) AddExpansionCompletion(expansion rune, comps CompletionFunc) {
+
+	// Completer
 	c.expansionComps[expansion] = comps
+
+	// Add default token highlighter if the config has not one for it.
+	if _, found := c.console.config.Highlighting[string(expansion)]; !found {
+		c.console.config.Highlighting[string(expansion)] = "{g}"
+	}
+
+	// Modify token completion descriptions with it
+	highlightingItemsComps[string(expansion)] = "user-added expansion variable"
 }
 
 // Static Completion generators ------------------------------------------------------------------------------
