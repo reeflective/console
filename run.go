@@ -12,6 +12,8 @@ func (c *Console) Run() (err error) {
 
 	for {
 		// Recompute the prompt for the current context
+		// First check and pull from configuration.
+		c.current.Prompt.loadFromConfig(c.config.Prompts[c.current.Name])
 		c.Shell.SetPrompt(c.current.Prompt.Render())
 
 		// Set the shell history sources with context ones
@@ -36,7 +38,6 @@ func (c *Console) Run() (err error) {
 		line, err := c.Shell.Readline()
 		if err != nil {
 			// Handle readline errors in a specialized function
-
 		}
 
 		// The user has entered an input line command. Any previous errors

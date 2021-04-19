@@ -55,6 +55,11 @@ type Console struct {
 	// the various asynchronous log/message functions, which need to adapt their
 	// behavior (do we reprint the prompt, where, etc) based on this.
 	isExecuting bool
+
+	// config - Holds all configuration elements for all contexts (input mode,
+	// prompt strings and setups, hints, etc)
+	config            *ConsoleConfig
+	configCommandName string
 }
 
 // NewConsole - Instantiates a new console application, with sane but powerful defaults.
@@ -66,15 +71,17 @@ func NewConsole() (c *Console) {
 		contexts: map[string]*Context{},
 	}
 
+	// Default configuration
+	c.loadDefaultConfig()
+
 	// Setup the readline instance, and input mode
 	c.Shell = readline.NewInstance()
-	c.Shell.InputMode = readline.Vim
-	c.Shell.Multiline = true
+	c.Shell.InputMode = c.config.InputMode
 	c.Shell.ShowVimMode = true
 	c.Shell.VimModeColorize = true
 
-	// Setup the prompt (all contexts)
-	c.Shell.MultilinePrompt = " > "
+	// Default context, "" (empty name)
+	c.current = c.NewContext("")
 
 	// Setup completers, hints, etc. We pass 2 functions as parameters,
 	// so that the engine can query the commands for the currently active context.
@@ -88,9 +95,10 @@ func NewConsole() (c *Console) {
 	// Available to the user for default completers.
 	c.Completer = engine
 
-	// Default context, "" (empty name)
-	c.current = c.NewContext("")
-	c.current.Prompt.Left = "gonsole"
+	// Setup the prompt (all contexts)
+	c.Shell.MultilinePrompt = c.config.Prompts[c.current.Name].MultilinePrompt
+	c.Shell.Multiline = c.config.Prompts[c.current.Name].Multiline
+	c.current.Prompt.loadFromConfig(c.config.Prompts[c.current.Name])
 
 	// Setup CtrlR history with an in-memory one by default
 	c.current.SetHistoryCtrlR("client history (in-memory)", new(readline.ExampleHistory))

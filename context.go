@@ -34,9 +34,12 @@ type Context struct {
 	// expansionComps - A list of completion generators that are triggered when
 	// the given string is detected (anywhere, even in other completions) in the input line.
 	expansionComps map[rune]CompletionFunc
+
+	// The context sometimes needs access to some console state.
+	console *Console
 }
 
-func newContext() *Context {
+func newContext(c *Console) *Context {
 	ctx := &Context{
 		Prompt: &Prompt{
 			Callbacks: map[string]func() string{},
@@ -44,6 +47,7 @@ func newContext() *Context {
 		},
 		cmd:            newCommand(),
 		expansionComps: map[rune]CompletionFunc{},
+		console:        c,
 	}
 	return ctx
 }
@@ -97,7 +101,7 @@ func (c *Context) SetHistoryAltR(name string, hist readline.History) {
 // NewContext - Create a new command context, to which the user
 // can attach some specific items, like history sources.
 func (c *Console) NewContext(name string) (ctx *Context) {
-	ctx = newContext()
+	ctx = newContext(c)
 	ctx.Name = name
 	c.contexts[name] = ctx
 	return

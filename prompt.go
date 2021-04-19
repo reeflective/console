@@ -110,6 +110,17 @@ func (p *Prompt) computeCallbacks(raw string) (ps string, width int) {
 	return
 }
 
+// The prompt takes its values from the configuration. This allows to have
+// a synchronized/actualized configuration file to export at any time.
+func (p *Prompt) loadFromConfig(promptConf *prompt) {
+	if promptConf == nil {
+		return
+	}
+	p.Left = promptConf.Left
+	p.Right = promptConf.Right
+	p.Newline = promptConf.Newline
+}
+
 // getRealLength - Some strings will have ANSI escape codes, which might be wrongly
 // interpreted as legitimate parts of the strings. This will bother if some prompt
 // components depend on other's length, so we always pass the string in this for
