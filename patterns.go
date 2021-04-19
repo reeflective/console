@@ -293,15 +293,7 @@ func getRemainingArgs(args []string, last []rune, command *flags.Command) (remai
 // [ Options ]-------------------------------------------------------------------------------------
 // commandOptionsAsked - Does the user asks for options in a root command ?
 func commandOptionsAsked(args []string, lastWord string, command *flags.Command) bool {
-	if len(args) >= 2 && (strings.HasPrefix(lastWord, "-") || strings.HasPrefix(lastWord, "--")) {
-		return true
-	}
-	return false
-}
-
-// commandOptionsAsked - Does the user asks for options in a subcommand ?
-func subCommandOptionsAsked(args []string, lastWord string, command *flags.Command) bool {
-	if len(args) > 2 && (strings.HasPrefix(lastWord, "-") || strings.HasPrefix(lastWord, "--")) {
+	if len(args) >= 1 && (strings.HasPrefix(lastWord, "-") || strings.HasPrefix(lastWord, "--")) {
 		return true
 	}
 	return false

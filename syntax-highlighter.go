@@ -1,7 +1,6 @@
 package gonsole
 
 import (
-	"fmt"
 	"strings"
 
 	"github.com/jessevdk/go-flags"
@@ -28,47 +27,109 @@ func (c *CommandCompleter) syntaxHighlighter(input []rune) (line string) {
 
 	// Base command
 	if commandFound(command) {
-		line, remain = highlightCommand(remain, command)
+
+		// Get the corresponding *Command from the console
+		gCommand := c.console.FindCommand(command.Name)
+		if gCommand == nil {
+			return
+		}
+
+		// Highlight the word, and return the shorter list of arguments to process.
+		line, remain = c.highlightCommand(line, remain, command)
 
 		// SubCommand
 		if sub, ok := subCommandFound(lastWord, args, command); ok {
-			line, remain = highlightSubCommand(line, remain, sub)
+			subgCommand := gCommand.FindCommand(sub.Name)
+			if gCommand != nil {
+				line, remain = c.handleSubCommandHint(line, remain, command, sub, subgCommand)
+			}
 		}
-
 	}
 
-	line = processRemain(line, remain)
+	// Process any expanded variables found, between others
+	line = c.processRemain(line, remain)
 
 	return
 }
 
-func highlightCommand(args []string, command *flags.Command) (line string, remain []string) {
-	line = readline.BOLD + args[0] + readline.RESET + " "
+func (c *CommandCompleter) handleSubCommandHint(processed string, args []string, parent, command *flags.Command, gCommand *Command) (line string, remain []string) {
+
+	line, remain = c.highlightCommand(processed, args, command)
+
+	// SubCommand
+	if sub, ok := subCommandFound(c.lastWord, args, command); ok {
+		subgCommand := gCommand.FindCommand(sub.Name)
+		if gCommand != nil {
+			line, remain = c.handleSubCommandHint(line, remain, command, sub, subgCommand)
+		}
+	}
+	return
+}
+
+func (c *CommandCompleter) highlightCommand(processed string, args []string, command *flags.Command) (line string, remain []string) {
+	var color = c.getTokenHighlighting("{command}")
+	line += color + args[0] + readline.RESET + " "
 	remain = args[1:]
-	return
+	return processed + line, remain
 }
 
-func highlightSubCommand(input string, args []string, command *flags.Command) (line string, remain []string) {
+func (c *CommandCompleter) highlightSubCommand(input string, args []string, command *flags.Command) (line string, remain []string) {
 	line = input
-	line += readline.BOLD + args[0] + readline.RESET + " "
+	var color = c.getTokenHighlighting("{command}")
+	line += color + args[0] + readline.RESET + " "
 	remain = args[1:]
 	return
 }
 
-func processRemain(input string, remain []string) (line string) {
+func (c *CommandCompleter) processRemain(input string, remain []string) (line string) {
 
 	// Check the last is not the last space in input
 	if len(remain) == 1 && remain[0] == " " {
 		return input
 	}
 
-	line = input + strings.Join(remain, " ")
-	// line = processEnvVars(input, remain)
+	// line = input + strings.Join(remain, " ")
+	line = c.processEnvVars(input, remain)
+	return
+}
+
+// evaluateExpansion - Given a single "word" argument, resolve any embedded expansion variables
+func (c *CommandCompleter) evaluateExpansion(arg string) (expanded string) {
+	// For each available per-context expansion variable, evaluate and replace. Any group
+	// successfully replacing the token will break the loop, and the remaining expanders will
+	// not be evaluated.
+	var evaluated = false
+	for exp := range c.console.current.expansionComps {
+		var color = c.getTokenHighlighting(string(exp))
+
+		if strings.HasPrefix(arg, string(exp)) { // It is an env var.
+			if args := strings.Split(arg, "/"); len(args) > 1 {
+				var processed = []string{}
+				for _, a := range args {
+					processed = append(processed, c.evaluateExpansion(a))
+					// if strings.HasPrefix(a, string(exp)) && a != " " { // It is an env var.
+					//         processed = append(processed, color+a+readline.RESET)
+					//         evaluated = true
+					//         break
+					// }
+				}
+				expanded = strings.Join(processed, "/")
+				evaluated = true
+				break
+			}
+			expanded = color + arg + readline.RESET
+			evaluated = true
+			break
+		}
+	}
+	if !evaluated {
+		expanded = arg
+	}
 	return
 }
 
 // processEnvVars - Highlights environment variables. NOTE: Rewrite with logic from console/env.go
-func processEnvVars(input string, remain []string) (line string) {
+func (c *CommandCompleter) processEnvVars(input string, remain []string) (line string) {
 
 	var processed []string
 
@@ -79,20 +140,7 @@ func processEnvVars(input string, remain []string) (line string) {
 		if arg == "" || arg == " " {
 			continue
 		}
-		if strings.HasPrefix(arg, "$") { // It is an env var.
-			if args := strings.Split(arg, "/"); len(args) > 1 {
-				for _, a := range args {
-					fmt.Println(a)
-					if strings.HasPrefix(a, "$") && a != " " { // It is an env var.
-						processed = append(processed, "\033[38;5;108m"+readline.DIM+a+readline.RESET)
-						continue
-					}
-				}
-			}
-			processed = append(processed, "\033[38;5;108m"+readline.DIM+arg+readline.RESET)
-			continue
-		}
-		processed = append(processed, arg)
+		processed = append(processed, c.evaluateExpansion(arg))
 	}
 
 	// Check remaining args (non-processed)
@@ -100,52 +148,31 @@ func processEnvVars(input string, remain []string) (line string) {
 		if arg == "" {
 			continue
 		}
-		if strings.HasPrefix(arg, "$") && arg != "$" { // It is an env var.
-			var full string
-			args := strings.Split(arg, "/")
-			if len(args) == 1 {
-				if strings.HasPrefix(args[0], "$") && args[0] != "" && args[0] != "$" { // It is an env var.
-					full += "\033[38;5;108m" + readline.DIM + args[0] + readline.RESET
-					continue
-				}
-			}
-			if len(args) > 1 {
-				var counter int
-				for _, arg := range args {
-					// If var is an env var
-					if strings.HasPrefix(arg, "$") && arg != "" && arg != "$" {
-						if counter < len(args)-1 {
-							full += "\033[38;5;108m" + readline.DIM + args[0] + readline.RESET + "/"
-							counter++
-							continue
-						}
-						if counter == len(args)-1 {
-							full += "\033[38;5;108m" + readline.DIM + args[0] + readline.RESET
-							counter++
-							continue
-						}
-					}
 
-					// Else, if we are not at the end of array
-					if counter < len(args)-1 && arg != "" {
-						full += arg + "/"
-						counter++
-					}
-					if counter == len(args)-1 {
-						full += arg
-						counter++
-					}
-				}
-			}
-			// Else add first var
-			processed = append(processed, full)
-		}
+		processed = append(processed, c.evaluateExpansion(arg))
 	}
 
 	line = strings.Join(processed, " ")
 
 	// Very important, keeps the line clear when erasing
 	// line += " "
+
+	return
+}
+
+func (c *CommandCompleter) getTokenHighlighting(token string) (highlight string) {
+	// Get the effect from the config and load it
+	if effect, found := c.console.config.Highlighting[token]; found {
+		defColor, found := defaultColorCallbacks[effect]
+		if !found {
+			highlight = effect
+		} else {
+			// If we found an equivalent, it means that
+			// the config is currently loaded with an expansion var {color},
+			// and we need to replace it with the actual color code sequence.
+			highlight = defColor
+		}
+	}
 
 	return
 }
