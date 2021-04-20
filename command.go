@@ -146,6 +146,23 @@ func (c *Command) CommandGroups() (grps []*commandGroup) {
 	return c.groups
 }
 
+// getCommandGroup - Get the group for a command.
+func (c *Command) getCommandGroup(cmd *flags.Command) string {
+
+	// Sliver commands are searched for if we are in this context
+	for _, group := range c.groups {
+		for _, c := range group.cmds {
+			if c.Name == cmd.Name {
+				// We don't return the name if the command is not generated
+				if c.cmd != nil {
+					return group.Name
+				}
+			}
+		}
+	}
+	return ""
+}
+
 // OptionGroups - Returns all groups of options that are bound to this command. These
 // groups (and their options) are available for use even in the command's child commands.
 func (c *Command) OptionGroups() (grps []*optionGroup) {

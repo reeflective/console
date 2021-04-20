@@ -78,7 +78,7 @@ func (c *CommandCompleter) tabCompleter(line []rune, pos int, dtc readline.Delay
 
 		// Then propose subcommands. We don't return from here, otherwise it always skips the next steps.
 		if hasSubCommands(command, c.args) {
-			comps = completeSubCommands(c.args, lastWord, command)
+			comps = completeSubCommands(c.args, lastWord, command, gCommand)
 		}
 
 		// Handle subcommand if found (maybe we should rewrite this function and use it also for base command)
@@ -131,6 +131,7 @@ func (c *CommandCompleter) completeMenuCommands(lastWord string, pos int) (prefi
 				grp := &readline.CompletionGroup{
 					Name:        c.console.GetCommandGroup(cmd),
 					Suggestions: []string{cmd.Name},
+					DisplayType: readline.TabDisplayList,
 					Descriptions: map[string]string{
 						cmd.Name: readline.Dim(cmd.ShortDescription),
 					},
@@ -140,41 +141,63 @@ func (c *CommandCompleter) completeMenuCommands(lastWord string, pos int) (prefi
 		}
 	}
 
-	// Make adjustments to the CompletionGroup list: set maxlength depending on items, check descriptions, etc.
-	for _, grp := range completions {
-		// If the length of suggestions is too long and we have
-		// many groups, use grid display.
-		// if len(completions) >= 10 {
-		// if len(completions) >= 10 && len(grp.Suggestions) >= 10 {
-		// grp.DisplayType = readline.TabDisplayGrid
-		// } else {
-		// By default, we use a map of command to descriptions
-		grp.DisplayType = readline.TabDisplayList
-		// }
-	}
-
 	return
 }
 
 // completeSubCommands - Takes subcommands and gives them as suggestions
 // One category, from one source (a parent command).
-func completeSubCommands(args []string, lastWord string, command *flags.Command) (completions []*readline.CompletionGroup) {
+func completeSubCommands(args []string, lastWord string, command *flags.Command, gCommand *Command) (completions []*readline.CompletionGroup) {
 
-	group := &readline.CompletionGroup{
-		Name:         command.Name,
-		Suggestions:  []string{},
-		Descriptions: map[string]string{},
-		DisplayType:  readline.TabDisplayList,
-	}
+	// Check their namespace (which should be their "group" (like utils, core, Jobs, etc))
+	for _, cmd := range command.Commands() {
+		// If command matches readline input, and the command is available
+		if strings.HasPrefix(cmd.Name, lastWord) && !cmd.Hidden {
+			// Check command group: add to existing group if found
+			var found bool
+			for _, grp := range completions {
+				if grp.Name == gCommand.getCommandGroup(cmd) {
+					found = true
+					grp.Suggestions = append(grp.Suggestions, cmd.Name)
+					grp.Descriptions[cmd.Name] = readline.Dim(cmd.ShortDescription)
+					break
+				}
+			}
+			// Add a new group if not found
+			if !found && gCommand.getCommandGroup(cmd) != "" {
+				grp := &readline.CompletionGroup{
+					Name:        gCommand.getCommandGroup(cmd),
+					Suggestions: []string{cmd.Name},
+					DisplayType: readline.TabDisplayList,
+					Descriptions: map[string]string{
+						cmd.Name: readline.Dim(cmd.ShortDescription),
+					},
+				}
+				completions = append(completions, grp)
+			} else if !found && gCommand.getCommandGroup(cmd) == "" {
+				var cmdGrpfound bool
+				for _, grp := range completions {
+					if grp.Name == command.Name {
+						cmdGrpfound = true
+						grp.Suggestions = append(grp.Suggestions, cmd.Name)
+						grp.Descriptions[cmd.Name] = readline.Dim(cmd.ShortDescription)
+						break
+					}
+				}
+				if !cmdGrpfound {
+					grp := &readline.CompletionGroup{
+						Name:        command.Name,
+						Suggestions: []string{cmd.Name},
+						DisplayType: readline.TabDisplayList,
+						Descriptions: map[string]string{
+							cmd.Name: readline.Dim(cmd.ShortDescription),
+						},
+					}
+					completions = append(completions, grp)
+				}
+			}
 
-	for _, sub := range command.Commands() {
-		if strings.HasPrefix(sub.Name, lastWord) && !sub.Hidden {
-			group.Suggestions = append(group.Suggestions, sub.Name)
-			group.Descriptions[sub.Name] = readline.DIM + sub.ShortDescription + readline.RESET
 		}
 	}
-
-	completions = append(completions, group)
 
 	return
 }
@@ -201,7 +224,7 @@ func (c *CommandCompleter) handleSubCommand(args []string, parent, command *flag
 
 	// Then propose subcommands. We don't return from here, otherwise it always skips the next steps.
 	if hasSubCommands(command, args) {
-		comps = completeSubCommands(args, lastWord, command)
+		comps = completeSubCommands(args, lastWord, command, gCommand)
 	}
 
 	// Handle subcommand if found (maybe we should rewrite this function and use it also for base command)
