@@ -6,8 +6,8 @@ import (
 	"github.com/maxlandon/readline"
 )
 
-// ConsoleConfig - The console configuration (prompts, hints, modes, etc)
-type ConsoleConfig struct {
+// Config - The console configuration (prompts, hints, modes, etc)
+type Config struct {
 	InputMode           readline.InputMode       `json:"input_mode"`
 	Prompts             map[string]*PromptConfig `json:"prompts"`
 	Hints               bool                     `json:"hints"`
@@ -17,8 +17,8 @@ type ConsoleConfig struct {
 
 // NewDefaultConfig - Users wishing to setup a special console configuration should
 // use this function in order to ensure there are no nil maps anywhere, and with defaults.
-func NewDefaultConfig() *ConsoleConfig {
-	return &ConsoleConfig{
+func NewDefaultConfig() *Config {
+	return &Config{
 		InputMode:           readline.Vim,
 		Prompts:             map[string]*PromptConfig{},
 		Hints:               true,
@@ -52,31 +52,9 @@ func newDefaultPromptConfig(context string) *PromptConfig {
 	}
 }
 
-// loadDefaultConfig - Sane defaults for the gonsole Console.
-func (c *Console) loadDefaultConfig() {
-	c.config = NewDefaultConfig()
-	// Make a default prompt for this application
-	c.config.Prompts[""] = newDefaultPromptConfig("")
-}
-
-func (c *Console) reloadConfig() {
-
-	// Setup the prompt, and input mode
-	c.current.Prompt.loadFromConfig(c.config.Prompts[c.current.Name])
-	c.Shell.MultilinePrompt = c.config.Prompts[c.current.Name].MultilinePrompt
-	c.Shell.Multiline = c.config.Prompts[c.current.Name].Multiline
-	c.Shell.InputMode = c.config.InputMode
-	c.PreOutputNewline = c.config.Prompts[c.current.Name].Newline
-}
-
-// ExportConfig - The console exports its configuration in a JSON struct.
-func (c *Console) ExportConfig() (conf *ConsoleConfig) {
-	return c.config
-}
-
 // LoadConfig - Loads a config struct, but does immediately refresh the prompt.
 // Settings will apply as they are needed by the console.
-func (c *Console) LoadConfig(conf *ConsoleConfig) {
+func (c *Console) LoadConfig(conf *Config) {
 	if conf == nil {
 		return
 	}
@@ -109,4 +87,26 @@ func (c *Console) LoadConfig(conf *ConsoleConfig) {
 	c.reloadConfig()
 
 	return
+}
+
+// ExportConfig - The console exports its configuration in a JSON struct.
+func (c *Console) ExportConfig() (conf *Config) {
+	return c.config
+}
+
+// loadDefaultConfig - Sane defaults for the gonsole Console.
+func (c *Console) loadDefaultConfig() {
+	c.config = NewDefaultConfig()
+	// Make a default prompt for this application
+	c.config.Prompts[""] = newDefaultPromptConfig("")
+}
+
+func (c *Console) reloadConfig() {
+
+	// Setup the prompt, and input mode
+	c.current.Prompt.loadFromConfig(c.config.Prompts[c.current.Name])
+	c.Shell.MultilinePrompt = c.config.Prompts[c.current.Name].MultilinePrompt
+	c.Shell.Multiline = c.config.Prompts[c.current.Name].Multiline
+	c.Shell.InputMode = c.config.InputMode
+	c.PreOutputNewline = c.config.Prompts[c.current.Name].Newline
 }

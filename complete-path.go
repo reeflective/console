@@ -10,8 +10,8 @@ import (
 	"github.com/maxlandon/readline"
 )
 
-// CompleteLocalPath - Provides completion for the client console filesystem, (directories only)
-func (c *CommandCompleter) CompleteLocalPath(last string) (string, []*readline.CompletionGroup) {
+// LocalPath - Provides completion for the client console filesystem, (directories only)
+func (c *CommandCompleter) LocalPath(last string) (string, []*readline.CompletionGroup) {
 
 	// Completions
 	completion := &readline.CompletionGroup{
@@ -103,8 +103,8 @@ func addSpaceTokens(in string) (path string) {
 	return
 }
 
-// CompleteLocalPathAndFiles - Provides completion for the client console filesystem, (directories and files)
-func (c *CommandCompleter) CompleteLocalPathAndFiles(last string) (string, []*readline.CompletionGroup) {
+// LocalPathAndFiles - Provides completion for the client console filesystem, (directories and files)
+func (c *CommandCompleter) LocalPathAndFiles(last string) (string, []*readline.CompletionGroup) {
 
 	// Completions
 	completion := &readline.CompletionGroup{

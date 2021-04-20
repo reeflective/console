@@ -19,13 +19,13 @@ func (c *Console) AddHelpCommand(group string) {
 			"",
 			group,
 			[]string{""},
-			func() interface{} { return &Help{console: c} })
+			func() interface{} { return &commandHelp{console: c} })
 		help.AddArgumentCompletion("Command", c.Completer.contextCommands)
 	}
 }
 
-// Help - Print help for the current context (lists all commands)
-type Help struct {
+// commandHelp - Print help for the current context (lists all commands)
+type commandHelp struct {
 	Positional struct {
 		Command    string `description:"(optional) command to print help for"`
 		SubCommand string `description:"(optional) subcommand of the root commmand passed as argument"`
@@ -36,7 +36,7 @@ type Help struct {
 }
 
 // Execute - Print help for the current context (lists all commands)
-func (h *Help) Execute(args []string) (err error) {
+func (h *commandHelp) Execute(args []string) (err error) {
 
 	parser := h.console.CommandParser()
 

@@ -58,12 +58,12 @@ func (c *CommandCompleter) PromptItems(lastWord string) (prefix string, comps []
 	comps = append(comps, sComp)
 
 	// Colors & effects
-	comps = append(comps, c.colors()...)
+	comps = append(comps, c.PromptColors()...)
 
 	return
 }
 
-func (c *CommandCompleter) colors() (comps []*readline.CompletionGroup) {
+func (c *CommandCompleter) PromptColors() (comps []*readline.CompletionGroup) {
 
 	cc := c.console.current
 	promptEffects := cc.Prompt.Colors

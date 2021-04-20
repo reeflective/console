@@ -8,8 +8,8 @@ import (
 	"github.com/maxlandon/readline"
 )
 
-// CompleteEnvironmentVariables - Returns all environment variables as suggestions.
-func (c *CommandCompleter) CompleteEnvironmentVariables() (completions []*readline.CompletionGroup) {
+// EnvironmentVariables - Returns all environment variables as suggestions.
+func (c *CommandCompleter) EnvironmentVariables() (completions []*readline.CompletionGroup) {
 
 	grp := &readline.CompletionGroup{
 		Name:         "console OS environment",

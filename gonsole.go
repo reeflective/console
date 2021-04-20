@@ -58,7 +58,7 @@ type Console struct {
 
 	// config - Holds all configuration elements for all contexts (input mode,
 	// prompt strings and setups, hints, etc)
-	config            *ConsoleConfig
+	config            *Config
 	configCommandName string
 }
 

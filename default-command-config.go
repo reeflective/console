@@ -31,7 +31,7 @@ func (c *Console) AddConfigCommand(name, group string) {
 			"",
 			group,
 			[]string{""},
-			func() interface{} { return &Config{console: c} })
+			func() interface{} { return &config{console: c} })
 		conf.SubcommandsOptional = true
 
 		// Set values
@@ -40,14 +40,14 @@ func (c *Console) AddConfigCommand(name, group string) {
 			"",
 			"builtin",
 			[]string{""},
-			func() interface{} { return &ConfigSet{console: c} })
+			func() interface{} { return &configSet{console: c} })
 
 		input := set.AddCommand("input",
 			"set the input editing mode of the console (Vim/Emacs)",
 			"",
 			"",
 			[]string{""},
-			func() interface{} { return &InputMode{console: c} })
+			func() interface{} { return &inputMode{console: c} })
 		input.AddArgumentCompletion("Input", c.Completer.inputModes)
 
 		hints := set.AddCommand("hints",
@@ -55,7 +55,7 @@ func (c *Console) AddConfigCommand(name, group string) {
 			"",
 			"",
 			[]string{""},
-			func() interface{} { return &Hints{console: c} })
+			func() interface{} { return &hintsDisplay{console: c} })
 		hints.AddArgumentCompletion("Display", c.Completer.hints)
 
 		set.AddCommand("max-tab-completer-rows",
@@ -63,14 +63,14 @@ func (c *Console) AddConfigCommand(name, group string) {
 			"",
 			"",
 			[]string{""},
-			func() interface{} { return &MaxTabCompleterRows{console: c} })
+			func() interface{} { return &maxTabCompleterRows{console: c} })
 
 		prompt := set.AddCommand("prompt",
 			"set prompt strings for one of the available contexts",
 			"",
 			"",
 			[]string{""},
-			func() interface{} { return &PromptSet{console: c} })
+			func() interface{} { return &promptSet{console: c} })
 		prompt.AddArgumentCompletionDynamic("Prompt", c.Completer.PromptItems)
 		prompt.AddOptionCompletion("Context", c.Completer.contexts)
 
@@ -79,7 +79,7 @@ func (c *Console) AddConfigCommand(name, group string) {
 			"",
 			"",
 			[]string{""},
-			func() interface{} { return &PromptSetMultiline{console: c} })
+			func() interface{} { return &promptSetMultiline{console: c} })
 		multiline.AddArgumentCompletionDynamic("Prompt", c.Completer.PromptItems)
 
 		highlight := set.AddCommand("highlight",
@@ -87,8 +87,8 @@ func (c *Console) AddConfigCommand(name, group string) {
 			"",
 			"",
 			[]string{""},
-			func() interface{} { return &HighlightSyntax{console: c} })
-		highlight.AddArgumentCompletion("Color", c.Completer.colors)
+			func() interface{} { return &highlightSyntax{console: c} })
+		highlight.AddArgumentCompletion("Color", c.Completer.PromptColors)
 		highlight.AddArgumentCompletion("Token", c.Completer.highlightTokens)
 
 		// Export configuration
@@ -97,8 +97,8 @@ func (c *Console) AddConfigCommand(name, group string) {
 			"",
 			"builtin",
 			[]string{""},
-			func() interface{} { return &ConfigExport{console: c} })
-		export.AddOptionCompletionDynamic("Save", c.Completer.CompleteLocalPath)
+			func() interface{} { return &configExport{console: c} })
+		export.AddOptionCompletionDynamic("Save", c.Completer.LocalPath)
 
 	}
 }
@@ -116,13 +116,13 @@ func (c *Console) AddConfigSubCommand(name, short, long, group string, filters [
 	return nil
 }
 
-// Config - Manage console configuration. Prints current by default
-type Config struct {
+// config - Manage console configuration. Prints current by default
+type config struct {
 	console *Console
 }
 
 // Execute - Manage console configuration. Prints current by default
-func (c *Config) Execute(args []string) (err error) {
+func (c *config) Execute(args []string) (err error) {
 	conf := c.console.config
 
 	fmt.Println(readline.Bold(readline.Blue(" Console configuration\n")))
@@ -183,18 +183,18 @@ func (c *Config) Execute(args []string) (err error) {
 	return
 }
 
-// ConfigSet - Set configuration elements of the console
-type ConfigSet struct {
+// configSet - Set configuration elements of the console
+type configSet struct {
 	console *Console
 }
 
 // Execute - Set configuration elements of the console
-func (c *ConfigSet) Execute(args []string) (err error) {
+func (c *configSet) Execute(args []string) (err error) {
 	return
 }
 
-// InputMode - Set the input editing mode of the console
-type InputMode struct {
+// inputMode - Set the input editing mode of the console
+type inputMode struct {
 	Positional struct {
 		Input string `description:"Input/editing mode"`
 	} `positional-args:"true"`
@@ -202,7 +202,7 @@ type InputMode struct {
 }
 
 // Execute - Set the input editing mode of the console
-func (i *InputMode) Execute(args []string) (err error) {
+func (i *inputMode) Execute(args []string) (err error) {
 	conf := i.console.config
 
 	switch i.Positional.Input {
@@ -220,8 +220,8 @@ func (i *InputMode) Execute(args []string) (err error) {
 	return
 }
 
-// Hints - Turn the hints on/off
-type Hints struct {
+// hintsDisplay - Turn the hints on/off
+type hintsDisplay struct {
 	Positional struct {
 		Display string `description:"show / hide command hints" required:"yes"`
 	} `positional-args:"yes" required:"yes"`
@@ -229,7 +229,7 @@ type Hints struct {
 }
 
 // Execute - Turn the hints on/off
-func (c *Hints) Execute(args []string) (err error) {
+func (c *hintsDisplay) Execute(args []string) (err error) {
 	conf := c.console.config
 
 	switch c.Positional.Display {
@@ -248,8 +248,8 @@ func (c *Hints) Execute(args []string) (err error) {
 	return
 }
 
-// MaxTabCompleterRows - Set the maximum number of completion rows
-type MaxTabCompleterRows struct {
+// maxTabCompleterRows - Set the maximum number of completion rows
+type maxTabCompleterRows struct {
 	Positional struct {
 		Rows int `description:"maximum number of completion rows to print" required:"yes"`
 	} `positional-args:"yes" required:"yes"`
@@ -257,15 +257,15 @@ type MaxTabCompleterRows struct {
 }
 
 // Execute - Set the maximum number of completion rows
-func (m *MaxTabCompleterRows) Execute(args []string) (err error) {
+func (m *maxTabCompleterRows) Execute(args []string) (err error) {
 	conf := m.console.config
 	conf.MaxTabCompleterRows = m.Positional.Rows
 	fmt.Printf(info+"Max tab completer rows: %d\n", m.Positional.Rows)
 	return
 }
 
-// ConfigExport - Export the current console configuration as a JSON object in a file.
-type ConfigExport struct {
+// configExport - Export the current console configuration as a JSON object in a file.
+type configExport struct {
 	Options struct {
 		Save   string `long:"save" short:"s" description:"path to save the configuration (default: working dir)"`
 		Output bool   `long:"output" short:"o" description:"if set, only print the JSON config to STDOUT"`
@@ -274,7 +274,7 @@ type ConfigExport struct {
 }
 
 // Execute - Export the current console configuration as a JSON object in a file.
-func (c *ConfigExport) Execute(args []string) (err error) {
+func (c *configExport) Execute(args []string) (err error) {
 	conf := c.console.config
 
 	// Pretty-print format marshaling
@@ -286,7 +286,7 @@ func (c *ConfigExport) Execute(args []string) (err error) {
 
 	// Print to STDOUT if asked
 	if c.Options.Output {
-		var config = &ConsoleConfig{}
+		var config = &Config{}
 		err = json.Unmarshal(configBytes, config)
 		if err != nil {
 			fmt.Printf(errorStr+"Failed to unmarshal config: %s\n", err.Error())
@@ -357,8 +357,8 @@ func saveLocation(save, defaultName string) (string, error) {
 	return saveTo, nil
 }
 
-// HighlightSyntax - Set the highlighting of tokens in the command line.
-type HighlightSyntax struct {
+// highlightSyntax - Set the highlighting of tokens in the command line.
+type highlightSyntax struct {
 	Positional struct {
 		Color string `description:"color to use for highlighting. Can be anything (some defaults colors/effects are completed)" required:"1-1"`
 		Token string `description:"token (word type) to highlight with the given color (completed)" required:"1-1"`
@@ -367,7 +367,7 @@ type HighlightSyntax struct {
 }
 
 // Execute - Set the highlighting of tokens in the command line.
-func (h *HighlightSyntax) Execute(args []string) (err error) {
+func (h *highlightSyntax) Execute(args []string) (err error) {
 	for token := range h.console.config.Highlighting {
 		if token == h.Positional.Token {
 			h.console.config.Highlighting[token] = h.Positional.Color
@@ -376,8 +376,8 @@ func (h *HighlightSyntax) Execute(args []string) (err error) {
 	return
 }
 
-// PromptSet - Set prompt strings for one of the available contexts.
-type PromptSet struct {
+// promptSet - Set prompt strings for one of the available contexts.
+type promptSet struct {
 	Positional struct {
 		Prompt string `description:"prompt string. Pass an empty '' to deactivate it (default colors/effect/items completed)" required:"yes"`
 	} `positional-args:"yes" required:"yes"`
@@ -392,7 +392,7 @@ type PromptSet struct {
 }
 
 // Execute - Set prompt strings for one of the available contexts.
-func (p *PromptSet) Execute(args []string) (err error) {
+func (p *promptSet) Execute(args []string) (err error) {
 	if len(args) > 0 {
 		fmt.Printf(warn+"Detected undesired remaining arguments: %s\n", readline.Bold(strings.Join(args, " ")))
 		fmt.Printf("    Please use \\ dashes for each space in prompt string (input readline doesn't detect them)\n")
@@ -447,8 +447,8 @@ func (p *PromptSet) Execute(args []string) (err error) {
 	return
 }
 
-// PromptSetMultiline - Set multiline prompt strings for one of the available contexts.
-type PromptSetMultiline struct {
+// promptSetMultiline - Set multiline prompt strings for one of the available contexts.
+type promptSetMultiline struct {
 	Positional struct {
 		Prompt string `description:"multine prompt string. Leave empty and '--enable' to activate. Pass '' to deactivate"`
 	} `positional-args:"yes"`
@@ -460,7 +460,7 @@ type PromptSetMultiline struct {
 }
 
 // Execute - Set multiline prompt strings for one of the available contexts.
-func (p *PromptSetMultiline) Execute(args []string) (err error) {
+func (p *promptSetMultiline) Execute(args []string) (err error) {
 	if len(args) > 0 {
 		fmt.Printf(warn+"Detected undesired remaining arguments: %s\n", readline.Bold(strings.Join(args, " ")))
 		fmt.Printf("    Please use \\ dashes for each space in prompt string (input readline doesn't detect them)\n")
