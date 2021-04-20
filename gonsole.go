@@ -1,6 +1,8 @@
 package gonsole
 
 import (
+	"sync"
+
 	"github.com/jessevdk/go-flags"
 	"github.com/maxlandon/readline"
 )
@@ -60,6 +62,9 @@ type Console struct {
 	// prompt strings and setups, hints, etc)
 	config            *Config
 	configCommandName string
+
+	// concurrency management.
+	mutex *sync.RWMutex
 }
 
 // NewConsole - Instantiates a new console application, with sane but powerful defaults.
@@ -69,6 +74,7 @@ func NewConsole() (c *Console) {
 
 	c = &Console{
 		contexts: map[string]*Context{},
+		mutex:    &sync.RWMutex{},
 	}
 
 	// Default configuration

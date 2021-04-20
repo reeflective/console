@@ -101,9 +101,11 @@ func (c *Context) SetHistoryAltR(name string, hist readline.History) {
 // NewContext - Create a new command context, to which the user
 // can attach some specific items, like history sources.
 func (c *Console) NewContext(name string) (ctx *Context) {
+	c.mutex.RLock()
 	ctx = newContext(c)
 	ctx.Name = name
 	c.contexts[name] = ctx
+	c.mutex.RUnlock()
 
 	// Load default prompt configuration
 	c.config.Prompts[ctx.Name] = newDefaultPromptConfig(ctx.Name)
@@ -113,6 +115,8 @@ func (c *Console) NewContext(name string) (ctx *Context) {
 // GetContext - Given a name, return the appropriate context.
 // If the context does not exists, it returns nil
 func (c *Console) GetContext(name string) (ctx *Context) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
 	if context, exists := c.contexts[name]; exists {
 		return context
 	}
@@ -124,6 +128,8 @@ func (c *Console) GetContext(name string) (ctx *Context) {
 // that belong to this new context. If the context is invalid, i.e that no commands
 // are bound to this context name, the current context is kept.
 func (c *Console) SwitchContext(context string) {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
 	for _, ctx := range c.contexts {
 		if ctx.Name == context {
 			c.current = ctx
@@ -137,5 +143,7 @@ func (c *Console) SwitchContext(context string) {
 // CurrentContext - Return the current console context. Because the Context
 // is just a reference, any modifications to this context will persist.
 func (c *Console) CurrentContext() *Context {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
 	return c.current
 }

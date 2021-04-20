@@ -104,6 +104,8 @@ func (c *Console) loadDefaultConfig() {
 }
 
 func (c *Console) reloadConfig() {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
 
 	// Setup the prompt, and input mode
 	c.current.Prompt.loadFromConfig(c.config.Prompts[c.current.Name])

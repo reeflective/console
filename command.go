@@ -2,6 +2,7 @@ package gonsole
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/jessevdk/go-flags"
 	"github.com/maxlandon/readline"
@@ -45,6 +46,9 @@ type Command struct {
 
 	optComps        map[string]CompletionFunc
 	optCompsDynamic map[string]CompletionFuncDynamic
+
+	// concurrency management
+	mutex *sync.RWMutex
 }
 
 func newCommand() *Command {
@@ -53,6 +57,7 @@ func newCommand() *Command {
 		argCompsDynamic: map[string]CompletionFuncDynamic{},
 		optComps:        map[string]CompletionFunc{},
 		optCompsDynamic: map[string]CompletionFuncDynamic{},
+		mutex:           &sync.RWMutex{},
 	}
 	return c
 }
@@ -77,7 +82,9 @@ func (c *Command) AddCommand(name, short, long, group string, filters []string, 
 	}
 	if grp == nil {
 		grp = &commandGroup{Name: group}
+		c.mutex.RLock()
 		c.groups = append(c.groups, grp)
+		c.mutex.RUnlock()
 	}
 
 	// Store the interface data in a command spawing funtion, which acts as an instantiator.
@@ -108,8 +115,12 @@ func (c *Command) AddCommand(name, short, long, group string, filters []string, 
 		argCompsDynamic:  map[string]CompletionFuncDynamic{},
 		optComps:         map[string]CompletionFunc{},
 		optCompsDynamic:  map[string]CompletionFuncDynamic{},
+		mutex:            &sync.RWMutex{},
 	}
+
+	c.mutex.RLock()
 	grp.cmds = append(grp.cmds, command)
+	c.mutex.RUnlock()
 
 	return command
 }
@@ -171,7 +182,9 @@ func (c *Command) OptionGroups() (grps []*optionGroup) {
 
 // Add - Same as AddCommand("", "", ...), but passing a populated Command struct.
 func (c *Command) Add(cmd *Command) *Command {
-	return c.AddCommand(cmd.Name, cmd.ShortDescription, cmd.LongDescription, cmd.Group, cmd.Filters, cmd.Data)
+	command := c.AddCommand(cmd.Name, cmd.ShortDescription, cmd.LongDescription, cmd.Group, cmd.Filters, cmd.Data)
+	command.SubcommandsOptional = cmd.SubcommandsOptional
+	return command
 }
 
 // AddCommand - Add a command to the default console context, named "". Please check gonsole.CurrentContext().AddCommand(),
@@ -182,7 +195,9 @@ func (c *Console) AddCommand(name, short, long, group string, filters []string, 
 
 // Add - Same as AddCommand("", "", ...), but passing a populated Command struct.
 func (c *Console) Add(cmd *Command) *Command {
-	return c.current.AddCommand(cmd.Name, cmd.ShortDescription, cmd.LongDescription, cmd.Group, cmd.Filters, cmd.Data)
+	command := c.current.AddCommand(cmd.Name, cmd.ShortDescription, cmd.LongDescription, cmd.Group, cmd.Filters, cmd.Data)
+	command.SubcommandsOptional = cmd.SubcommandsOptional
+	return command
 }
 
 // HideCommands - Commands, in addition to their contexts, can be shown/hidden based
@@ -205,6 +220,8 @@ func (c *Console) HideCommands(filter string) {
 // Use this function if you have previously called HideCommands("filter") and want
 // these commands to be available back under their respective context.
 func (c *Console) ShowCommands(filter string) {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
 	for i, f := range c.filters {
 		if f == filter {
 			// Remove the element at index i from a.
@@ -217,6 +234,8 @@ func (c *Console) ShowCommands(filter string) {
 
 // FindCommand - Find a subcommand of this command, given the command name.
 func (c *Command) FindCommand(name string) (command *Command) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
 	for _, group := range c.groups {
 		for _, cmd := range group.cmds {
 			if cmd.Name == name {
@@ -230,6 +249,8 @@ func (c *Command) FindCommand(name string) (command *Command) {
 // GetCommands - Callers of this are for example the TabCompleter, which needs to call
 // this regularly in order to have a list of commands belonging to the current context.
 func (c *Console) GetCommands() (groups map[string][]*flags.Command, groupNames []string) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
 
 	groups = map[string][]*flags.Command{}
 
@@ -245,6 +266,9 @@ func (c *Console) GetCommands() (groups map[string][]*flags.Command, groupNames 
 
 // FindCommand - Find a command among the root ones in the application, for the current context.
 func (c *Console) FindCommand(name string) (command *Command) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
 	for _, group := range c.current.cmd.groups {
 		for _, cmd := range group.cmds {
 			if cmd.Name == name {
@@ -274,31 +298,5 @@ func (c *Console) bindCommands() {
 	// and all of their subcommands recursively. Also generates options, etc.
 	for _, group := range cc.cmd.groups {
 		c.bindCommandGroup(cc.parser, group)
-	}
-
-	// Once all go-flags commands are generated, we can set them hidden if
-	// they match some of the active hide/show filters.
-	c.hideCommands()
-}
-
-func (c *Console) hideCommands() {
-	cc := c.current
-
-	// For each command group
-	for _, group := range cc.cmd.groups {
-	nextCommand:
-		// analyse next command's filters against the console ones.
-		for _, cmd := range group.cmds {
-			if cmd.cmd != nil {
-				for _, cmdFilter := range cmd.Filters {
-					for _, filter := range c.filters {
-						if filter == cmdFilter {
-							cmd.cmd.Hidden = true
-							continue nextCommand
-						}
-					}
-				}
-			}
-		}
 	}
 }
