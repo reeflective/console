@@ -9,8 +9,8 @@ import (
 	"github.com/maxlandon/readline"
 )
 
-// prompt - Computes all prompts used on the shell for a given context.
-type prompt struct {
+// Prompt - Computes all prompts used on the shell for a given context.
+type Prompt struct {
 	Left  string // The leftmost prompt
 	Right string // The rightmost prompt, currently same line as left.
 
@@ -64,7 +64,7 @@ func (c *Console) RefreshPromptInPlace(log string, prompt string) {
 
 // Render - The core prompt computes all necessary values, forges a prompt string
 // and returns it for being printed by the shell.
-func (p *prompt) Render() (prompt string) {
+func (p *Prompt) Render() (prompt string) {
 
 	// We need the terminal width: the prompt sometimes
 	// makes use of both sides for different items.
@@ -94,7 +94,7 @@ func (p *prompt) Render() (prompt string) {
 
 // computeBase - Computes the base prompt (left-side) with potential custom prompt given.
 // Returns the width of the computed string, for correct aggregation of all strings.
-func (p *prompt) computeCallbacks(raw string) (ps string, width int) {
+func (p *Prompt) computeCallbacks(raw string) (ps string, width int) {
 	ps = raw
 
 	// Compute callback values
@@ -112,7 +112,7 @@ func (p *prompt) computeCallbacks(raw string) (ps string, width int) {
 
 // The prompt takes its values from the configuration. This allows to have
 // a synchronized/actualized configuration file to export at any time.
-func (p *prompt) loadFromConfig(promptConf *PromptConfig) {
+func (p *Prompt) loadFromConfig(promptConf *PromptConfig) {
 	if promptConf == nil {
 		return
 	}

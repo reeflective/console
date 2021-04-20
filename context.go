@@ -10,7 +10,7 @@ import (
 // specific to some host/user, or domain of activity, commands will vary.
 type Context struct {
 	Name   string  // This name is just used for retrieving usage
-	Prompt *prompt // A dedicated prompt with its own callbacks and colors
+	Prompt *Prompt // A dedicated prompt with its own callbacks and colors
 
 	// UnknownCommandHandler - The user can specify a function that will
 	// be executed if the error raised by the application parser is a
@@ -41,7 +41,7 @@ type Context struct {
 
 func newContext(c *Console) *Context {
 	ctx := &Context{
-		Prompt: &prompt{
+		Prompt: &Prompt{
 			Callbacks: map[string]func() string{},
 			Colors:    defaultColorCallbacks,
 		},
