@@ -3,7 +3,6 @@ package gonsole
 import (
 	"fmt"
 
-	"github.com/jessevdk/go-flags"
 	"github.com/maxlandon/readline"
 )
 
@@ -27,8 +26,7 @@ func (c *Console) AddHelpCommand(group string) {
 // commandHelp - Print help for the current context (lists all commands)
 type commandHelp struct {
 	Positional struct {
-		Command    string `description:"(optional) command to print help for"`
-		SubCommand string `description:"(optional) subcommand of the root commmand passed as argument"`
+		Command []string `description:"(optional) command / subcommand (at any level) to print help for"`
 	} `positional-args:"true"`
 
 	// Needed to access commands
@@ -38,44 +36,21 @@ type commandHelp struct {
 // Execute - Print help for the current context (lists all commands)
 func (h *commandHelp) Execute(args []string) (err error) {
 
-	parser := h.console.CommandParser()
-
 	// If no component argument is asked for
-	if h.Positional.Command == "" {
+	if len(h.Positional.Command) == 0 {
 		h.console.printMenuHelp(h.console.CurrentContext().Name)
 		return
 	}
 
-	var command *flags.Command
-	for _, cmd := range parser.Commands() {
-		if cmd.Name == h.Positional.Command {
-			command = cmd
-		}
-	}
+	parser := h.console.CommandParser()
+	command := h.console.findHelpCommand(h.Positional.Command, parser)
+
 	if command == nil {
 		fmt.Printf(errorStr+"Invalid command: %s%s%s\n",
 			readline.BOLD, h.Positional.Command, readline.RESET)
 		return
 	}
-
-	if h.Positional.SubCommand == "" {
-		h.console.printCommandHelp(command)
-		return
-	}
-
-	var sub *flags.Command
-	for _, cmd := range command.Commands() {
-		if cmd.Name == h.Positional.SubCommand {
-			sub = cmd
-		}
-	}
-	if sub == nil {
-		fmt.Printf(errorStr+"Invalid command: %s%s%s\n",
-			readline.BOLD, h.Positional.SubCommand, readline.RESET)
-		return
-	}
-
-	h.console.printCommandHelp(sub)
+	h.console.printCommandHelp(command)
 
 	return
 }

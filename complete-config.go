@@ -138,6 +138,7 @@ func (c *CommandCompleter) highlightTokens() (comps []*readline.CompletionGroup)
 		"{command-argument}": "highlight the command arguments",
 		"{option}":           "highlight the option name",
 		"{option-argument}":  "highlight the option arguments",
+		"{hint-text}":        "color of the hint text displayed below prompt",
 		// We will dynamically add all <$-env> items as well.
 	}
 

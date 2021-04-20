@@ -82,36 +82,26 @@ func (c *Console) printMenuHelp(context string) {
 // findHelpCommand - A -h, --help flag was invoked in the output.
 // Find the root or any subcommand.
 func (c *Console) findHelpCommand(args []string, parser *flags.Parser) *flags.Command {
-
-	var root *flags.Command
 	for _, cmd := range parser.Commands() {
 		if cmd.Name == args[0] {
-			root = cmd
+			return c.findLastCommand(args[1:], cmd)
 		}
-	}
-	if root == nil {
-		return nil
-	}
-	if len(args) == 1 || len(root.Commands()) == 0 {
-		return root
-	}
-
-	var sub *flags.Command
-	if len(args) > 1 {
-		for _, s := range root.Commands() {
-			if s.Name == args[1] {
-				sub = s
-			}
-		}
-	}
-	if sub == nil {
-		return root
-	}
-	if len(args) == 2 || len(sub.Commands()) == 0 {
-		return sub
 	}
 
 	return nil
+}
+
+// findHelpCommand - A -h, --help flag was invoked in the output.
+// Find the root or any subcommand.
+func (c *Console) findLastCommand(args []string, command *flags.Command) (sub *flags.Command) {
+	for i, arg := range args {
+		for _, cmd := range command.Commands() {
+			if cmd.Name == arg {
+				return c.findLastCommand(args[i:], cmd)
+			}
+		}
+	}
+	return command
 }
 
 func stringInSlice(a string, list *[]string) bool {
