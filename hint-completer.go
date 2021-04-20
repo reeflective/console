@@ -34,7 +34,7 @@ func (c *CommandCompleter) hintCompleter(line []rune, pos int) (hint []rune) {
 	if commandFound(command) {
 
 		// Command hint by default (no space between cursor and last command character)
-		hint = commandHint(command)
+		hint = c.commandHint(command)
 
 		// Check environment variables
 		if c.envVarAsked(args, lastWord) {
@@ -47,7 +47,7 @@ func (c *CommandCompleter) hintCompleter(line []rune, pos int) (hint []rune) {
 			groups = append(groups, c.console.CommandParser().Groups()...)
 			for _, grp := range groups {
 				if opt, yes := optionArgRequired(args, last, grp); yes {
-					hint = optionArgumentHint(args, last, opt)
+					hint = c.optionArgumentHint(args, last, opt)
 				}
 			}
 		}
@@ -60,12 +60,7 @@ func (c *CommandCompleter) hintCompleter(line []rune, pos int) (hint []rune) {
 
 		// If command has args, hint for args
 		if arg, yes := commandArgumentRequired(lastWord, args, command); yes {
-			hint = []rune(commandArgumentHints(args, last, command, arg))
-		}
-
-		// Brief subcommand hint
-		if lastIsSubCommand(lastWord, command) {
-			hint = []rune(cmdHint + command.Find(string(last)).ShortDescription)
+			hint = []rune(c.commandArgumentHints(args, last, command, arg))
 		}
 
 		// Handle subcommand if found
@@ -83,16 +78,11 @@ func (c *CommandCompleter) hintCompleter(line []rune, pos int) (hint []rune) {
 	return
 }
 
-// commandHint - Yields the hint of a Wiregost command
-func commandHint(command *flags.Command) (hint []rune) {
-	return []rune(cmdHint + command.ShortDescription)
-}
-
 // handleSubcommandHints - Handles hints for a subcommand and its arguments, options, etc.
 func (c *CommandCompleter) handleSubcommandHints(args []string, last []rune, rootCommand, command *flags.Command) (hint []rune) {
 
 	// By default, the hint for this subcommand.
-	hint = []rune(cmdHint + command.ShortDescription)
+	hint = c.commandHint(command)
 
 	// If command has args, hint for args
 	if arg, yes := commandArgumentRequired(string(last), args, command); yes {
@@ -131,6 +121,12 @@ func (c *CommandCompleter) handleSubcommandHints(args []string, last []rune, roo
 	}
 
 	return
+}
+
+// commandHint - Yields the hint of a Wiregost command
+func (c *CommandCompleter) commandHint(command *flags.Command) (hint []rune) {
+	var color = c.getTokenHighlighting("{hint-text}")
+	return []rune(cmdHint + color + command.ShortDescription)
 }
 
 // commandArgumentHints - Yields hints for arguments to commands if they have some

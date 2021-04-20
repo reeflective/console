@@ -163,13 +163,9 @@ func (c *CommandCompleter) processEnvVars(input string, remain []string) (line s
 func (c *CommandCompleter) getTokenHighlighting(token string) (highlight string) {
 	// Get the effect from the config and load it
 	if effect, found := c.console.config.Highlighting[token]; found {
-		defColor, found := defaultColorCallbacks[effect]
-		if !found {
-			highlight = effect
-		} else {
-			// If we found an equivalent, it means that
-			// the config is currently loaded with an expansion var {color},
-			// and we need to replace it with the actual color code sequence.
+		highlight = effect
+
+		if defColor, exists := defaultColorCallbacks[effect]; exists {
 			highlight = defColor
 		}
 	}

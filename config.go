@@ -28,6 +28,7 @@ func NewDefaultConfig() *Config {
 			"{command-argument}": readline.FOREWHITE,
 			"{option}":           readline.BOLD,
 			"{option-argument}":  readline.FOREWHITE,
+			"{hint-text}":        "\033[38;5;248m",
 		},
 	}
 }
@@ -78,7 +79,7 @@ func (c *Console) LoadConfig(conf *Config) {
 			"{command-argument}": readline.FOREWHITE,
 			"{option}":           readline.BOLD,
 			"{option-argument}":  readline.FOREWHITE,
-			"{hint-text}":        "\033[38;5;250m",
+			"{hint-text}":        "\033[38;5;248m",
 		}
 	}
 	// Then load and apply all componenets that need a refresh now
