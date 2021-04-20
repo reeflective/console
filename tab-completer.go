@@ -144,13 +144,13 @@ func (c *CommandCompleter) completeMenuCommands(lastWord string, pos int) (prefi
 	for _, grp := range completions {
 		// If the length of suggestions is too long and we have
 		// many groups, use grid display.
-		if len(completions) >= 10 {
-			// if len(completions) >= 10 && len(grp.Suggestions) >= 10 {
-			grp.DisplayType = readline.TabDisplayGrid
-		} else {
-			// By default, we use a map of command to descriptions
-			grp.DisplayType = readline.TabDisplayList
-		}
+		// if len(completions) >= 10 {
+		// if len(completions) >= 10 && len(grp.Suggestions) >= 10 {
+		// grp.DisplayType = readline.TabDisplayGrid
+		// } else {
+		// By default, we use a map of command to descriptions
+		grp.DisplayType = readline.TabDisplayList
+		// }
 	}
 
 	return

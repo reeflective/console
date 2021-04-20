@@ -78,6 +78,7 @@ func (c *Console) LoadConfig(conf *Config) {
 			"{command-argument}": readline.FOREWHITE,
 			"{option}":           readline.BOLD,
 			"{option-argument}":  readline.FOREWHITE,
+			"{hint-text}":        "\033[38;5;250m",
 		}
 	}
 	// Then load and apply all componenets that need a refresh now

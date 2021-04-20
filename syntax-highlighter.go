@@ -41,7 +41,7 @@ func (c *CommandCompleter) syntaxHighlighter(input []rune) (line string) {
 		if sub, ok := subCommandFound(lastWord, args, command); ok {
 			subgCommand := gCommand.FindCommand(sub.Name)
 			if gCommand != nil {
-				line, remain = c.handleSubCommandHint(line, remain, command, sub, subgCommand)
+				line, remain = c.handleSubCommandSyntax(line, remain, command, sub, subgCommand)
 			}
 		}
 	}
@@ -52,7 +52,7 @@ func (c *CommandCompleter) syntaxHighlighter(input []rune) (line string) {
 	return
 }
 
-func (c *CommandCompleter) handleSubCommandHint(processed string, args []string, parent, command *flags.Command, gCommand *Command) (line string, remain []string) {
+func (c *CommandCompleter) handleSubCommandSyntax(processed string, args []string, parent, command *flags.Command, gCommand *Command) (line string, remain []string) {
 
 	line, remain = c.highlightCommand(processed, args, command)
 
@@ -60,7 +60,7 @@ func (c *CommandCompleter) handleSubCommandHint(processed string, args []string,
 	if sub, ok := subCommandFound(c.lastWord, args, command); ok {
 		subgCommand := gCommand.FindCommand(sub.Name)
 		if gCommand != nil {
-			line, remain = c.handleSubCommandHint(line, remain, command, sub, subgCommand)
+			line, remain = c.handleSubCommandSyntax(line, remain, command, sub, subgCommand)
 		}
 	}
 	return
