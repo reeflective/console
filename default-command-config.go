@@ -42,19 +42,21 @@ func (c *Console) AddConfigCommand(name, group string) {
 			[]string{""},
 			func() interface{} { return &ConfigSet{console: c} })
 
-		set.AddCommand("input",
+		input := set.AddCommand("input",
 			"set the input editing mode of the console (Vim/Emacs)",
 			"",
 			"",
 			[]string{""},
 			func() interface{} { return &InputMode{console: c} })
+		input.AddArgumentCompletion("Input", c.Completer.inputModes)
 
-		set.AddCommand("hints",
+		hints := set.AddCommand("hints",
 			"turn the console hints on/off",
 			"",
 			"",
 			[]string{""},
 			func() interface{} { return &Hints{console: c} })
+		hints.AddArgumentCompletion("Display", c.Completer.hints)
 
 		set.AddCommand("max-tab-completer-rows",
 			"set the maximum number of completion rows",
@@ -70,21 +72,24 @@ func (c *Console) AddConfigCommand(name, group string) {
 			[]string{""},
 			func() interface{} { return &PromptSet{console: c} })
 		prompt.AddArgumentCompletionDynamic("Prompt", c.Completer.PromptItems)
+		prompt.AddOptionCompletion("Context", c.Completer.contexts)
 
 		multiline := set.AddCommand("prompt-multiline",
 			"set/enable/disable multiline prompt strings for one of the available contexts",
 			"",
 			"",
 			[]string{""},
-			func() interface{} { return &PromptSet{console: c} })
+			func() interface{} { return &PromptSetMultiline{console: c} })
 		multiline.AddArgumentCompletionDynamic("Prompt", c.Completer.PromptItems)
 
-		set.AddCommand("highlight",
+		highlight := set.AddCommand("highlight",
 			"set the highlighting of tokens in the command line",
 			"",
 			"",
 			[]string{""},
 			func() interface{} { return &HighlightSyntax{console: c} })
+		highlight.AddArgumentCompletion("Color", c.Completer.colors)
+		highlight.AddArgumentCompletion("Token", c.Completer.highlightTokens)
 
 		// Export configuration
 		export := conf.AddCommand("export",
@@ -280,7 +285,13 @@ func (c *ConfigExport) Execute(args []string) (err error) {
 
 	// Print to STDOUT if asked
 	if c.Options.Output {
-		fmt.Println(configBytes)
+		var config = &ConsoleConfig{}
+		err = json.Unmarshal(configBytes, config)
+		if err != nil {
+			fmt.Printf(errorStr+"Failed to unmarshal config: %s\n", err.Error())
+		} else {
+			fmt.Println(string(configBytes))
+		}
 		return
 	}
 
@@ -348,8 +359,8 @@ func saveLocation(save, defaultName string) (string, error) {
 // HighlightSyntax - Set the highlighting of tokens in the command line.
 type HighlightSyntax struct {
 	Positional struct {
-		Color string `description:"color to use for highlighting. Can be anything (some defaults colors/effects are completed)" required:"yes"`
-		Token string `description:"token (word type) to highlight with the given color (completed)" required:"yes"`
+		Color string `description:"color to use for highlighting. Can be anything (some defaults colors/effects are completed)" required:"1-1"`
+		Token string `description:"token (word type) to highlight with the given color (completed)" required:"1-1"`
 	} `positional-args:"true" required:"yes"`
 	console *Console
 }
@@ -374,7 +385,7 @@ type PromptSet struct {
 		Left          bool   `long:"left" short:"l" description:"apply changes to the left-side prompt"`
 		NewlineBefore bool   `long:"newline-before" short:"b" description:"if true, a blank line is left before the prompt is printed"`
 		NewlineAfter  bool   `long:"newline-after" short:"a" description:"if true, a blank line is left before the command output is printed"`
-		Context       string `long:"context" short:"c" description:"name of the context for which to set the prompt (completed)" default:"default"`
+		Context       string `long:"context" short:"c" description:"name of the context for which to set the prompt (completed)" default:"current"`
 	} `group:"export options"`
 	console *Console
 }

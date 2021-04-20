@@ -6,15 +6,15 @@ import (
 	"github.com/maxlandon/readline"
 )
 
-var (
-	highlightingItemsComps = map[string]string{
-		"{command}":          "highlight the command words",
-		"{command-argument}": "highlight the command arguments",
-		"{option}":           "highlight the option name",
-		"{option-argument}":  "highlight the option arguments",
-		// We will dynamically add all <$-env> items as well.
-	}
-)
+// var (
+//         highlightingItemsComps = map[string]string{
+//                 "{command}":          "highlight the command words",
+//                 "{command-argument}": "highlight the command arguments",
+//                 "{option}":           "highlight the option name",
+//                 "{option-argument}":  "highlight the option arguments",
+//                 // We will dynamically add all <$-env> items as well.
+//         }
+// )
 
 // ConsoleConfig - The console configuration (prompts, hints, modes, etc)
 type ConsoleConfig struct {
@@ -25,7 +25,9 @@ type ConsoleConfig struct {
 	Highlighting        map[string]string        `json:"highlighting"`
 }
 
-func newDefaultConfig() *ConsoleConfig {
+// NewDefaultConfig - Users wishing to setup a special console configuration should
+// use this function in order to ensure there are no nil maps anywhere, and with defaults.
+func NewDefaultConfig() *ConsoleConfig {
 	return &ConsoleConfig{
 		InputMode:           readline.Vim,
 		Prompts:             map[string]*PromptConfig{},
@@ -62,7 +64,7 @@ func newDefaultPromptConfig(context string) *PromptConfig {
 
 // loadDefaultConfig - Sane defaults for the gonsole Console.
 func (c *Console) loadDefaultConfig() {
-	c.config = newDefaultConfig()
+	c.config = NewDefaultConfig()
 	// Make a default prompt for this application
 	c.config.Prompts[""] = newDefaultPromptConfig("")
 }

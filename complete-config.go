@@ -37,13 +37,12 @@ func (c *CommandCompleter) PromptItems(lastWord string) (prefix string, comps []
 
 	cc := c.console.current
 	serverPromptItems := cc.Prompt.Callbacks
-	promptEffects := cc.Prompt.Colors
 
 	// Items
 	sComp := &readline.CompletionGroup{
 		Name:         fmt.Sprintf("%s prompt items", cc.Name),
 		Descriptions: map[string]string{},
-		DisplayType:  readline.TabDisplayMap,
+		DisplayType:  readline.TabDisplayGrid,
 	}
 
 	var keys []string
@@ -52,11 +51,22 @@ func (c *CommandCompleter) PromptItems(lastWord string) (prefix string, comps []
 	}
 	sort.Strings(keys)
 	for _, item := range keys {
-		if strings.HasPrefix(item, lastWord) {
-			sComp.Suggestions = append(sComp.Suggestions, item)
-		}
+		// if strings.HasPrefix(item, lastWord) {
+		sComp.Suggestions = append(sComp.Suggestions, item)
+		// }
 	}
 	comps = append(comps, sComp)
+
+	// Colors & effects
+	comps = append(comps, c.colors()...)
+
+	return
+}
+
+func (c *CommandCompleter) colors() (comps []*readline.CompletionGroup) {
+
+	cc := c.console.current
+	promptEffects := cc.Prompt.Colors
 
 	// Colors & effects
 	cComp := &readline.CompletionGroup{
@@ -71,17 +81,87 @@ func (c *CommandCompleter) PromptItems(lastWord string) (prefix string, comps []
 	}
 	sort.Strings(colorKeys)
 	for _, item := range colorKeys {
-		if strings.HasPrefix(item, lastWord) {
-			desc, ok := promptEffectsDesc[item]
-			if ok {
-				cComp.Suggestions = append(cComp.Suggestions, item)
-				cComp.Descriptions[item] = readline.Dim(desc)
-			} else {
-				cComp.Suggestions = append(cComp.Suggestions, item)
-			}
+		desc, ok := promptEffectsDesc[item]
+		if ok {
+			cComp.Suggestions = append(cComp.Suggestions, item)
+			cComp.Descriptions[item] = readline.Dim(desc)
+		} else {
+			cComp.Suggestions = append(cComp.Suggestions, item)
 		}
 	}
 	comps = append(comps, cComp)
 
 	return
+}
+
+func (c *CommandCompleter) hints() (comps []*readline.CompletionGroup) {
+	comp := &readline.CompletionGroup{
+		Name:         "hint verbosity",
+		Descriptions: map[string]string{},
+		DisplayType:  readline.TabDisplayGrid,
+		Suggestions:  []string{"show", "hide"},
+	}
+	return []*readline.CompletionGroup{comp}
+}
+
+func (c *CommandCompleter) inputModes() (comps []*readline.CompletionGroup) {
+	comp := &readline.CompletionGroup{
+		Name:         "input/editing modes",
+		Descriptions: map[string]string{},
+		DisplayType:  readline.TabDisplayGrid,
+		Suggestions:  []string{"vim", "emacs"},
+	}
+	return []*readline.CompletionGroup{comp}
+}
+
+func (c *CommandCompleter) contexts() (comps []*readline.CompletionGroup) {
+	comp := &readline.CompletionGroup{
+		Name:         "console contexts (menus)",
+		Descriptions: map[string]string{},
+		DisplayType:  readline.TabDisplayGrid,
+	}
+	for _, cc := range c.console.contexts {
+		comp.Suggestions = append(comp.Suggestions, cc.Name)
+	}
+	return []*readline.CompletionGroup{comp}
+}
+
+func (c *CommandCompleter) highlightTokens() (comps []*readline.CompletionGroup) {
+	comp := &readline.CompletionGroup{
+		Name:         "line tokens",
+		Descriptions: map[string]string{},
+		DisplayType:  readline.TabDisplayList,
+	}
+
+	var highlightingTokens = map[string]string{
+		"{command}":          "highlight the command words",
+		"{command-argument}": "highlight the command arguments",
+		"{option}":           "highlight the option name",
+		"{option-argument}":  "highlight the option arguments",
+		// We will dynamically add all <$-env> items as well.
+	}
+
+	// Add user-added expansion variables
+	for exp, completer := range c.console.current.expansionComps {
+		groups := completer()
+		var titles []string
+		for _, grp := range groups {
+			titles = append(titles, grp.Name)
+		}
+		highlightingTokens[string(exp)] = "(user-added) " + strings.Join(titles, ",")
+	}
+
+	// Sort and add to comp group.
+	var keys []string
+	for item := range highlightingTokens {
+		keys = append(keys, item)
+	}
+	sort.Strings(keys)
+
+	for _, token := range keys {
+		comp.Suggestions = append(comp.Suggestions, token)
+		comp.Descriptions[token] = readline.DIM + highlightingTokens[token] + readline.RESET
+	}
+
+	return []*readline.CompletionGroup{comp}
 }

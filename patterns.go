@@ -147,10 +147,10 @@ func hasArgs(command *flags.Command) bool {
 }
 
 // commandArgumentRequired - Analyses input and sends back the next argument name to provide completion for
-func commandArgumentRequired(lastWord string, raw []string, command *flags.Command) (name string, yes bool) {
+func commandArgumentRequired(lastWord string, args []string, command *flags.Command) (name string, yes bool) {
 
 	// First, filter redundant spaces. This does not modify the actual line
-	args := ignoreRedundantSpaces(raw)
+	args = ignoreRedundantSpaces(args)
 
 	// Trim command and subcommand args
 	var remain []string
@@ -190,6 +190,8 @@ func commandArgumentRequired(lastWord string, raw []string, command *flags.Comma
 				if lastWord != "" {
 					return arg.Name, true
 				}
+				remain = remain[1:]
+				continue
 			}
 
 			// If filed and we are not last arg, continue

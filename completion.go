@@ -20,7 +20,7 @@ func (c *Context) AddExpansionCompletion(expansion rune, comps CompletionFunc) {
 	}
 
 	// Modify token completion descriptions with it
-	highlightingItemsComps[string(expansion)] = "user-added expansion variable"
+	// highlightingItemsComps[string(expansion)] = "user-added expansion variable"
 }
 
 // Static Completion generators ------------------------------------------------------------------------------
