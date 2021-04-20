@@ -235,6 +235,7 @@ func (c *Hints) Execute(args []string) (err error) {
 	switch c.Positional.Display {
 	case "show", "on":
 		conf.Hints = true
+		c.console.Shell.HintText = c.console.Completer.hintCompleter
 		fmt.Printf(info+"Console hints: %s\n", readline.Yellow(c.Positional.Display))
 	case "hide", "off":
 		conf.Hints = false

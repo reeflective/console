@@ -60,6 +60,18 @@ func (c *Console) Run() (err error) {
 		// Run user-provided pre-run line hooks, which may modify the input line
 		args = c.runLineHooks(args)
 
+		// Parse any special rune tokens, before trying to evaluate any expanded variable.
+		tokenParsed, err := c.parseTokens(args)
+		if err != nil {
+			tokenParsed = args
+		}
+
+		// Parse the input line for any expanded variables, and evaluate them.
+		args, err = c.parseExpansionVariables(tokenParsed)
+		if err != nil {
+			fmt.Println(warn+"Failed to evaluate expanded variables: %s", err.Error())
+		}
+
 		// Run user-provided pre-run hooks
 		c.runPreRunHooks()
 

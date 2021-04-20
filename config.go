@@ -6,16 +6,6 @@ import (
 	"github.com/maxlandon/readline"
 )
 
-// var (
-//         highlightingItemsComps = map[string]string{
-//                 "{command}":          "highlight the command words",
-//                 "{command-argument}": "highlight the command arguments",
-//                 "{option}":           "highlight the option name",
-//                 "{option-argument}":  "highlight the option arguments",
-//                 // We will dynamically add all <$-env> items as well.
-//         }
-// )
-
 // ConsoleConfig - The console configuration (prompts, hints, modes, etc)
 type ConsoleConfig struct {
 	InputMode           readline.InputMode       `json:"input_mode"`

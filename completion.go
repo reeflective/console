@@ -18,9 +18,6 @@ func (c *Context) AddExpansionCompletion(expansion rune, comps CompletionFunc) {
 	if _, found := c.console.config.Highlighting[string(expansion)]; !found {
 		c.console.config.Highlighting[string(expansion)] = "{g}"
 	}
-
-	// Modify token completion descriptions with it
-	// highlightingItemsComps[string(expansion)] = "user-added expansion variable"
 }
 
 // Static Completion generators ------------------------------------------------------------------------------

@@ -140,3 +140,35 @@ func handleEmbeddedVar(arg string, exp rune, grps []*readline.CompletionGroup) (
 
 	return strings.Join(path, "/")
 }
+
+// parseTokens - Parse and process any special tokens that are not treated by environment-like parsers.
+func (c *Console) parseTokens(sanitized []string) (parsed []string, err error) {
+
+	// PATH SPACE TOKENS
+	// Catch \ tokens, which have been introduced in paths where some directories have spaces in name.
+	// For each of these splits, we concatenate them with the next string.
+	// This will also inspect commands/options/arguments, but there is no reason why a backlash should be present in them.
+	var pathAdjusted []string
+	var roll bool
+	var arg string
+	for i := range sanitized {
+		if strings.HasSuffix(sanitized[i], "\\") {
+			// If we find a suffix, replace with a space. Go on with next input
+			arg += strings.TrimSuffix(sanitized[i], "\\") + " "
+			roll = true
+		} else if roll {
+			// No suffix but part of previous input. Add it and go on.
+			arg += sanitized[i]
+			pathAdjusted = append(pathAdjusted, arg)
+			arg = ""
+			roll = false
+		} else {
+			// Default, we add our path and go on.
+			pathAdjusted = append(pathAdjusted, sanitized[i])
+		}
+	}
+	parsed = pathAdjusted
+
+	// Add new function here, act on parsed []string from now on, not sanitized
+	return
+}
