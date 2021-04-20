@@ -42,6 +42,10 @@ func (c *CommandCompleter) completeExpansionCompletions(lastWord string) (last s
 
 func (c *Console) parseExpansionVariables(args []string) (processed []string, err error) {
 
+	if len(c.CurrentContext().expansionComps) == 0 {
+		return args, nil
+	}
+
 	for _, arg := range args {
 
 		for exp, completer := range c.CurrentContext().expansionComps {
@@ -66,8 +70,8 @@ func (c *Console) parseExpansionVariables(args []string) (processed []string, er
 				processed = append(processed, arg)
 			}
 		}
-
 	}
+
 	return
 }
 
