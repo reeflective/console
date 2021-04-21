@@ -32,8 +32,8 @@ var (
 	}
 )
 
-// PromptItems - Queries the console context prompt for all its callbacks and passes them as completions.
-func (c *CommandCompleter) PromptItems(lastWord string) (prefix string, comps []*readline.CompletionGroup) {
+// promptItems - Queries the console menu prompt for all its callbacks and passes them as completions.
+func (c *CommandCompleter) promptItems(lastWord string) (prefix string, comps []*readline.CompletionGroup) {
 
 	cc := c.console.current
 	serverPromptItems := cc.Prompt.Callbacks
@@ -58,12 +58,12 @@ func (c *CommandCompleter) PromptItems(lastWord string) (prefix string, comps []
 	comps = append(comps, sComp)
 
 	// Colors & effects
-	comps = append(comps, c.PromptColors()...)
+	comps = append(comps, c.promptColors()...)
 
 	return
 }
 
-func (c *CommandCompleter) PromptColors() (comps []*readline.CompletionGroup) {
+func (c *CommandCompleter) promptColors() (comps []*readline.CompletionGroup) {
 
 	cc := c.console.current
 	promptEffects := cc.Prompt.Colors
@@ -114,13 +114,13 @@ func (c *CommandCompleter) inputModes() (comps []*readline.CompletionGroup) {
 	return []*readline.CompletionGroup{comp}
 }
 
-func (c *CommandCompleter) contexts() (comps []*readline.CompletionGroup) {
+func (c *CommandCompleter) menus() (comps []*readline.CompletionGroup) {
 	comp := &readline.CompletionGroup{
-		Name:         "console contexts (menus)",
+		Name:         "console menus (menus)",
 		Descriptions: map[string]string{},
 		DisplayType:  readline.TabDisplayGrid,
 	}
-	for _, cc := range c.console.contexts {
+	for _, cc := range c.console.menus {
 		comp.Suggestions = append(comp.Suggestions, cc.Name)
 	}
 	return []*readline.CompletionGroup{comp}

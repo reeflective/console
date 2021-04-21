@@ -95,7 +95,7 @@ func (c *CommandCompleter) processRemain(input string, remain []string) (line st
 
 // evaluateExpansion - Given a single "word" argument, resolve any embedded expansion variables
 func (c *CommandCompleter) evaluateExpansion(arg string) (expanded string) {
-	// For each available per-context expansion variable, evaluate and replace. Any group
+	// For each available per-menu expansion variable, evaluate and replace. Any group
 	// successfully replacing the token will break the loop, and the remaining expanders will
 	// not be evaluated.
 	var evaluated = false

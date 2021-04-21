@@ -14,7 +14,7 @@ func (c *Console) handleHelpFlag(args []string) {
 	cmd := c.findHelpCommand(args, c.current.parser)
 
 	// If command is nil, it means the help was requested as
-	// the menu help: print all commands for the context.
+	// the menu help: print all commands for the menu.
 	if cmd == nil {
 		c.printMenuHelp(c.current.Name)
 		return
@@ -26,10 +26,10 @@ func (c *Console) handleHelpFlag(args []string) {
 
 // printMenuHelp - Prints all commands (per category)
 // and a brief description when help is asked from the menu.
-func (c *Console) printMenuHelp(context string) {
+func (c *Console) printMenuHelp(menu string) {
 
 	// The user can specify the menu help he wants. If none is
-	// given or recognized, we default on the current console context.
+	// given or recognized, we default on the current console menu.
 	cmds, groups := c.GetCommands()
 
 	// Menu title

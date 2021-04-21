@@ -9,15 +9,24 @@ import (
 	"github.com/maxlandon/readline"
 )
 
-// Prompt - Computes all prompts used on the shell for a given context.
+// Prompt - Computes all prompts used on the shell for a given menu.
+// You can register two sorts of callbacks to it, so you can give
+// customized prompt elements to be used by the end user.
 type Prompt struct {
-	Left  string // The leftmost prompt
-	Right string // The rightmost prompt, currently same line as left.
+	// Callbacks - A list of value callbacks to be used, preferably of the following form:
+	// "{key}": func() "value". (notice the brackets). Each of callbacks found
+	// in the prompt strings will be replaced by the function they're mapped to.
+	Callbacks map[string]func() string
+	// Colors - A more optional feature, because this console library automatically
+	// populates it with a few callback colors, coming from evilsocket's libs.
+	// Please also use brackets (though not mandatory): "{key}": "value".
+	Colors map[string]string
 
-	Callbacks map[string]func() string // A list of value callbacks to be used.
-	Colors    map[string]string        // Users can also register colors
+	left    string // The leftmost prompt
+	right   string // The rightmost prompt, currently same line as left.
+	newline bool   // If true, leaves a new line before showing command output.
 
-	Newline bool // If true, leaves a new line before showing command output.
+	console *Console
 }
 
 // RefreshPromptLog - A simple function to print a string message (a log, or more broadly,
@@ -28,7 +37,7 @@ func (c *Console) RefreshPromptLog(log string) {
 	if c.isExecuting {
 		fmt.Print(log)
 	} else {
-		c.Shell.RefreshPromptLog(log)
+		c.shell.RefreshPromptLog(log)
 	}
 }
 
@@ -44,7 +53,7 @@ func (c *Console) RefreshPromptCustom(log string, prompt string, offset int) {
 		fmt.Print(log)
 	} else {
 		fmt.Print(log)
-		c.Shell.RefreshPromptCustom(prompt, offset, false)
+		c.shell.RefreshPromptCustom(prompt, offset, false)
 	}
 }
 
@@ -58,12 +67,22 @@ func (c *Console) RefreshPromptInPlace(log string, prompt string) {
 		fmt.Print(log)
 	} else {
 		fmt.Print(log)
-		c.Shell.RefreshPromptInPlace(prompt)
+		c.shell.RefreshPromptInPlace(prompt)
 	}
 }
 
+// Gathers all per-execution-loop refresh and synchronization that needs to occur
+// betwee the application, the readline instance, the context prompt and the config.
+func (p *Prompt) refreshPromptSettings() {
+	p.loadFromConfig(p.console.config.Prompts[p.console.current.Name])
+	p.console.shell.SetPrompt(p.Render())
+	p.console.shell.Multiline = p.console.current.PromptConfig().Multiline
+	p.console.shell.MultilinePrompt = p.console.current.PromptConfig().MultilinePrompt
+}
+
 // Render - The core prompt computes all necessary values, forges a prompt string
-// and returns it for being printed by the shell.
+// and returns it for being printed by the shell. You might need to access it if
+// you want to tinker with it while using one the console.RefreshPrompt() functions.
 func (p *Prompt) Render() (prompt string) {
 
 	// We need the terminal width: the prompt sometimes
@@ -71,8 +90,13 @@ func (p *Prompt) Render() (prompt string) {
 	sWidth := readline.GetTermWidth()
 
 	// Compute all prompt parts independently
-	left, bWidth := p.computeCallbacks(p.Left)
-	right, cWidth := p.computeCallbacks(p.Right)
+	left, bWidth := p.computeCallbacks(p.left)
+	right, cWidth := p.computeCallbacks(p.right)
+
+	// Return the left prompt if we don't have multiline prompt.
+	if !p.console.config.Prompts[p.console.current.Name].Multiline {
+		return left
+	}
 
 	// Verify that the length of all combined prompt elements is not wider than
 	// determined terminal width. If yes, truncate the prompt string accordingly.
@@ -116,9 +140,9 @@ func (p *Prompt) loadFromConfig(promptConf *PromptConfig) {
 	if promptConf == nil {
 		return
 	}
-	p.Left = promptConf.Left
-	p.Right = promptConf.Right
-	p.Newline = promptConf.Newline
+	p.left = promptConf.Left
+	p.right = promptConf.Right
+	p.newline = promptConf.Newline
 }
 
 // getRealLength - Some strings will have ANSI escape codes, which might be wrongly
@@ -129,8 +153,8 @@ func getRealLength(s string) (l int) {
 	return len(ansi.Strip(s))
 }
 
-func getPromptPad(total, base, context int) (pad string) {
-	var padLength = total - base - context
+func getPromptPad(total, base, menu int) (pad string) {
+	var padLength = total - base - menu
 	for i := 0; i < padLength; i++ {
 		pad += " "
 	}

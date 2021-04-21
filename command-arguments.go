@@ -10,7 +10,7 @@ import (
 
 // CompleteCommandArguments - Completes all values for arguments to a command.
 // Arguments here are different from command options (--option).
-// Many categories, from multiple sources in multiple contexts
+// Many categories, from multiple sources in multiple menus
 func (c *CommandCompleter) completeCommandArguments(gcmd *Command, cmd *flags.Command, arg string, lastWord string) (prefix string, completions []*readline.CompletionGroup) {
 
 	// the prefix is the last word, by default

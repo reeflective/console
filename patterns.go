@@ -55,7 +55,7 @@ func noCommandOrEmpty(args []string, last []rune, command *flags.Command) bool {
 }
 
 // [ Commands ] -------------------------------------------------------------------------------------
-// detectedCommand - Returns the base command from parser if detected, depending on context
+// detectedCommand - Returns the base command from parser if detected, depending on menu
 func (c *CommandCompleter) detectedCommand(args []string) (command *flags.Command) {
 	arg := strings.TrimSpace(args[0])
 	command = c.console.CommandParser().Find(arg)
@@ -428,7 +428,7 @@ func optionArgRequired(args []string, last []rune, group *flags.Group) (opt *fla
 // [ Other ]-----------------------------------------------------------------------------------------------------//
 // Does the user asks for Environment variables ?
 func (c *CommandCompleter) envVarAsked(args []string, lastWord string) bool {
-	cc := c.console.CurrentContext()
+	cc := c.console.CurrentMenu()
 
 	// For each of the expansion runes for which the user has given a completion generator
 	for exp := range cc.expansionComps {

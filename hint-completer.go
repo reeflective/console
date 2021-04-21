@@ -151,7 +151,7 @@ func (c *CommandCompleter) optionArgumentHint(args []string, last []rune, opt *f
 	return []rune(valueHint + color + opt.Description)
 }
 
-// menuHint - Returns the Hint for a given menu context
+// menuHint - Returns the Hint for a given menu menu
 func menuHint(args []string, current []rune) (hint []rune) {
 	return
 }
@@ -170,7 +170,7 @@ func (c *CommandCompleter) envVarHint(args []string, last []rune) (hint []rune) 
 	// Base hint
 	hint = []rune(envHint + lastVar)
 
-	for exp, comp := range c.console.CurrentContext().expansionComps {
+	for exp, comp := range c.console.CurrentMenu().expansionComps {
 		if strings.HasPrefix(lastVar, string(exp)) {
 			envVar := strings.TrimPrefix(lastVar, string(exp))
 			grps := comp()

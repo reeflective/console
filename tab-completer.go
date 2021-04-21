@@ -107,7 +107,7 @@ func (c *CommandCompleter) tabCompleter(line []rune, pos int, dtc readline.Delay
 
 // [ Main Completion Functions ] -----------------------------------------------------------------------------------------------------------------
 
-// completeMenuCommands - Selects all commands available in a given context and returns them as suggestions
+// completeMenuCommands - Selects all commands available in a given menu and returns them as suggestions
 // Many categories, all from command parsers.
 func (c *CommandCompleter) completeMenuCommands(lastWord string, pos int) (prefix string, completions []*readline.CompletionGroup) {
 

@@ -7,7 +7,7 @@ import (
 	"github.com/maxlandon/readline"
 )
 
-// ClientInterfaceAddrs - All addresses of the client host
+// ClientInterfaceAddrs - All addresses (IPv4/v6) of the console-running host.
 func (c *CommandCompleter) ClientInterfaceAddrs() (comps []*readline.CompletionGroup) {
 
 	// Completions
@@ -39,7 +39,7 @@ func (c *CommandCompleter) ClientInterfaceAddrs() (comps []*readline.CompletionG
 	return []*readline.CompletionGroup{comp}
 }
 
-// ClientInterfaceNetworks - All network to which client belongs.
+// ClientInterfaceNetworks - All networks (IPv4/v6, CIDR notation) to which the console-running host belongs.
 func (c *CommandCompleter) ClientInterfaceNetworks() (comps []*readline.CompletionGroup) {
 
 	// Completions

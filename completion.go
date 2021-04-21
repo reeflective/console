@@ -9,7 +9,7 @@ import (
 // AddExpansionCompletion - Add a completion generator that is triggered when the expansion
 // string paramater is detected (anywhere, even in other completions) in the input line.
 // Ex: you can pass '$' as an expansion, and a function that will yield environment variables.
-func (c *Context) AddExpansionCompletion(expansion rune, comps CompletionFunc) {
+func (c *Menu) AddExpansionCompletion(expansion rune, comps CompletionFunc) {
 
 	// Completer
 	c.expansionComps[expansion] = comps
@@ -59,8 +59,8 @@ type CompletionFuncDynamic func(prefix string) (pref string, comps []*readline.C
 // It is VERY IMPORTANT to pass the case-sensitive name of the argument, as declared in the command struct.
 // The type of the underlying argument does not matter, and gonsole will correctly yield suggestions based
 // on wheteher list are required, are these arguments optional, etc.
-// The context is needed in order to bind these completions to the good command,
-// because several contexts migh have some being identically named.
+// The menu is needed in order to bind these completions to the good command,
+// because several menus migh have some being identically named.
 func (c *Command) AddArgumentCompletionDynamic(arg string, comps CompletionFuncDynamic) {
 	c.argCompsDynamic[arg] = comps
 }
@@ -70,8 +70,8 @@ func (c *Command) AddArgumentCompletionDynamic(arg string, comps CompletionFuncD
 // It is VERY IMPORTANT to pass the case-sensitive name of the option, as declared in the command struct.
 // The type of the underlying argument does not matter, and gonsole will correctly yield suggestions based
 // on wheteher list are required, are these arguments optional, etc.
-// The context is needed in order to bind these completions to the good command,
-// because several contexts migh have some being identically named.
+// The menu is needed in order to bind these completions to the good command,
+// because several menus migh have some being identically named.
 func (c *Command) AddOptionCompletionDynamic(option string, comps CompletionFuncDynamic) {
 	c.optCompsDynamic[option] = comps
 }

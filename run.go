@@ -11,17 +11,16 @@ import (
 func (c *Console) Run() (err error) {
 
 	for {
-		// Recompute the prompt for the current context
+		// Recompute the prompt for the current menu
 		// First check and pull from configuration.
-		c.current.Prompt.loadFromConfig(c.config.Prompts[c.current.Name])
-		c.Shell.SetPrompt(c.current.Prompt.Render())
+		c.current.Prompt.refreshPromptSettings()
 
-		// Set the shell history sources with context ones
-		c.Shell.SetHistoryCtrlR(c.current.historyCtrlRName, c.current.historyCtrlR)
-		c.Shell.SetHistoryAltR(c.current.historyAltRName, c.current.historyAltR)
+		// Set the shell history sources with menu ones
+		c.shell.SetHistoryCtrlR(c.current.historyCtrlRName, c.current.historyCtrlR)
+		c.shell.SetHistoryAltR(c.current.historyAltRName, c.current.historyAltR)
 
 		// Instantiate and bind all commands for the current
-		// context, respecting any filter used to hide some of them.
+		// menu, respecting any filter used to hide some of them.
 		c.bindCommands()
 
 		// Run user-provided pre-loop hooks
@@ -35,7 +34,7 @@ func (c *Console) Run() (err error) {
 		// Block and read user input. Provides completion, syntax, hints, etc.
 		// Various types of errors might arise from here. We handle them
 		// in a special function, where we can specify behavior for certain errors.
-		line, err := c.Shell.Readline()
+		line, err := c.shell.Readline()
 		if err != nil {
 			// Handle readline errors in a specialized function
 		}
@@ -44,7 +43,7 @@ func (c *Console) Run() (err error) {
 		// have been handled, and we will go all the way toward command execution,
 		// even if the command line is empty.
 
-		// If the context prompt is asked to leave a newline
+		// If the menu prompt is asked to leave a newline
 		// between prompt and output, we print it now.
 		if c.PreOutputNewline {
 			fmt.Println()

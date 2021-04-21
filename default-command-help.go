@@ -8,22 +8,22 @@ import (
 
 // AddHelpCommand - The console will automatically add a command named "help", which accepts any
 // (optional) command and/or any of its subcommands, and prints the corresponding help. If no
-// argument is passed, prints the list of available of commands for the current context.
+// argument is passed, prints the list of available of commands for the current menu.
 // The name of the group is left to the user's discretion, for putting the command in a given group/topic.
 // Command names and their subcommands will be automatically completed.
 func (c *Console) AddHelpCommand(group string) {
-	for _, cc := range c.contexts {
+	for _, cc := range c.menus {
 		help := cc.AddCommand("help",
-			"print menu, command or subcommand help for the current context (menu)",
+			"print menu, command or subcommand help for the current menu (menu)",
 			"",
 			group,
 			[]string{""},
 			func() interface{} { return &commandHelp{console: c} })
-		help.AddArgumentCompletion("Command", c.Completer.contextCommands)
+		help.AddArgumentCompletion("Command", c.Completer.menuCommands)
 	}
 }
 
-// commandHelp - Print help for the current context (lists all commands)
+// commandHelp - Print help for the current menu (lists all commands)
 type commandHelp struct {
 	Positional struct {
 		Command []string `description:"(optional) command / subcommand (at any level) to print help for"`
@@ -33,12 +33,12 @@ type commandHelp struct {
 	console *Console
 }
 
-// Execute - Print help for the current context (lists all commands)
+// Execute - Print help for the current menu (lists all commands)
 func (h *commandHelp) Execute(args []string) (err error) {
 
 	// If no component argument is asked for
 	if len(h.Positional.Command) == 0 {
-		h.console.printMenuHelp(h.console.CurrentContext().Name)
+		h.console.printMenuHelp(h.console.CurrentMenu().Name)
 		return
 	}
 
@@ -55,7 +55,7 @@ func (h *commandHelp) Execute(args []string) (err error) {
 	return
 }
 
-func (c *CommandCompleter) contextCommands() (completions []*readline.CompletionGroup) {
+func (c *CommandCompleter) menuCommands() (completions []*readline.CompletionGroup) {
 
 	for _, cmd := range c.console.CommandParser().Commands() {
 		// Check command group: add to existing group if found

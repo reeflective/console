@@ -66,16 +66,16 @@ func NewCommand() *Command {
 
 // AddCommand - Add a command to the given command (the console Contexts embed a command for this matter). If you are
 // calling this function directly like gonsole.Console.AddCommand(), be aware that this will bind the command to the
-// default context named "". If you don't intend to use multiple contexts this is fine, but if you do, you should
-// create and name each of your contexts, and add commands to them, like Console.NewContext("name").AddCommand("", "", ...)
+// default menu named "". If you don't intend to use multiple menus this is fine, but if you do, you should
+// create and name each of your menus, and add commands to them, like Console.NewContext("name").AddCommand("", "", ...)
 func (c *Command) AddCommand(name, short, long, group string, filters []string, data func() interface{}) *Command {
 
 	if data == nil {
 		return nil
 	}
 
-	// Check if the group exists within this context, or create
-	// it and attach to the specificed context.if needed
+	// Check if the group exists within this menu, or create
+	// it and attach to the specificed menu.if needed
 	var grp *commandGroup
 	for _, g := range c.groups {
 		if g.Name == group {
@@ -162,7 +162,7 @@ func (c *Command) CommandGroups() (grps []*commandGroup) {
 // getCommandGroup - Get the group for a command.
 func (c *Command) getCommandGroup(cmd *flags.Command) string {
 
-	// Sliver commands are searched for if we are in this context
+	// Sliver commands are searched for if we are in this menu
 	for _, group := range c.groups {
 		for _, c := range group.cmds {
 			if c.Name == cmd.Name {
@@ -189,8 +189,8 @@ func (c *Command) Add(cmd *Command) *Command {
 	return command
 }
 
-// AddCommand - Add a command to the default console context, named "". Please check gonsole.CurrentContext().AddCommand(),
-// if you intend to use multiple contexts, for more detailed explanations
+// AddCommand - Add a command to the default console menu, named "". Please check gonsole.CurrentContext().AddCommand(),
+// if you intend to use multiple menus, for more detailed explanations
 func (c *Console) AddCommand(name, short, long, group string, filters []string, data func() interface{}) *Command {
 	return c.current.cmd.AddCommand(name, short, long, group, filters, data)
 }
@@ -202,11 +202,11 @@ func (c *Console) Add(cmd *Command) *Command {
 	return command
 }
 
-// HideCommands - Commands, in addition to their contexts, can be shown/hidden based
+// HideCommands - Commands, in addition to their menus, can be shown/hidden based
 // on a filter string. For example, some commands applying to a Windows host might
 // be scattered around different groups, but, having all the filter "windows".
 // If "windows" is used as the argument here, all windows commands for the current
-// context are subsquently hidden, until ShowCommands("windows") is called.
+// menu are subsquently hidden, until ShowCommands("windows") is called.
 func (c *Console) HideCommands(filter string) {
 	for _, f := range c.filters {
 		if f == filter {
@@ -216,11 +216,11 @@ func (c *Console) HideCommands(filter string) {
 	c.filters = append(c.filters, filter)
 }
 
-// ShowCommands - Commands, in addition to their contexts, can be shown/hidden based
+// ShowCommands - Commands, in addition to their menus, can be shown/hidden based
 // on a filter string. For example, some commands applying to a Windows host might
 // be scattered around different groups, but, having all the filter "windows".
 // Use this function if you have previously called HideCommands("filter") and want
-// these commands to be available back under their respective context.
+// these commands to be available back under their respective menu.
 func (c *Console) ShowCommands(filter string) {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
@@ -249,7 +249,7 @@ func (c *Command) FindCommand(name string) (command *Command) {
 }
 
 // GetCommands - Callers of this are for example the TabCompleter, which needs to call
-// this regularly in order to have a list of commands belonging to the current context.
+// this regularly in order to have a list of commands belonging to the current menu.
 func (c *Console) GetCommands() (groups map[string][]*flags.Command, groupNames []string) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
@@ -266,7 +266,7 @@ func (c *Console) GetCommands() (groups map[string][]*flags.Command, groupNames 
 	return
 }
 
-// FindCommand - Find a command among the root ones in the application, for the current context.
+// FindCommand - Find a command among the root ones in the application, for the current menu.
 func (c *Console) FindCommand(name string) (command *Command) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
@@ -288,7 +288,7 @@ func (c *Console) FindCommand(name string) (command *Command) {
 func (c *Console) bindCommands() {
 	cc := c.current
 
-	// First, reset the parser for the current context.
+	// First, reset the parser for the current menu.
 	cc.initParser(c.parserOpts)
 
 	// Generate all global options if there are some.
@@ -296,7 +296,7 @@ func (c *Console) bindCommands() {
 		cc.parser.AddGroup(opt.short, opt.long, opt.generator())
 	}
 
-	// For each (root) command group in this context, generate all of its commands,
+	// For each (root) command group in this menu, generate all of its commands,
 	// and all of their subcommands recursively. Also generates options, etc.
 	for _, group := range cc.cmd.groups {
 		c.bindCommandGroup(cc.parser, group)

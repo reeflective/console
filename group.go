@@ -14,7 +14,7 @@ type commandGroup struct {
 // GetCommandGroup - Get the group for a command.
 func (c *Console) GetCommandGroup(cmd *flags.Command) string {
 
-	// Sliver commands are searched for if we are in this context
+	// Sliver commands are searched for if we are in this menu
 	for _, group := range c.current.cmd.groups {
 		for _, c := range group.cmds {
 			if c.Name == cmd.Name {

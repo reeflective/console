@@ -7,7 +7,7 @@ import (
 )
 
 func (c *CommandCompleter) completeExpansionCompletions(lastWord string) (last string, completions []*readline.CompletionGroup) {
-	cc := c.console.CurrentContext()
+	cc := c.console.CurrentMenu()
 
 	// Check if last input is made of several different variables
 	allVars := strings.Split(lastWord, "/")
@@ -42,13 +42,13 @@ func (c *CommandCompleter) completeExpansionCompletions(lastWord string) (last s
 
 func (c *Console) parseExpansionVariables(args []string) (processed []string, err error) {
 
-	if len(c.CurrentContext().expansionComps) == 0 {
+	if len(c.CurrentMenu().expansionComps) == 0 {
 		return args, nil
 	}
 
 	for _, arg := range args {
 
-		for exp, completer := range c.CurrentContext().expansionComps {
+		for exp, completer := range c.CurrentMenu().expansionComps {
 
 			// Anywhere a $ is assigned means there is an env variable
 			if strings.Contains(arg, string(exp)) || strings.Contains(arg, "~") {

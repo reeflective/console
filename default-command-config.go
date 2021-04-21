@@ -18,12 +18,12 @@ import (
 )
 
 // AddConfigCommand - The console will add a command used to manage all elements of the console
-// for any context, and to save such elements into configurations, ready for export. You can
+// for any menu, and to save such elements into configurations, ready for export. You can
 // choose both the command name and the group, for avoiding command collision with your owns.
 func (c *Console) AddConfigCommand(name, group string) {
 	c.configCommandName = name
 
-	for _, cc := range c.contexts {
+	for _, cc := range c.menus {
 
 		// Root
 		conf := cc.AddCommand(name,
@@ -66,21 +66,21 @@ func (c *Console) AddConfigCommand(name, group string) {
 			func() interface{} { return &maxTabCompleterRows{console: c} })
 
 		prompt := set.AddCommand("prompt",
-			"set prompt strings for one of the available contexts",
+			"set prompt strings for one of the available menus",
 			"",
 			"",
 			[]string{""},
 			func() interface{} { return &promptSet{console: c} })
-		prompt.AddArgumentCompletionDynamic("Prompt", c.Completer.PromptItems)
-		prompt.AddOptionCompletion("Context", c.Completer.contexts)
+		prompt.AddArgumentCompletionDynamic("Prompt", c.Completer.promptItems)
+		prompt.AddOptionCompletion("Context", c.Completer.menus)
 
 		multiline := set.AddCommand("prompt-multiline",
-			"set/enable/disable multiline prompt strings for one of the available contexts",
+			"set/enable/disable multiline prompt strings for one of the available menus",
 			"",
 			"",
 			[]string{""},
 			func() interface{} { return &promptSetMultiline{console: c} })
-		multiline.AddArgumentCompletionDynamic("Prompt", c.Completer.PromptItems)
+		multiline.AddArgumentCompletionDynamic("Prompt", c.Completer.promptItems)
 
 		highlight := set.AddCommand("highlight",
 			"set the highlighting of tokens in the command line",
@@ -88,7 +88,7 @@ func (c *Console) AddConfigCommand(name, group string) {
 			"",
 			[]string{""},
 			func() interface{} { return &highlightSyntax{console: c} })
-		highlight.AddArgumentCompletion("Color", c.Completer.PromptColors)
+		highlight.AddArgumentCompletion("Color", c.Completer.promptColors)
 		highlight.AddArgumentCompletion("Token", c.Completer.highlightTokens)
 
 		// Export configuration
@@ -106,7 +106,7 @@ func (c *Console) AddConfigCommand(name, group string) {
 // AddConfigSubCommand - Allows the user to bind specialized subcommands to the config root command. This is useful if, for
 // example, you want to save the console configuration on a remote server.
 func (c *Console) AddConfigSubCommand(name, short, long, group string, filters []string, data func() interface{}) {
-	for _, cc := range c.contexts {
+	for _, cc := range c.menus {
 		for _, cmd := range cc.Commands() {
 			if cmd.Name == c.configCommandName {
 				cmd.AddCommand(name, short, long, group, filters, data)
@@ -127,7 +127,7 @@ func (c *config) Execute(args []string) (err error) {
 
 	fmt.Println(readline.Bold(readline.Blue(" Console configuration\n")))
 
-	// Elements applying to all contexts.
+	// Elements applying to all menus.
 	fmt.Println(readline.Yellow("Global"))
 
 	var input string
@@ -142,7 +142,7 @@ func (c *config) Execute(args []string) (err error) {
 	fmt.Printf(" "+pad+"    %s%t%s\n", readline.BOLD, conf.Hints, readline.RESET)
 	fmt.Println()
 
-	// Print context-specific configuration elements
+	// Print menu-specific configuration elements
 	cc := c.console.current
 	promptConf := conf.Prompts[cc.Name]
 
@@ -161,7 +161,7 @@ func (c *config) Execute(args []string) (err error) {
 
 	// Check if this config has been saved (they should be identical)
 	// req := &clientpb.GetConsoleConfigReq{}
-	// res, err := transport.RPC.LoadConsoleConfig(context.Background(), req, grpc.EmptyCallOption{})
+	// res, err := transport.RPC.LoadConsoleConfig(menu.Background(), req, grpc.EmptyCallOption{})
 	// if err != nil {
 	//         fmt.Printf(util.Warn + "Could not check if current config is saved\n")
 	//         return
@@ -208,10 +208,10 @@ func (i *inputMode) Execute(args []string) (err error) {
 	switch i.Positional.Input {
 	case "vi", "vim":
 		conf.InputMode = readline.Vim
-		i.console.Shell.InputMode = readline.Vim
+		i.console.shell.InputMode = readline.Vim
 	case "emacs":
 		conf.InputMode = readline.Emacs
-		i.console.Shell.InputMode = readline.Emacs
+		i.console.shell.InputMode = readline.Emacs
 	default:
 		fmt.Printf(errorStr+"Invalid argument: %s (must be 'vim'/'vi' or 'emacs')\n", i.Positional.Input)
 	}
@@ -235,11 +235,11 @@ func (c *hintsDisplay) Execute(args []string) (err error) {
 	switch c.Positional.Display {
 	case "show", "on":
 		conf.Hints = true
-		c.console.Shell.HintText = c.console.Completer.hintCompleter
+		c.console.shell.HintText = c.console.Completer.hintCompleter
 		fmt.Printf(info+"Console hints: %s\n", readline.Yellow(c.Positional.Display))
 	case "hide", "off":
 		conf.Hints = false
-		c.console.Shell.HintText = nil
+		c.console.shell.HintText = nil
 		fmt.Printf(info+"Console hints: %s\n", readline.Yellow(c.Positional.Display))
 	default:
 		fmt.Printf(errorStr+"Invalid argument: %s (must be 'hide'/'on' or 'show'/'off')\n", c.Positional.Display)
@@ -376,7 +376,7 @@ func (h *highlightSyntax) Execute(args []string) (err error) {
 	return
 }
 
-// promptSet - Set prompt strings for one of the available contexts.
+// promptSet - Set prompt strings for one of the available menus.
 type promptSet struct {
 	Positional struct {
 		Prompt string `description:"prompt string. Pass an empty '' to deactivate it (default colors/effect/items completed)" required:"yes"`
@@ -386,12 +386,12 @@ type promptSet struct {
 		Left          bool   `long:"left" short:"l" description:"apply changes to the left-side prompt"`
 		NewlineBefore bool   `long:"newline-before" short:"b" description:"if true, a blank line is left before the prompt is printed"`
 		NewlineAfter  bool   `long:"newline-after" short:"a" description:"if true, a blank line is left before the command output is printed"`
-		Context       string `long:"context" short:"c" description:"name of the context for which to set the prompt (completed)" default:"current"`
+		Context       string `long:"menu" short:"c" description:"name of the menu for which to set the prompt (completed)" default:"current"`
 	} `group:"export options"`
 	console *Console
 }
 
-// Execute - Set prompt strings for one of the available contexts.
+// Execute - Set prompt strings for one of the available menus.
 func (p *promptSet) Execute(args []string) (err error) {
 	if len(args) > 0 {
 		fmt.Printf(warn+"Detected undesired remaining arguments: %s\n", readline.Bold(strings.Join(args, " ")))
@@ -400,14 +400,14 @@ func (p *promptSet) Execute(args []string) (err error) {
 		return
 	}
 
-	var cc *Context
+	var cc *Menu
 	if p.Options.Context == "current" {
 		cc = p.console.current
 	} else {
-		cc = p.console.GetContext(p.Options.Context)
+		cc = p.console.GetMenu(p.Options.Context)
 	}
 	if cc == nil {
-		fmt.Printf(errorStr+"Invalid menu/context name: %s .\n", p.Options.Context)
+		fmt.Printf(errorStr+"Invalid menu/menu name: %s .\n", p.Options.Context)
 		return
 	}
 
@@ -417,23 +417,23 @@ func (p *promptSet) Execute(args []string) (err error) {
 	var side string
 	if p.Options.Right {
 		side = "(right)"
-		cc.Prompt.Right = p.Positional.Prompt
+		cc.Prompt.right = p.Positional.Prompt
 		conf.Prompts[cc.Name].Right = p.Positional.Prompt
 	}
 	if p.Options.Left {
 		side = "(left)"
-		cc.Prompt.Left = p.Positional.Prompt
+		cc.Prompt.left = p.Positional.Prompt
 		conf.Prompts[cc.Name].Left = p.Positional.Prompt
 	}
 	if !p.Options.Left && !p.Options.Right {
 		side = "(left)"
-		cc.Prompt.Left = p.Positional.Prompt
+		cc.Prompt.left = p.Positional.Prompt
 		conf.Prompts[cc.Name].Left = p.Positional.Prompt
 	}
 
 	// TODO: should be changed because not handy to use like this
 	if p.Options.NewlineAfter {
-		cc.Prompt.Newline = true
+		cc.Prompt.newline = true
 		cc.console.PreOutputNewline = true
 		conf.Prompts[cc.Name].Newline = true
 	}
@@ -447,19 +447,19 @@ func (p *promptSet) Execute(args []string) (err error) {
 	return
 }
 
-// promptSetMultiline - Set multiline prompt strings for one of the available contexts.
+// promptSetMultiline - Set multiline prompt strings for one of the available menus.
 type promptSetMultiline struct {
 	Positional struct {
 		Prompt string `description:"multine prompt string. Leave empty and '--enable' to activate. Pass '' to deactivate"`
 	} `positional-args:"yes"`
 	Options struct {
 		Enable  bool   `long:"enable" short:"e" description:"if true, the prompt will be a 2-line prompt"`
-		Context string `long:"context" short:"c" description:"name of the context for which to set the prompt (completed)" default:"current"`
+		Context string `long:"menu" short:"c" description:"name of the menu for which to set the prompt (completed)" default:"current"`
 	} `group:"export options"`
 	console *Console
 }
 
-// Execute - Set multiline prompt strings for one of the available contexts.
+// Execute - Set multiline prompt strings for one of the available menus.
 func (p *promptSetMultiline) Execute(args []string) (err error) {
 	if len(args) > 0 {
 		fmt.Printf(warn+"Detected undesired remaining arguments: %s\n", readline.Bold(strings.Join(args, " ")))
@@ -468,33 +468,33 @@ func (p *promptSetMultiline) Execute(args []string) (err error) {
 		return
 	}
 
-	var cc *Context
+	var cc *Menu
 	if p.Options.Context == "current" {
 		cc = p.console.current
 	} else {
-		cc = p.console.GetContext(p.Options.Context)
+		cc = p.console.GetMenu(p.Options.Context)
 	}
 	if cc == nil {
-		fmt.Printf(errorStr+"Invalid menu/context name: %s .\n", p.Options.Context)
+		fmt.Printf(errorStr+"Invalid menu/menu name: %s .\n", p.Options.Context)
 		return
 	}
 
 	conf := p.console.config
 
 	if p.Positional.Prompt == "\"\"" || p.Positional.Prompt == "''" {
-		p.console.Shell.Multiline = false
+		p.console.shell.Multiline = false
 		conf.Prompts[cc.Name].Multiline = false
 		fmt.Printf(info + "Detected empty prompt string: deactivating the corresponding prompt.\n")
 		return
 	}
 
 	if p.Positional.Prompt == "" && p.Options.Enable {
-		p.console.Shell.Multiline = true
+		p.console.shell.Multiline = true
 		conf.Prompts[cc.Name].Multiline = true
 		return
 	}
 
-	p.console.Shell.MultilinePrompt = p.Positional.Prompt
+	p.console.shell.MultilinePrompt = p.Positional.Prompt
 	conf.Prompts[cc.Name].MultilinePrompt = p.Positional.Prompt
 
 	return

@@ -9,14 +9,14 @@ import (
 )
 
 // completeOptionArguments - Completes all values for arguments to a command. Arguments here are different from command options (--option).
-// Many categories, from multiple sources in multiple contexts
+// Many categories, from multiple sources in multiple menus
 func (c *CommandCompleter) completeOptionArguments(gcmd *Command, cmd *flags.Command, opt *flags.Option, lastWord string) (prefix string, completions []*readline.CompletionGroup) {
 
 	// By default the last word is the prefix
 	prefix = lastWord
 
-	// First of all: some options, no matter their contexts and subject, have default values.
-	// When we have such an option, we don't bother analyzing context, we just build completions and return.
+	// First of all: some options, no matter their menus and subject, have default values.
+	// When we have such an option, we don't bother analyzing menu, we just build completions and return.
 	if len(opt.Choices) > 0 {
 		var comp = &readline.CompletionGroup{
 			Name:        opt.ValueName, // Value names are specified in struct metadata fields

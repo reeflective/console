@@ -32,6 +32,10 @@ type commandParser interface {
 // Default options are:
 // -h, --h options are available to all registered commands.
 // Ignored option dashes are ignored and passed along the command tree.
+// This function might be used by people who forked this library, and
+// do not care about --help options triggering helps, but instead want
+// lower level access to how arguments are parsed
+// or on when/why/how errors should be raised.
 func (c *Console) SetParserOptions(options flags.Options) {
 	c.parserOpts = options
 	if c.current.parser != nil {
@@ -41,18 +45,13 @@ func (c *Console) SetParserOptions(options flags.Options) {
 }
 
 // CommandParser - Returns the root command parser of the console.
-// Maybe used to find an modify some commands, or add completions to them, etc.
-// NOTE: The parser's AddCommand() should not be used to register commands, because
-// they will lack a certain quantity of wrapping code.
+// You can use it to find and query about the CURRENT Context commands, options, etc.
+// The only limitation is simple: anything you change to these commands, options will
+// NOT persist across execution loops, because commands are reinstantiated each time.
+// Please the documentation wiki of this project, to see how to use this: can be very
+// handy and powerful, even when programming your commands.
 func (c *Console) CommandParser() (parser *flags.Parser) {
 	return c.current.parser
-}
-
-// Find - Given the name of the command, return its go-flags object.
-// Can be used for many things: please see the go-flags documentation.
-// This will only scan the commands for the current context.
-func (c *Console) Find(command string) (cmd *flags.Command) {
-	return c.current.parser.Find(command)
 }
 
 // optionGroup - Used to generate global option structs, bound to commands/parsers.

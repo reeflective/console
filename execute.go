@@ -19,7 +19,7 @@ func (c *Console) execute(args []string) {
 		c.isExecuting = false
 	}()
 
-	// Execute the command line, with the current context' parser.
+	// Execute the command line, with the current menu' parser.
 	_, err := c.current.parser.ParseArgs(args)
 
 	// Process the errors raised by the parser.
@@ -33,7 +33,7 @@ func (c *Console) execute(args []string) {
 		}
 
 		// If the command was not recognized and the current
-		// context has a user-specified unknown command handler, execute it.
+		// menu has a user-specified unknown command handler, execute it.
 		if parserErr.Type == flags.ErrUnknownCommand {
 			if c.current.UnknownCommandHandler != nil {
 				err = c.current.UnknownCommandHandler(args)

@@ -33,7 +33,7 @@ func NewDefaultConfig() *Config {
 	}
 }
 
-// PromptConfig - Contains all the information needed for the PromptConfig of a given context.
+// PromptConfig - Contains all the information needed for the PromptConfig of a given menu.
 type PromptConfig struct {
 	Left            string `json:"left"`
 	Right           string `json:"right"`
@@ -42,10 +42,10 @@ type PromptConfig struct {
 	MultilinePrompt string `json:"multiline_prompt"`
 }
 
-// newDefaultPromptConfig - Newly created contexts have a default prompt configuration
-func newDefaultPromptConfig(context string) *PromptConfig {
+// newDefaultPromptConfig - Newly created menus have a default prompt configuration
+func newDefaultPromptConfig(menu string) *PromptConfig {
 	return &PromptConfig{
-		Left:            fmt.Sprintf("gonsole (%s)", context),
+		Left:            fmt.Sprintf("gonsole (%s)", menu),
 		Right:           "",
 		Newline:         true,
 		Multiline:       true,
@@ -109,8 +109,8 @@ func (c *Console) reloadConfig() {
 
 	// Setup the prompt, and input mode
 	c.current.Prompt.loadFromConfig(c.config.Prompts[c.current.Name])
-	c.Shell.MultilinePrompt = c.config.Prompts[c.current.Name].MultilinePrompt
-	c.Shell.Multiline = c.config.Prompts[c.current.Name].Multiline
-	c.Shell.InputMode = c.config.InputMode
+	c.shell.MultilinePrompt = c.config.Prompts[c.current.Name].MultilinePrompt
+	c.shell.Multiline = c.config.Prompts[c.current.Name].Multiline
+	c.shell.InputMode = c.config.InputMode
 	c.PreOutputNewline = c.config.Prompts[c.current.Name].Newline
 }

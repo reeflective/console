@@ -11,6 +11,7 @@ The purpose of this library is to offer a complete off-the-shelf console applica
 - An equally simple way to provide completions for any command/subcommand, any arguments of them, or any option arguments.
 
 
+----
 ## Features Summary
 
 The list of features supported or provided by this library can fall into 2 different categories:
@@ -18,14 +19,13 @@ the shell/console interface part, and the commands/parsing logic part. We start 
 in order to highlight some of the key differences that this library provides, then we go on with
 the shell *per se*, with most of the interface features that you will find in there. 
 
-----
-### 1 - Commands Features
+### 1 - Commands 
 
 #### Menus
 - The console allows to declare different "menus" (`Context` in the code), to which you can bind commands, prompt and shell settings.
-- Any commands and or settings bound to a given context are not reachable from another context, unless you bound the commands to it as well.
-- Users can switch between contexts (programmatically, so consumers of this library should call `console.SwitchContext("name")`).
-- By default, if you don't intend to use multiple contexts, you don't have to bother with them, and the console will provide the necessary methods for you to declare commands.
+- Any commands and or settings bound to a given menu are not reachable from another menu, unless you bound the commands to it as well.
+- Users can switch between menus (programmatically, so consumers of this library should call `console.SwitchContext("name")`).
+- By default, if you don't intend to use multiple menus, you don't have to bother with them, and the console will provide the necessary methods for you to declare commands.
 
 #### Commands
 - The library is fundamentally a wrapper around the [go-flags](https://github.com/jessievdk/go-flags) commands/options, etc.
@@ -39,11 +39,10 @@ the shell *per se*, with most of the interface features that you will find in th
 - You can pass special completers that will be triggered if the rune (like `$` or `@`) is detected, anywhere in the line. These variables are expanded at command execution time, and work in completions as well.
 - You can export the configuration for your application, its menus, and add some custom subcommands to the root one, for specialized actions over it.
 - Also, an optional `help` command can be bound to the console, in additional to default `-h`/`--help` flags for every command.
-- History sources can also be bound per context/menu.
+- History sources can also be bound per menu/menu.
 
 
------
-### 2 - Shell (or readline) Features
+### 2 - Shell (or readline) 
 
 #### Input & Editing 
 - Vim / Emacs input and editing modes.
@@ -64,12 +63,11 @@ the shell *per se*, with most of the interface features that you will find in th
 #### Prompt system & Colors
 - 1-line and 2-line prompts, both being customizable.
 - Function for refreshing the prompt, with optional behavior settings.
-- Optional colors (can be disabled).
 
 #### Hints & Syntax highlighting
 - A hint line can be printed below the input line, with any type of information. See utilities for a default one.
 - The Hint system is now refreshed depending on the cursor position as well, like completions.
-- A syntax highlighting system. A default one is also available.
+- A syntax highlighting system. 
 
 #### Command history 
 - Ability to have 2 different history sources (I used this for clients connected to a server, used by a single user).
@@ -78,9 +76,12 @@ the shell *per se*, with most of the interface features that you will find in th
 - Quick history navigation with *Up*/*Down* arrow keys in Emacs mode, and *j*/*k* keys in Vim mode.
 
 
-
-
 ## Simple Usage
+
+The library is made to work with sane but powerful defaults. In order to have a running console instance, simply do:
+```go
+
+```
 
 
 ## Status & Support 
@@ -95,7 +96,7 @@ the shell *per se*, with most of the interface features that you will find in th
 - [ ] `config load` command
 - [ ] Analyse args and pull out from comps if in line
 - [ ] Add color for strings in input line (this will need a good part of murex parser code) 
-- [ ] Add token parsing code from murex (this must be well thought out, like the quotes stuff, because it must also not interfere with other commands in special contexts, the command parsing code, etc...)
+- [ ] Add token parsing code from murex (this must be well thought out, like the quotes stuff, because it must also not interfere with other commands in special menus, the command parsing code, etc...)
 
 
 ## File Contents & Packages

@@ -9,13 +9,13 @@ import (
 
 // Console - An integrated console instance.
 type Console struct {
-	// Shell - The underlying Shell provides the core readline functionality,
+	// shell - The underlying shell provides the core readline functionality,
 	// including but not limited to: inputs, completions, hints, history.
-	Shell *readline.Instance
+	shell *readline.Instance
 
 	// Completer - The completion engine is available to the user for registering
 	// default completion generators. A list of them is available to be bound
-	// to either or both command/option argument completions. Console contexts
+	// to either or both command/option argument completions. Console menus
 	// are not relevant here, the user should not worry.
 	Completer *CommandCompleter
 
@@ -39,10 +39,10 @@ type Console struct {
 	LeaveNewline     bool
 	PreOutputNewline bool
 
-	// Contexts - The various contexts hold a list of command instantiators
+	// Contexts - The various menus hold a list of command instantiators
 	// structured by groups. These groups are needed for completions and helps.
-	contexts map[string]*Context
-	current  *Context // The name of the current context
+	menus   map[string]*Menu
+	current *Menu // The name of the current menu
 
 	// parser - Contains the whole aspect of command registering, parsing,
 	// processing, and execution. There is only one parser at a time,
@@ -58,7 +58,7 @@ type Console struct {
 	// behavior (do we reprint the prompt, where, etc) based on this.
 	isExecuting bool
 
-	// config - Holds all configuration elements for all contexts (input mode,
+	// config - Holds all configuration elements for all menus (input mode,
 	// prompt strings and setups, hints, etc)
 	config            *Config
 	configCommandName string
@@ -73,37 +73,37 @@ type Console struct {
 func NewConsole() (c *Console) {
 
 	c = &Console{
-		contexts: map[string]*Context{},
-		mutex:    &sync.RWMutex{},
+		menus: map[string]*Menu{},
+		mutex: &sync.RWMutex{},
 	}
 
 	// Default configuration
 	c.loadDefaultConfig()
 
 	// Setup the readline instance, and input mode
-	c.Shell = readline.NewInstance()
-	c.Shell.InputMode = c.config.InputMode
-	c.Shell.ShowVimMode = true
-	c.Shell.VimModeColorize = true
+	c.shell = readline.NewInstance()
+	c.shell.InputMode = c.config.InputMode
+	c.shell.ShowVimMode = true
+	c.shell.VimModeColorize = true
 
-	// Default context, "" (empty name)
-	c.current = c.NewContext("")
+	// Default menu, "" (empty name)
+	c.current = c.NewMenu("")
 
 	// Setup completers, hints, etc. We pass 2 functions as parameters,
-	// so that the engine can query the commands for the currently active context.
+	// so that the engine can query the commands for the currently active menu.
 	engine := newCommandCompleter(c)
 
-	c.Shell.TabCompleter = engine.tabCompleter
-	c.Shell.MaxTabCompleterRows = 50
-	c.Shell.HintText = engine.hintCompleter
-	c.Shell.SyntaxHighlighter = engine.syntaxHighlighter
+	c.shell.TabCompleter = engine.tabCompleter
+	c.shell.MaxTabCompleterRows = 50
+	c.shell.HintText = engine.hintCompleter
+	c.shell.SyntaxHighlighter = engine.syntaxHighlighter
 
 	// Available to the user for default completers.
 	c.Completer = engine
 
-	// Setup the prompt (all contexts)
-	c.Shell.MultilinePrompt = c.config.Prompts[c.current.Name].MultilinePrompt
-	c.Shell.Multiline = c.config.Prompts[c.current.Name].Multiline
+	// Setup the prompt (all menus)
+	c.shell.MultilinePrompt = c.config.Prompts[c.current.Name].MultilinePrompt
+	c.shell.Multiline = c.config.Prompts[c.current.Name].Multiline
 	c.current.Prompt.loadFromConfig(c.config.Prompts[c.current.Name])
 
 	// Setup CtrlR history with an in-memory one by default
