@@ -112,6 +112,10 @@ func main() {
 If you're still here, at least you want to declare and bind commands. Just as everything else possible with
 this library, it is explained in the [Wiki](https://github.com/maxlandon/gonsole/wiki), although with more 
 pictures than text (I like pictures), because the code is heavily documented (I don't like to repeat myself).
+Using the library, as usual:
+```
+go get -u github.com/maxlandon/gonsole
+```
 
 
 ## Status & Support 
@@ -129,7 +133,8 @@ pictures than text (I like pictures), because the code is heavily documented (I 
 - [ ] Add token parsing code from murex (this must be well thought out, like the quotes stuff, because it must also not interfere with other commands in special menus, the command parsing code, etc...)
 
 
-## File Contents & Packages
-
-
 ## License
+
+The `gonsole` library is distributed under the Apache License (Version 2.0, January 2004) (http://www.apache.org/licenses/). 
+All the example code and documentation in `/examples`, `/completers` is public domain.
+
