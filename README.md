@@ -15,11 +15,9 @@ The purpose of this library is to offer a complete off-the-shelf console applica
 ## Features Summary
 
 The list of features supported or provided by this library can fall into 2 different categories:
-the shell/console interface part, and the commands/parsing logic part. We start with the latter,
-in order to highlight some of the key differences that this library provides, then we go on with
-the shell *per se*, with most of the interface features that you will find in there. 
+the shell/console interface part, and the commands/parsing logic part.  Some of the features below
+are simply extrated from my [readline](https://github.com/maxlandon/readline) library (everything below **Shell Details**).
 
-### 1 - Commands 
 
 #### Menus
 - Declare different "menus" (`Context` in the code), to which you can bind commands, prompt and shell settings.
@@ -40,17 +38,11 @@ the shell *per se*, with most of the interface features that you will find in th
 - Also, an optional `help` command can be bound to the console, in additional to default `-h`/`--help` flags for every command.
 - History sources can also be bound per menu/menu.
 
-
-### 2 - Shell (or readline) 
-
-#### Input & Editing 
+#### Shell details
 - Vim / Emacs input and editing modes.
-- Optional, live-refresh Vim status.
 - Vim modes (Insert, Normal, Replace, Delete) with visual prompt Vim status indicator
 - line editing using `$EDITOR` (`vi` in the example - enabled by pressing `[ESC]` followed by `[v]`)
-- Vim registers (one default, 10 numbered, and 26 lettered)
-- Vim iterations
-- Most default keybindings you might find in Emacs-like readline. Some are still missing though
+- Vim registers (one default, 10 numbered, and 26 lettered) and Vim iterations
 
 #### Completion engine
 - Rather easy declaration of completion generators, which some level of customization.
