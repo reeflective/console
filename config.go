@@ -53,8 +53,8 @@ func newDefaultPromptConfig(menu string) *PromptConfig {
 	}
 }
 
-// LoadConfig - Loads a config struct, but does immediately refresh the prompt.
-// Settings will apply as they are needed by the console.
+// LoadConfig - Loads a config struct, but does not immediately refresh
+// the prompt. Settings will apply as they are needed by the console.
 func (c *Console) LoadConfig(conf *Config) {
 	if conf == nil {
 		return

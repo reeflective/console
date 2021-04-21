@@ -69,8 +69,9 @@ are simply extrated from my [readline](https://github.com/maxlandon/readline) li
 
 ## Simple Usage
 
-The library is made to work with sane but powerful defaults. Paste the following and run it,
-and take a look around to get a feel, without touching anything. Default editing mode is Vim.
+The library is made to work with sane but powerful defaults. Paste the following, run it,
+and take a look around to get a feel, without your commands. Default editing mode is Vim.
+THis example doesn't have an exit command: you'll need to close your terminal.
 
 ```go
 
@@ -123,7 +124,7 @@ go get -u github.com/maxlandon/gonsole
 #### Support:
 - Support for any issue opened.
 - Answering any questions related.
-- Being available for any blame you'd like to make for my humble but passioned work. I don't mind, I need to go up.
+- Taking blames if things are done wrong.
 
 #### TO DO:
 - [ ] Recursive option completion (`-sP`, `-oL`, etc)
@@ -131,6 +132,7 @@ go get -u github.com/maxlandon/gonsole
 - [ ] Analyse args and pull out from comps if in line
 - [ ] Add color for strings in input line (this will need a good part of murex parser code) 
 - [ ] Add token parsing code from murex (this must be well thought out, like the quotes stuff, because it must also not interfere with other commands in special menus, the command parsing code, etc...)
+- [ ] Let the user pass keypresses and their associated behavior, like we could do in readline.
 
 
 ## License
