@@ -22,10 +22,9 @@ the shell *per se*, with most of the interface features that you will find in th
 ### 1 - Commands 
 
 #### Menus
-- The console allows to declare different "menus" (`Context` in the code), to which you can bind commands, prompt and shell settings.
-- Any commands and or settings bound to a given menu are not reachable from another menu, unless you bound the commands to it as well.
+- Declare different "menus" (`Context` in the code), to which you can bind commands, prompt and shell settings.
+- Commands and settings bound to a menu are not reachable from another menu, unless you bound the commands to it as well.
 - Users can switch between menus (programmatically, so consumers of this library should call `console.SwitchContext("name")`).
-- By default, if you don't intend to use multiple menus, you don't have to bother with them, and the console will provide the necessary methods for you to declare commands.
 
 #### Commands
 - The library is fundamentally a wrapper around the [go-flags](https://github.com/jessievdk/go-flags) commands/options, etc.
