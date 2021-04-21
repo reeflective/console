@@ -45,7 +45,7 @@ func newContext(c *Console) *Context {
 			Callbacks: map[string]func() string{},
 			Colors:    defaultColorCallbacks,
 		},
-		cmd:            newCommand(),
+		cmd:            NewCommand(),
 		expansionComps: map[rune]CompletionFunc{},
 		console:        c,
 	}

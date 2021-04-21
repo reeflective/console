@@ -51,7 +51,9 @@ type Command struct {
 	mutex *sync.RWMutex
 }
 
-func newCommand() *Command {
+// NewCommand - Any user wishing to add a command to its application by passing a *Command struct
+// directly, should use this constructor, becaus it must initialize a few private fields first.
+func NewCommand() *Command {
 	c := &Command{
 		argComps:        map[string]CompletionFunc{},
 		argCompsDynamic: map[string]CompletionFuncDynamic{},
