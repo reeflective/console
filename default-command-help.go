@@ -3,6 +3,7 @@ package gonsole
 import (
 	"fmt"
 
+	"github.com/jessevdk/go-flags"
 	"github.com/maxlandon/readline"
 )
 
@@ -55,9 +56,32 @@ func (h *commandHelp) Execute(args []string) (err error) {
 	return
 }
 
-func (c *CommandCompleter) menuCommands() (completions []*readline.CompletionGroup) {
+func getChildCommand(args []string, root *flags.Command) (child *flags.Command) {
+	child = root
+	var temp = root
+	for _, arg := range args {
+		if cmd := temp.Find(arg); cmd != nil {
+			child = cmd
+			temp = cmd
+		}
+	}
+	return
+}
 
-	for _, cmd := range c.console.CommandParser().Commands() {
+func (c *CommandCompleter) menuCommands() (completions []*readline.CompletionGroup) {
+	args := c.args[1:]
+
+	var candidateCommands = []*flags.Command{}
+	if len(args) < 2 {
+		candidateCommands = c.console.CommandParser().Commands()
+	} else {
+		cmd := c.console.CommandParser().Find(args[0])
+		if cmd != nil {
+			candidateCommands = getChildCommand(args[1:], cmd).Commands()
+		}
+	}
+
+	for _, cmd := range candidateCommands {
 		// Check command group: add to existing group if found
 		var found bool
 		for _, grp := range completions {
