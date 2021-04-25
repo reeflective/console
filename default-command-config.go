@@ -43,7 +43,7 @@ func (c *Console) AddConfigCommand(name, group string) {
 			func() interface{} { return &configSet{console: c} })
 
 		input := set.AddCommand("input",
-			"set the input editing mode of the console (Vim/Emacs)",
+			"set the input editing mode of the console (Vim/Emacs) (all menus)",
 			"",
 			"",
 			[]string{""},
@@ -51,7 +51,7 @@ func (c *Console) AddConfigCommand(name, group string) {
 		input.AddArgumentCompletion("Input", c.Completer.inputModes)
 
 		hints := set.AddCommand("hints",
-			"turn the console hints on/off",
+			"turn the console hints on/off (all menus)",
 			"",
 			"",
 			[]string{""},
@@ -59,14 +59,14 @@ func (c *Console) AddConfigCommand(name, group string) {
 		hints.AddArgumentCompletion("Display", c.Completer.hints)
 
 		set.AddCommand("max-tab-completer-rows",
-			"set the maximum number of completion rows",
+			"set the maximum number of completion rows (all menus)",
 			"",
 			"",
 			[]string{""},
 			func() interface{} { return &maxTabCompleterRows{console: c} })
 
 		prompt := set.AddCommand("prompt",
-			"set prompt strings for one of the available menus",
+			"set right/left prompt strings (per menu, default is current)",
 			"",
 			"",
 			[]string{""},
@@ -83,7 +83,7 @@ func (c *Console) AddConfigCommand(name, group string) {
 		multiline.AddArgumentCompletionDynamic("Prompt", c.Completer.promptItems)
 
 		highlight := set.AddCommand("highlight",
-			"set the highlighting of tokens in the command line",
+			"set the highlighting of tokens in the command line (all menus)",
 			"",
 			"",
 			[]string{""},
@@ -131,7 +131,7 @@ func (c *config) Execute(args []string) (err error) {
 	fmt.Println(readline.Yellow("Global"))
 
 	var input string
-	if conf.InputMode == readline.Vim {
+	if conf.InputMode == InputVim {
 		input = readline.Bold("Vim")
 	} else {
 		input = readline.Bold("Emacs")
@@ -207,10 +207,10 @@ func (i *inputMode) Execute(args []string) (err error) {
 
 	switch i.Positional.Input {
 	case "vi", "vim":
-		conf.InputMode = readline.Vim
+		conf.InputMode = InputVim
 		i.console.shell.InputMode = readline.Vim
 	case "emacs":
-		conf.InputMode = readline.Emacs
+		conf.InputMode = InputEmacs
 		i.console.shell.InputMode = readline.Emacs
 	default:
 		fmt.Printf(errorStr+"Invalid argument: %s (must be 'vim'/'vi' or 'emacs')\n", i.Positional.Input)

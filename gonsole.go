@@ -80,9 +80,15 @@ func NewConsole() (c *Console) {
 	// Default configuration
 	c.loadDefaultConfig()
 
-	// Setup the readline instance, and input mode
+	// Setup the readline instance
 	c.shell = readline.NewInstance()
-	c.shell.InputMode = c.config.InputMode
+
+	// Input mode
+	if c.config.InputMode == InputEmacs {
+		c.shell.InputMode = readline.Emacs
+	} else {
+		c.shell.InputMode = readline.Vim
+	}
 	c.shell.ShowVimMode = true
 	c.shell.VimModeColorize = true
 
@@ -94,7 +100,7 @@ func NewConsole() (c *Console) {
 	engine := newCommandCompleter(c)
 
 	c.shell.TabCompleter = engine.tabCompleter
-	c.shell.MaxTabCompleterRows = 50
+	c.shell.MaxTabCompleterRows = c.config.MaxTabCompleterRows
 	c.shell.HintText = engine.hintCompleter
 	c.shell.SyntaxHighlighter = engine.syntaxHighlighter
 

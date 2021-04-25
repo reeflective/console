@@ -57,16 +57,12 @@ func (c *Console) RefreshPromptCustom(log string, prompt string, offset int) {
 	}
 }
 
-// RefreshPromptInPlace - Refreshes the prompt in the very same place he is.
-// Like other Refresh functions, it will not reprint the prompt if the console
-// is currently executing a command.
-// @log         => An optional log message to print before refreshing the prompt.
-// @prompt      => If not nil (""), will use this prompt instead of the currently set prompt.
-func (c *Console) RefreshPromptInPlace(log string, prompt string) {
-	if c.isExecuting {
-		fmt.Print(log)
-	} else {
-		fmt.Print(log)
+// RefreshPromptInPlace - Refreshes the prompt in the very same place he is, with a string
+// that will list only until the next execution loop. This might be used in conjunction with
+// c.Menu["myMenu"].Prompt.Render(). Like other Refresh functions, it will not reprint the
+// prompt if the console is currently executing a command.
+func (c *Console) RefreshPromptInPlace(prompt string) {
+	if !c.isExecuting {
 		c.shell.RefreshPromptInPlace(prompt)
 	}
 }
@@ -74,10 +70,19 @@ func (c *Console) RefreshPromptInPlace(log string, prompt string) {
 // Gathers all per-execution-loop refresh and synchronization that needs to occur
 // betwee the application, the readline instance, the context prompt and the config.
 func (p *Prompt) refreshPromptSettings() {
-	p.loadFromConfig(p.console.config.Prompts[p.console.current.Name])
+	conf := p.console.config
+	current := p.console.current
+	if _, exist := conf.Prompts[current.Name]; !exist {
+		conf.Prompts[current.Name] = newDefaultPromptConfig(current.Name)
+	}
+
+	// Load the configuration
+	p.loadFromConfig(conf.Prompts[current.Name])
+
+	// Apply to underlying readline lib.
 	p.console.shell.SetPrompt(p.Render())
-	p.console.shell.Multiline = p.console.current.PromptConfig().Multiline
-	p.console.shell.MultilinePrompt = p.console.current.PromptConfig().MultilinePrompt
+	p.console.shell.Multiline = current.PromptConfig().Multiline
+	p.console.shell.MultilinePrompt = current.PromptConfig().MultilinePrompt
 }
 
 // Render - The core prompt computes all necessary values, forges a prompt string

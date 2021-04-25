@@ -14,9 +14,13 @@ func (c *Console) execute(args []string) {
 	// Asynchronous messages do not mess with the prompt from now on,
 	// until end of execution. Once we are done executing the command,
 	// they can again.
+	c.mutex.RLock()
 	c.isExecuting = true
+	c.mutex.RUnlock()
 	defer func() {
+		c.mutex.RLock()
 		c.isExecuting = false
+		c.mutex.RUnlock()
 	}()
 
 	// Execute the command line, with the current menu' parser.

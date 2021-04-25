@@ -6,9 +6,16 @@ import (
 	"github.com/maxlandon/readline"
 )
 
+type InputMode string
+
+const (
+	InputVim   InputMode = "vim"
+	InputEmacs InputMode = "emacs"
+)
+
 // Config - The console configuration (prompts, hints, modes, etc)
 type Config struct {
-	InputMode           readline.InputMode       `json:"input_mode"`
+	InputMode           InputMode                `json:"input_mode"`
 	Prompts             map[string]*PromptConfig `json:"prompts"`
 	Hints               bool                     `json:"hints"`
 	MaxTabCompleterRows int                      `json:"max_tab_completer_rows"`
@@ -19,7 +26,7 @@ type Config struct {
 // use this function in order to ensure there are no nil maps anywhere, and with defaults.
 func NewDefaultConfig() *Config {
 	return &Config{
-		InputMode:           readline.Vim,
+		InputMode:           InputVim,
 		Prompts:             map[string]*PromptConfig{},
 		Hints:               true,
 		MaxTabCompleterRows: 50,
@@ -91,8 +98,8 @@ func (c *Console) LoadConfig(conf *Config) {
 	return
 }
 
-// ExportConfig - The console exports its configuration in a JSON struct.
-func (c *Console) ExportConfig() (conf *Config) {
+// GetConfig - The console exports its configuration.
+func (c *Console) GetConfig() (conf *Config) {
 	return c.config
 }
 
@@ -107,10 +114,16 @@ func (c *Console) reloadConfig() {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
 
-	// Setup the prompt, and input mode
+	// Setup the prompt
 	c.current.Prompt.loadFromConfig(c.config.Prompts[c.current.Name])
 	c.shell.MultilinePrompt = c.config.Prompts[c.current.Name].MultilinePrompt
 	c.shell.Multiline = c.config.Prompts[c.current.Name].Multiline
-	c.shell.InputMode = c.config.InputMode
 	c.PreOutputNewline = c.config.Prompts[c.current.Name].Newline
+
+	// Input mode
+	if c.config.InputMode == InputEmacs {
+		c.shell.InputMode = readline.Emacs
+	} else {
+		c.shell.InputMode = readline.Vim
+	}
 }

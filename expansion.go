@@ -6,7 +6,7 @@ import (
 	"github.com/maxlandon/readline"
 )
 
-func (c *CommandCompleter) completeExpansionCompletions(lastWord string) (last string, completions []*readline.CompletionGroup) {
+func (c *CommandCompleter) completeExpansionVariables(lastWord string) (last string, completions []*readline.CompletionGroup) {
 	cc := c.console.CurrentMenu()
 
 	// Check if last input is made of several different variables
@@ -47,11 +47,11 @@ func (c *Console) parseExpansionVariables(args []string) (processed []string, er
 	}
 
 	for _, arg := range args {
-
 		for exp, completer := range c.CurrentMenu().expansionComps {
 
 			// Anywhere a $ is assigned means there is an env variable
-			if strings.Contains(arg, string(exp)) || strings.Contains(arg, "~") {
+			if strings.Contains(arg, string(exp)) {
+				// if strings.Contains(arg, string(exp)) || strings.Contains(arg, "~") {
 
 				//Split in case env is embedded in path
 				envArgs := strings.Split(arg, "/")
