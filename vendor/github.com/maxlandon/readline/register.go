@@ -1,6 +1,7 @@
 package readline
 
 import (
+	"fmt"
 	"sort"
 	"strconv"
 	"strings"
@@ -111,12 +112,17 @@ func (rl *Instance) saveBufToRegister(buffer []rune) {
 	// When exiting this function the currently selected register is dropped,
 	defer rl.registers.resetRegister()
 
+	// If the buffer is empty, just return
+	if len(buffer) == 0 || buf == "" {
+		return
+	}
+
 	// Put the buffer in the appropriate registers.
 	// By default, always in the unnamed one first.
 	rl.registers.unnamed = []rune(buf)
 
 	// If there is an active register, directly give it the buffer.
-	// Check if its a numbered of lettered register, and put it in.
+	// Check if its a numbered or lettered register, and put it in.
 	if rl.registers.onRegister {
 		num, err := strconv.Atoi(string(rl.registers.currentRegister))
 		if err == nil && num < 10 {
@@ -206,7 +212,7 @@ func (r *registers) writeNumberedRegister(idx int, buf []rune, push bool) {
 	var max int
 	if push {
 		for i := range r.num {
-			if i > max {
+			if i > max && string(r.num[i]) != string(buf) {
 				max = i
 			}
 		}
@@ -283,10 +289,10 @@ func (rl *Instance) completeRegisters() (groups []*CompletionGroup) {
 		nums = append(nums, reg)
 	}
 	sort.Ints(nums)
-	for _, reg := range nums {
-		buf := rl.registers.num[reg]
+	for _, val := range nums {
+		buf := rl.registers.num[val]
 		numRegs.Suggestions = append(numRegs.Suggestions, string(buf))
-		numRegs.Descriptions[string(buf)] = DIM + "\"" + strconv.Itoa(reg) + RESET
+		numRegs.Descriptions[string(buf)] = fmt.Sprintf("%s\"%d%s", DIM, val, RESET)
 	}
 
 	if len(numRegs.Suggestions) > 0 {

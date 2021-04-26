@@ -179,6 +179,9 @@ func (rl *Instance) Readline() (string, error) {
 
 		// Line Editing ------------------------------------------------------------------------------------
 		case charCtrlU:
+			if rl.modeTabCompletion {
+				rl.resetVirtualComp(true)
+			}
 			// Delete everything from the beginning of the line to the cursor position
 			rl.saveBufToRegister(rl.line[:rl.pos])
 			rl.deleteToBeginning()
@@ -618,7 +621,8 @@ func (rl *Instance) escapeSeq(r []rune) {
 			rl.renderHelpers()
 			return
 		}
-		rl.walkHistory(-1)
+		rl.mainHist = true
+		rl.walkHistory(1)
 
 	case seqDown:
 		if rl.modeTabCompletion {
@@ -628,7 +632,8 @@ func (rl *Instance) escapeSeq(r []rune) {
 			rl.renderHelpers()
 			return
 		}
-		rl.walkHistory(1)
+		rl.mainHist = true
+		rl.walkHistory(-1)
 
 	case seqForwards:
 		if rl.modeTabCompletion {
@@ -643,6 +648,7 @@ func (rl *Instance) escapeSeq(r []rune) {
 			moveCursorForwards(1)
 			rl.pos++
 		}
+		rl.updateHelpers()
 		rl.viUndoSkipAppend = true
 
 	case seqBackwards:
@@ -660,6 +666,7 @@ func (rl *Instance) escapeSeq(r []rune) {
 			rl.pos--
 		}
 		rl.viUndoSkipAppend = true
+		rl.updateHelpers()
 
 	// Registers -------------------------------------------------------------------------------
 	case seqAltQuote:
@@ -677,11 +684,11 @@ func (rl *Instance) escapeSeq(r []rune) {
 	// Movement -------------------------------------------------------------------------------
 	case seqCtrlLeftArrow:
 		rl.moveCursorByAdjust(rl.viJumpB(tokeniseLine))
-		rl.renderHelpers()
+		rl.updateHelpers()
 		return
 	case seqCtrlRightArrow:
 		rl.moveCursorByAdjust(rl.viJumpW(tokeniseLine))
-		rl.renderHelpers()
+		rl.updateHelpers()
 		return
 
 	case seqDelete:

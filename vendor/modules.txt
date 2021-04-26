@@ -14,14 +14,15 @@ github.com/kballard/go-shellquote
 github.com/mattn/go-colorable
 # github.com/mattn/go-isatty v0.0.8
 github.com/mattn/go-isatty
-# github.com/maxlandon/readline v0.1.0-beta.0.20210410214614-fd6528ce17ad => /home/user/projects/readline
+# github.com/maxlandon/readline v0.1.0-beta.0.20210425200952-9e33f3acfc3f
 ## explicit
 github.com/maxlandon/readline
 # github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b
 github.com/mgutz/ansi
 # github.com/olekukonko/ts v0.0.0-20171002115256-78ecb04241c0
 github.com/olekukonko/ts
-# golang.org/x/sys v0.0.0-20210320140829-1e4c9ba3b0c4
+# golang.org/x/sys v0.0.0-20210423185535-09eb48e85fd7
+## explicit
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
 golang.org/x/sys/windows
@@ -30,4 +31,3 @@ golang.org/x/sys/windows
 gopkg.in/AlecAivazis/survey.v1
 gopkg.in/AlecAivazis/survey.v1/core
 gopkg.in/AlecAivazis/survey.v1/terminal
-# github.com/maxlandon/readline => /home/user/projects/readline
