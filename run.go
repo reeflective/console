@@ -2,6 +2,7 @@ package gonsole
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 )
 
@@ -38,10 +39,6 @@ func (c *Console) Run() (err error) {
 		if err != nil {
 			// Handle readline errors in a specialized function
 		}
-
-		// The user has entered an input line command. Any previous errors
-		// have been handled, and we will go all the way toward command execution,
-		// even if the command line is empty.
 
 		// If the menu prompt is asked to leave a newline
 		// between prompt and output, we print it now.
@@ -116,7 +113,12 @@ func (c *Console) sanitizeInput(line string) (sanitized []string, empty bool) {
 		empty = true
 		return
 	}
-	unfiltered := strings.Split(trimmed, " ")
+
+	// Parse arguments for quotes, and split according to these quotes first:
+	// they might influence heavily on the go-flags argument parsing done further
+	// Split all strings with '' and ""
+	r := regexp.MustCompile(`[^\s"']+|"([^"]*)"|'([^']*)'`)
+	unfiltered := r.FindAllString(trimmed, -1)
 
 	// Catch any eventual empty items
 	for _, arg := range unfiltered {
