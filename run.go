@@ -120,8 +120,20 @@ func (c *Console) sanitizeInput(line string) (sanitized []string, empty bool) {
 	r := regexp.MustCompile(`[^\s"']+|"([^"]*)"|'([^']*)'`)
 	unfiltered := r.FindAllString(trimmed, -1)
 
-	// Catch any eventual empty items
+	var test []string
 	for _, arg := range unfiltered {
+		if strings.HasPrefix(arg, "'") && strings.HasSuffix(arg, "'") {
+			trim := strings.TrimPrefix(arg, "'")
+			trim = strings.TrimSuffix(trim, "'")
+			test = append(test, trim)
+			continue
+		}
+		test = append(test, arg)
+	}
+
+	// Catch any eventual empty items
+	for _, arg := range test {
+		// for _, arg := range unfiltered {
 		if arg != "" {
 			sanitized = append(sanitized, arg)
 		}
