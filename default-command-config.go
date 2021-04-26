@@ -157,7 +157,7 @@ func (c *config) Execute(args []string) (err error) {
 	pad = fmt.Sprintf("%-15s", "Multiline prompt")
 	fmt.Printf(" "+pad+"    %s%s%s\n", readline.BOLD, promptConf.MultilinePrompt, readline.RESET)
 	pad = fmt.Sprintf("%-15s", "Newline")
-	fmt.Printf(" "+pad+"    %s%t%s\n", readline.BOLD, promptConf.Newline, readline.RESET)
+	fmt.Printf(" "+pad+"    %s%t%s\n", readline.BOLD, promptConf.NewlineAfter, readline.RESET)
 
 	// Check if this config has been saved (they should be identical)
 	// req := &clientpb.GetConsoleConfigReq{}
@@ -435,7 +435,12 @@ func (p *promptSet) Execute(args []string) (err error) {
 	if p.Options.NewlineAfter {
 		cc.Prompt.newline = true
 		cc.console.PreOutputNewline = true
-		conf.Prompts[cc.Name].Newline = true
+		conf.Prompts[cc.Name].NewlineAfter = true
+	}
+
+	if p.Options.NewlineBefore {
+		p.console.LeaveNewline = true
+		conf.Prompts[cc.Name].NewlineBefore = true
 	}
 
 	if p.Positional.Prompt == "\"\"" || p.Positional.Prompt == "''" {

@@ -147,6 +147,10 @@ func (c *Console) SwitchMenu(menu string) {
 
 	// Contexts have some specific configuration values, reload them.
 	c.reloadConfig()
+
+	// Bind history sources
+	c.shell.SetHistoryCtrlR(c.current.historyCtrlRName, c.current.historyCtrlR)
+	c.shell.SetHistoryAltR(c.current.historyAltRName, c.current.historyAltR)
 }
 
 // CurrentMenu - Return the current console menu. Because the Context

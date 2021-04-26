@@ -44,7 +44,8 @@ func NewDefaultConfig() *Config {
 type PromptConfig struct {
 	Left            string `json:"left"`
 	Right           string `json:"right"`
-	Newline         bool   `json:"newline"`
+	NewlineAfter    bool   `json:"newline_after"`
+	NewlineBefore   bool   `json:"newline_before"`
 	Multiline       bool   `json:"multiline"`
 	MultilinePrompt string `json:"multiline_prompt"`
 }
@@ -54,7 +55,8 @@ func newDefaultPromptConfig(menu string) *PromptConfig {
 	return &PromptConfig{
 		Left:            fmt.Sprintf("gonsole (%s)", menu),
 		Right:           "",
-		Newline:         true,
+		NewlineAfter:    true,
+		NewlineBefore:   true,
 		Multiline:       true,
 		MultilinePrompt: " > ",
 	}
@@ -69,14 +71,7 @@ func (c *Console) LoadConfig(conf *Config) {
 
 	// Ensure no fields are nil
 	if conf.Prompts == nil {
-		p := &PromptConfig{
-			Left:            "gonsole",
-			Right:           "",
-			Newline:         true,
-			Multiline:       true,
-			MultilinePrompt: " > ",
-		}
-		conf.Prompts = map[string]*PromptConfig{"": p}
+		conf.Prompts = map[string]*PromptConfig{"": newDefaultPromptConfig("")}
 	}
 
 	// Users might forget to load default highlighting maps.
@@ -118,7 +113,8 @@ func (c *Console) reloadConfig() {
 	c.current.Prompt.loadFromConfig(c.config.Prompts[c.current.Name])
 	c.shell.MultilinePrompt = c.config.Prompts[c.current.Name].MultilinePrompt
 	c.shell.Multiline = c.config.Prompts[c.current.Name].Multiline
-	c.PreOutputNewline = c.config.Prompts[c.current.Name].Newline
+	c.PreOutputNewline = c.config.Prompts[c.current.Name].NewlineAfter
+	c.LeaveNewline = c.config.Prompts[c.current.Name].NewlineBefore
 
 	// Input mode
 	if c.config.InputMode == InputEmacs {
