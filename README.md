@@ -9,7 +9,9 @@ The purpose of this library is to offer a complete off-the-shelf console applica
 - Better overall features than what is currently seen in such projects, including those not written in Go.
 - A really simple but very powerful way of transforming code (structs and anything they might embed), into commands.
 - An equally simple way to provide completions for any command/subcommand, any arguments of them, or any option arguments.
+- So if you get how to declare a go-flags compatible command, you know how to declare commands that work with this console.
 
+[readme-main-gif]()
 
 ----
 ## Features Summary
@@ -18,30 +20,18 @@ The list of features supported or provided by this library can fall into 2 diffe
 the shell/console interface part, and the commands/parsing logic part.  Some of the features below
 are simply extrated from my [readline](https://github.com/maxlandon/readline) library (everything below **Shell Details**).
 
-
-#### Menus
-- Declare different "menus" (`Context` in the code), to which you can bind commands, prompt and shell settings.
-- Commands and settings bound to a menu are not reachable from another menu, unless you bound the commands to it as well.
-- Users can switch between menus (programmatically, so consumers of this library should call `console.SwitchContext("name")`).
-
-#### Commands
+#### Menus & Commands
+- Declare different "menus" to which you can bind commands, prompt and shell settings.
 - The library is fundamentally a wrapper around the [go-flags](https://github.com/jessievdk/go-flags) commands/options, etc.
 - This go-flag library allows you to create commands out of structs (however populated), and gonsole asks you to pass these structs to it.
-- So if you get how to declare a go-flags compatible command, you know how to declare commands that work with this library.
 - This works for any level of command nesting. 
 - Also allows you to declare as many option groups you want, all of that will work.
 - All commands have methods for adding completions either to their arguments, or to their options.
 
-#### Others
-- You can pass special completers that will be triggered if the rune (like `$` or `@`) is detected, anywhere in the line. These variables are expanded at command execution time, and work in completions as well.
-- You can export the configuration for your application, its menus, and add some custom subcommands to the root one, for specialized actions over it.
-- Also, an optional `help` command can be bound to the console, in additional to default `-h`/`--help` flags for every command.
-- History sources can also be bound per menu/menu.
-
 #### Shell details
 - Vim / Emacs input and editing modes.
 - Vim modes (Insert, Normal, Replace, Delete) with visual prompt Vim status indicator
-- line editing using `$EDITOR` (`vi` in the example - enabled by pressing `[ESC]` followed by `[v]`)
+- Line editing using `$EDITOR` (`vi` in the example - enabled by pressing `[ESC]` followed by `[v]`)
 - Vim registers (one default, 10 numbered, and 26 lettered) and Vim iterations
 
 #### Completion engine
@@ -50,6 +40,12 @@ are simply extrated from my [readline](https://github.com/maxlandon/readline) li
 - In `List` completion groups, ability to have alternative candidates (used for displaying `--long` and `-s` (short) options, with descriptions)
 - Completions working anywhere in the input line (your cursor can be anywhere)
 - Completions are searchable with *Ctrl-F*, 
+
+#### Others
+- You can pass special completers that will be triggered if the rune (like `$` or `@`) is detected, anywhere in the line. These variables are expanded at command execution time, and work in completions as well.
+- You can export the configuration for your application, its menus, and add some custom subcommands to the root one, for specialized actions over it.
+- Also, an optional `help` command can be bound to the console, in additional to default `-h`/`--help` flags for every command.
+- History sources can also be bound per menu/menu.
 
 #### Prompt system & Colors
 - 1-line and 2-line prompts, both being customizable.
@@ -135,7 +131,30 @@ go get -u github.com/maxlandon/gonsole
 - [ ] Let the user pass keypresses and their associated behavior, like we could do in readline.
 
 
-## Versioning
+## Version Information
+
+* The version string will be based on Semantic Versioning. ie version numbers
+  will be formatted `(major).(minor).(patch)` - for example `2.0.1`
+
+* `major` releases _will_ have breaking changes. Be sure to read CHANGES.md for
+  upgrade instructions
+
+* `minor` releases will contain new APIs or introduce new user facing features
+  which may affect useability from an end user perspective. However `minor`
+  releases will not break backwards compatibility at the source code level and
+  nor will it break existing expected user-facing behavior. These changes will
+  be documented in CHANGES.md too
+
+* `patch` releases will be bug fixes and such like. Where the code has changed
+  but both API endpoints and user experience will remain the same (except where
+  expected user experience was broken due to a bug, then that would be bumped
+  to either a `minor` or `major` depending on the significance of the bug and
+  the significance of the change to the user experience)
+
+* Any updates to documentation, comments within code or the example code will
+  not result in a version bump because they will not affect the output of the
+  go compiler. However if this concerns you then I recommend pinning your
+  project to the git commit hash rather than a `patch` release
 
 
 ## License
