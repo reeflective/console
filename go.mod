@@ -10,5 +10,3 @@ require (
 	golang.org/x/sys v0.0.0-20210423185535-09eb48e85fd7 // indirect
 	gopkg.in/AlecAivazis/survey.v1 v1.8.8
 )
-
-replace github.com/maxlandon/readline => /home/user/projects/readline
