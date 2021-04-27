@@ -23,7 +23,7 @@ func (c *CommandCompleter) LocalPath(last string) (string, []*readline.Completio
 	var suggestions []string
 
 	// Any parsing error is silently ignored, for not messing the prompt
-	processedPath, _ := c.console.parseExpansionVariables([]string{last})
+	processedPath, _ := c.console.ParseExpansionVariables([]string{last})
 
 	// Check if processed input is empty
 	var inputPath string
@@ -116,7 +116,7 @@ func (c *CommandCompleter) LocalPathAndFiles(last string) (string, []*readline.C
 	var suggestions []string
 
 	// Any parsing error is silently ignored, for not messing the prompt
-	processedPath, _ := c.console.parseExpansionVariables([]string{last})
+	processedPath, _ := c.console.ParseExpansionVariables([]string{last})
 
 	// Check if processed input is empty
 	var inputPath string

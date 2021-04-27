@@ -63,7 +63,7 @@ func (c *Console) Run() (err error) {
 		}
 
 		// Parse the input line for any expanded variables, and evaluate them.
-		args, err = c.parseExpansionVariables(tokenParsed)
+		args, err = c.ParseExpansionVariables(tokenParsed)
 		if err != nil {
 			fmt.Println(warn+"Failed to evaluate expanded variables: %s", err.Error())
 		}

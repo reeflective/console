@@ -44,7 +44,8 @@ func (c *CommandCompleter) completeExpansionVariables(lastWord string) (last str
 	return lastVar, completions
 }
 
-func (c *Console) parseExpansionVariables(args []string) (processed []string, err error) {
+// ParseExpansionVariables - This function ca be used if you need to have access to a path in which your expansion variables have been evaluated.
+func (c *Console) ParseExpansionVariables(args []string) (processed []string, err error) {
 
 	if len(c.CurrentMenu().expansionComps) == 0 {
 		return args, nil
