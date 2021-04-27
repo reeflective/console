@@ -362,7 +362,8 @@ func optionArgRequired(args []string, last []rune, group *flags.Group) (opt *fla
 	var option *flags.Option
 
 	// If there is argument required we must have 1) command 2) --option inputs at least.
-	if len(args) <= 2 {
+	// if len(args) <= 2 {
+	if len(args) < 2 {
 		return nil, false
 	}
 

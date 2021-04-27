@@ -6,10 +6,13 @@ import (
 	"github.com/maxlandon/readline"
 )
 
+// InputMode - The input & navigation mode of the console. (Vim or Emacs)
 type InputMode string
 
 const (
-	InputVim   InputMode = "vim"
+	// InputVim - Vim editing system, with modes, registers, navigation and iterations.
+	InputVim InputMode = "vim"
+	// InputEmacs - Emacs-style mode, without most of Emacs binding (not a real Emacs).
 	InputEmacs InputMode = "emacs"
 )
 
@@ -111,6 +114,7 @@ func (c *Console) reloadConfig() {
 
 	// Setup the prompt
 	c.current.Prompt.loadFromConfig(c.config.Prompts[c.current.Name])
+	c.shell.SetPrompt(c.current.Prompt.Render())
 	c.shell.MultilinePrompt = c.config.Prompts[c.current.Name].MultilinePrompt
 	c.shell.Multiline = c.config.Prompts[c.current.Name].Multiline
 	c.PreOutputNewline = c.config.Prompts[c.current.Name].NewlineAfter

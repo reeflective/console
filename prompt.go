@@ -147,7 +147,7 @@ func (p *Prompt) loadFromConfig(promptConf *PromptConfig) {
 	}
 	p.left = promptConf.Left
 	p.right = promptConf.Right
-	p.newline = promptConf.Newline
+	p.newline = promptConf.NewlineAfter
 }
 
 // getRealLength - Some strings will have ANSI escape codes, which might be wrongly

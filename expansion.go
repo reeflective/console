@@ -19,15 +19,19 @@ func (c *CommandCompleter) completeExpansionVariables(lastWord string) (last str
 			var suggs []string
 			var evaluated = map[string]string{}
 
+			escape := ""
+			if exp == '%' {
+				escape = "\\"
+			}
 			for _, v := range grp.Suggestions {
 				if strings.HasPrefix(string(exp)+v, lastVar) {
-					suggs = append(suggs, string(exp)+v+"/")
-					evaluated[string(exp)+v+"/"] = grp.Descriptions[v]
+					suggs = append(suggs, escape+string(exp)+v+"/")
+					evaluated[escape+string(exp)+v+"/"] = grp.Descriptions[v]
 					continue
 				}
 				if _, exists := grp.Aliases[v]; exists {
-					suggs = append(suggs, string(exp)+v+"/")
-					evaluated[string(exp)+v+"/"] = grp.Descriptions[v]
+					suggs = append(suggs, escape+string(exp)+v+"/")
+					evaluated[escape+string(exp)+v+"/"] = grp.Descriptions[v]
 					continue
 				}
 			}
