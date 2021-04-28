@@ -49,8 +49,8 @@ func (c *CommandCompleter) tabCompleter(line []rune, pos int, dtc readline.Delay
 	}
 
 	// Check environment variables
-	if c.envVarAsked(c.args, lastWord) {
-		c.completeExpansionVariables(lastWord)
+	if yes, envComps := c.envVarAsked(c.args, lastWord); yes {
+		c.completeExpansionVariables(lastWord, envComps())
 	}
 
 	// Base command has been identified
@@ -63,8 +63,8 @@ func (c *CommandCompleter) tabCompleter(line []rune, pos int, dtc readline.Delay
 		}
 
 		// Check environment variables again
-		if c.envVarAsked(c.args, lastWord) {
-			return c.completeExpansionVariables(lastWord)
+		if yes, envComps := c.envVarAsked(c.args, lastWord); yes {
+			return c.completeExpansionVariables(lastWord, envComps())
 		}
 
 		// If options are asked for root command, return commpletions.
@@ -209,8 +209,8 @@ func (c *CommandCompleter) handleSubCommand(args []string, parent, command *flag
 	lastWord = c.lastWord
 
 	// Check environment variables
-	if c.envVarAsked(args, lastWord) {
-		c.completeExpansionVariables(lastWord)
+	if yes, envComps := c.envVarAsked(args, lastWord); yes {
+		c.completeExpansionVariables(lastWord, envComps())
 	}
 
 	// Check argument options

@@ -6,11 +6,13 @@ import (
 	"github.com/maxlandon/readline"
 )
 
-func (c *CommandCompleter) completeExpansionVariables(lastWord string) (last string, completions []*readline.CompletionGroup) {
+func (c *CommandCompleter) completeExpansionVariables(lastWord string, grps []*readline.CompletionGroup) (last string, completions []*readline.CompletionGroup) {
 	cc := c.console.CurrentMenu()
 
+	sep := grps[0].PathSeparator
+
 	// Check if last input is made of several different variables
-	allVars := strings.Split(lastWord, "/")
+	allVars := strings.Split(lastWord, string(sep))
 	lastVar := allVars[len(allVars)-1]
 
 	for exp, completer := range cc.expansionComps {
@@ -19,19 +21,15 @@ func (c *CommandCompleter) completeExpansionVariables(lastWord string) (last str
 			var suggs []string
 			var evaluated = map[string]string{}
 
-			escape := ""
-			if exp == '%' {
-				escape = "\\"
-			}
 			for _, v := range grp.Suggestions {
 				if strings.HasPrefix(string(exp)+v, lastVar) {
-					suggs = append(suggs, escape+string(exp)+v+"/")
-					evaluated[escape+string(exp)+v+"/"] = grp.Descriptions[v]
+					suggs = append(suggs, string(exp)+v+string(sep))
+					evaluated[string(exp)+v+string(sep)] = grp.Descriptions[v]
 					continue
 				}
 				if _, exists := grp.Aliases[v]; exists {
-					suggs = append(suggs, escape+string(exp)+v+"/")
-					evaluated[escape+string(exp)+v+"/"] = grp.Descriptions[v]
+					suggs = append(suggs, string(exp)+v+string(sep))
+					evaluated[string(exp)+v+string(sep)] = grp.Descriptions[v]
 					continue
 				}
 			}
@@ -44,8 +42,56 @@ func (c *CommandCompleter) completeExpansionVariables(lastWord string) (last str
 	return lastVar, completions
 }
 
-// ParseExpansionVariables - This function ca be used if you need to have access to a path in which your expansion variables have been evaluated.
-func (c *Console) ParseExpansionVariables(args []string) (processed []string, err error) {
+// ParseExpansionVariables - This function can be used if you need to have access to a path in which your expansion
+// variables have been evaluated. The splitter parameter is used to specify with path separators to use. If "", will be POSIX "/".
+func (c *Console) ParseExpansionVariables(args []string, pathSeparator rune) (processed []string, err error) {
+
+	if len(c.CurrentMenu().expansionComps) == 0 {
+		return args, nil
+	}
+
+	for _, arg := range args {
+		var expanded bool
+		for exp, completer := range c.CurrentMenu().expansionComps {
+
+			// Anywhere a $ is assigned means there is an env variable
+			if strings.Contains(arg, string(exp)) {
+
+				// Split in case env is embedded in path
+				envArgs := strings.Split(arg, string(pathSeparator))
+
+				// If its not a path
+				if len(envArgs) == 1 {
+					processed = append(processed, handleCuratedVar(arg, exp, completer()))
+					expanded = true
+					break
+				}
+
+				// If len of the env var split is > 1, its a path
+				if len(envArgs) > 1 {
+					processed = append(processed, handleEmbeddedVar(arg, exp, pathSeparator, completer()))
+					expanded = true
+					break
+				}
+				//
+				// } else if arg != "" && arg != " " {
+				// Else, if arg is not an environment variable, return it as is
+
+				// processed = append(processed, arg)
+			}
+		}
+
+		if !expanded {
+			processed = append(processed, arg)
+		}
+	}
+
+	return
+}
+
+// parseExpansionVariables - This function can be used if you need to have access to a path in which your expansion
+// variables have been evaluated. The splitter parameter is used to specify with path separators to use. If "", will be POSIX "/".
+func (c *Console) parseAllExpansionVariables(args []string) (processed []string, err error) {
 
 	if len(c.CurrentMenu().expansionComps) == 0 {
 		return args, nil
@@ -54,12 +100,13 @@ func (c *Console) ParseExpansionVariables(args []string) (processed []string, er
 	for _, arg := range args {
 		for exp, completer := range c.CurrentMenu().expansionComps {
 
+			pathSeparator := completer()[0].PathSeparator
+
 			// Anywhere a $ is assigned means there is an env variable
 			if strings.Contains(arg, string(exp)) {
-				// if strings.Contains(arg, string(exp)) || strings.Contains(arg, "~") {
 
-				//Split in case env is embedded in path
-				envArgs := strings.Split(arg, "/")
+				// Split in case env is embedded in path
+				envArgs := strings.Split(arg, string(pathSeparator))
 
 				// If its not a path
 				if len(envArgs) == 1 {
@@ -68,8 +115,9 @@ func (c *Console) ParseExpansionVariables(args []string) (processed []string, er
 
 				// If len of the env var split is > 1, its a path
 				if len(envArgs) > 1 {
-					processed = append(processed, handleEmbeddedVar(arg, exp, completer()))
+					processed = append(processed, handleEmbeddedVar(arg, exp, pathSeparator, completer()))
 				}
+
 			} else if arg != "" && arg != " " {
 				// Else, if arg is not an environment variable, return it as is
 				processed = append(processed, arg)
@@ -110,9 +158,9 @@ func handleCuratedVar(arg string, exp rune, grps []*readline.CompletionGroup) (v
 }
 
 // handleEmbeddedVar - Replace an environment variable that is in the middle of a path, or other one-string combination
-func handleEmbeddedVar(arg string, exp rune, grps []*readline.CompletionGroup) (value string) {
+func handleEmbeddedVar(arg string, exp rune, pathSeparator rune, grps []*readline.CompletionGroup) (value string) {
 
-	envArgs := strings.Split(arg, "/")
+	envArgs := strings.Split(arg, string(pathSeparator))
 	var path []string
 
 	for _, arg := range envArgs {
@@ -147,7 +195,7 @@ func handleEmbeddedVar(arg string, exp rune, grps []*readline.CompletionGroup) (
 		}
 	}
 
-	return strings.Join(path, "/")
+	return strings.Join(path, string(pathSeparator))
 }
 
 // parseTokens - Parse and process any special tokens that are not treated by environment-like parsers.

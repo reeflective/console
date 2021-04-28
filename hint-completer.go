@@ -26,7 +26,7 @@ func (c *CommandCompleter) hintCompleter(line []rune, pos int) (hint []rune) {
 	}
 
 	// Check environment variables
-	if c.envVarAsked(args, lastWord) {
+	if yes, _ := c.envVarAsked(args, lastWord); yes {
 		return c.envVarHint(args, last)
 	}
 
@@ -37,7 +37,7 @@ func (c *CommandCompleter) hintCompleter(line []rune, pos int) (hint []rune) {
 		hint = c.commandHint(command)
 
 		// Check environment variables
-		if c.envVarAsked(args, lastWord) {
+		if yes, _ := c.envVarAsked(args, lastWord); yes {
 			return c.envVarHint(args, last)
 		}
 
@@ -91,7 +91,7 @@ func (c *CommandCompleter) handleSubcommandHints(args []string, last []rune, roo
 	}
 
 	// Environment variables
-	if c.envVarAsked(args, string(last)) {
+	if yes, _ := c.envVarAsked(args, string(last)); yes {
 		hint = c.envVarHint(args, last)
 	}
 

@@ -428,41 +428,44 @@ func optionArgRequired(args []string, last []rune, group *flags.Group) (opt *fla
 
 // [ Other ]-----------------------------------------------------------------------------------------------------//
 // Does the user asks for Environment variables ?
-func (c *CommandCompleter) envVarAsked(args []string, lastWord string) bool {
+func (c *CommandCompleter) envVarAsked(args []string, lastWord string) (yes bool, completer CompletionFunc) {
 	cc := c.console.CurrentMenu()
 
 	// For each of the expansion runes for which the user has given a completion generator
 	for exp := range cc.expansionComps {
 
+		completers := cc.expansionComps[exp]()
+		sep := completers[0].PathSeparator
+
 		// If we are at the beginning of an env var
 		if len(lastWord) > 0 && lastWord[len(lastWord)-1] == byte(exp) {
-			return true
+			return true, cc.expansionComps[exp]
 		}
 
 		// Check if env var is asked in a path or something
 		if len(lastWord) > 1 {
 
 			// If last is a path, it cannot be an env var anymore
-			if lastWord[len(lastWord)-1] == '/' {
-				return false
+			if lastWord[len(lastWord)-1] == byte(sep) {
+				return false, nil
 			}
 
 			if lastWord[len(lastWord)-1] == byte(exp) {
-				return true
+				return true, cc.expansionComps[exp]
 			}
 		}
 
 		// Check if the current word is an environment variable, or if the last part of it is a variable
 		if len(lastWord) > 1 && strings.HasPrefix(lastWord, string(exp)) {
-			if strings.LastIndex(lastWord, "/") < strings.LastIndex(lastWord, string(exp)) {
-				return true
+			if strings.LastIndex(lastWord, string(sep)) < strings.LastIndex(lastWord, string(exp)) {
+				return true, cc.expansionComps[exp]
 			}
-			return false
+			return false, nil
 		}
 
 	}
 
-	return false
+	return false, nil
 }
 
 // filterOptions - Check various elements of an option and return a list

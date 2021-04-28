@@ -12,11 +12,12 @@ import (
 func (c *CommandCompleter) EnvironmentVariables() (completions []*readline.CompletionGroup) {
 
 	grp := &readline.CompletionGroup{
-		Name:         "console OS environment",
-		MaxLength:    5, // Should be plenty enough
-		DisplayType:  readline.TabDisplayGrid,
-		TrimSlash:    true, // Some variables can be paths
-		Descriptions: map[string]string{},
+		Name:          "console OS environment",
+		MaxLength:     5, // Should be plenty enough
+		DisplayType:   readline.TabDisplayGrid,
+		TrimSlash:     true, // Some variables can be paths
+		PathSeparator: getOSPathSeparator(),
+		Descriptions:  map[string]string{},
 	}
 
 	var clientEnv = map[string]string{}
@@ -48,4 +49,14 @@ func (c *CommandCompleter) EnvironmentVariables() (completions []*readline.Compl
 	completions = append(completions, grp)
 
 	return
+}
+
+func (c *CommandCompleter) getDefaultExpansions() {
+
+	// ~ . .. *
+
+	// OS: windows, darwin, linux
+
+	// windows: os.GetEnv(HOMEPATH)
+	// hardcoded: \Users\<usename>
 }

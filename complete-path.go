@@ -4,6 +4,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/evilsocket/islazy/fs"
@@ -15,15 +16,17 @@ func (c *CommandCompleter) LocalPath(last string) (string, []*readline.Completio
 
 	// Completions
 	completion := &readline.CompletionGroup{
-		Name:        "(console) local path",
-		MaxLength:   10, // The grid system is not yet able to roll on comps if > MaxLength
-		DisplayType: readline.TabDisplayGrid,
-		TrimSlash:   true,
+		Name:          "(console) local path",
+		MaxLength:     10, // The grid system is not yet able to roll on comps if > MaxLength
+		DisplayType:   readline.TabDisplayGrid,
+		TrimSlash:     true,
+		PathSeparator: getOSPathSeparator(),
 	}
 	var suggestions []string
+	sep := completion.PathSeparator
 
 	// Any parsing error is silently ignored, for not messing the prompt
-	processedPath, _ := c.console.ParseExpansionVariables([]string{last})
+	processedPath, _ := c.console.ParseExpansionVariables([]string{last}, completion.PathSeparator)
 
 	// Check if processed input is empty
 	var inputPath string
@@ -32,15 +35,15 @@ func (c *CommandCompleter) LocalPath(last string) (string, []*readline.Completio
 	}
 
 	// Add a slash if the raw input has one but not the processed input
-	if len(last) > 0 && last[len(last)-1] == '/' {
-		inputPath += "/"
+	if len(last) > 0 && last[len(last)-1] == byte(sep) {
+		inputPath += string(sep)
 	}
 
 	var linePath string // curated version of the inputPath
 	var absPath string  // absolute path (excluding suffix) of the inputPath
 	var lastPath string // last directory in the input path
 
-	if strings.HasSuffix(string(inputPath), "/") {
+	if strings.HasSuffix(string(inputPath), string(sep)) {
 		linePath = filepath.Dir(string(inputPath))
 		absPath, _ = fs.Expand(string(linePath)) // Get absolute path
 
@@ -67,7 +70,7 @@ func (c *CommandCompleter) LocalPath(last string) (string, []*readline.Completio
 		for _, dir := range dirs {
 			if strings.HasPrefix(dir, lastPath) || lastPath == dir {
 				tokenized := addSpaceTokens(dir)
-				suggestions = append(suggestions, tokenized+"/")
+				suggestions = append(suggestions, tokenized+string(sep))
 			}
 		}
 	default:
@@ -81,7 +84,7 @@ func (c *CommandCompleter) LocalPath(last string) (string, []*readline.Completio
 		for _, dir := range filtered {
 			if !hasPrefix([]rune(lastPath), []rune(dir)) || lastPath == dir {
 				tokenized := addSpaceTokens(dir)
-				suggestions = append(suggestions, tokenized+"/")
+				suggestions = append(suggestions, tokenized+string(sep))
 			}
 		}
 
@@ -108,16 +111,18 @@ func (c *CommandCompleter) LocalPathAndFiles(last string) (string, []*readline.C
 
 	// Completions
 	completion := &readline.CompletionGroup{
-		Name:        "(console) local directory/files",
-		MaxLength:   10, // The grid system is not yet able to roll on comps if > MaxLength
-		DisplayType: readline.TabDisplayGrid,
-		TrimSlash:   true,
+		Name:          "(console) local directory/files",
+		MaxLength:     10, // The grid system is not yet able to roll on comps if > MaxLength
+		DisplayType:   readline.TabDisplayGrid,
+		TrimSlash:     true,
+		PathSeparator: getOSPathSeparator(),
 	}
 	var suggestions []string
 
 	// Any parsing error is silently ignored, for not messing the prompt
-	processedPath, _ := c.console.ParseExpansionVariables([]string{last})
+	processedPath, _ := c.console.ParseExpansionVariables([]string{last}, completion.PathSeparator)
 
+	sep := completion.PathSeparator
 	// Check if processed input is empty
 	var inputPath string
 	if len(processedPath) == 1 {
@@ -125,15 +130,15 @@ func (c *CommandCompleter) LocalPathAndFiles(last string) (string, []*readline.C
 	}
 
 	// Add a slash if the raw input has one but not the processed input
-	if len(last) > 0 && last[len(last)-1] == '/' {
-		inputPath += "/"
+	if len(last) > 0 && last[len(last)-1] == byte(sep) {
+		inputPath += string(sep)
 	}
 
 	var linePath string // curated version of the inputPath
 	var absPath string  // absolute path (excluding suffix) of the inputPath
 	var lastPath string // last directory in the input path
 
-	if strings.HasSuffix(string(inputPath), "/") {
+	if strings.HasSuffix(string(inputPath), string(sep)) {
 		linePath = filepath.Dir(string(inputPath)) // Trim the non needed slash
 		absPath, _ = fs.Expand(string(linePath))   // Get absolute path
 
@@ -160,7 +165,7 @@ func (c *CommandCompleter) LocalPathAndFiles(last string) (string, []*readline.C
 		for _, file := range files {
 			if strings.HasPrefix(file.Name(), lastPath) || lastPath == file.Name() {
 				if file.IsDir() {
-					suggestions = append(suggestions, file.Name()+"/")
+					suggestions = append(suggestions, file.Name()+string(sep))
 				} else {
 					suggestions = append(suggestions, file.Name())
 				}
@@ -177,7 +182,7 @@ func (c *CommandCompleter) LocalPathAndFiles(last string) (string, []*readline.C
 		for _, file := range filtered {
 			if !hasPrefix([]rune(lastPath), []rune(file.Name())) || lastPath == file.Name() {
 				if file.IsDir() {
-					suggestions = append(suggestions, file.Name()+"/")
+					suggestions = append(suggestions, file.Name()+string(sep))
 				} else {
 					suggestions = append(suggestions, file.Name())
 				}
@@ -188,4 +193,13 @@ func (c *CommandCompleter) LocalPathAndFiles(last string) (string, []*readline.C
 
 	completion.Suggestions = suggestions
 	return string(lastPath), []*readline.CompletionGroup{completion}
+}
+
+func getOSPathSeparator() rune {
+	switch runtime.GOOS {
+	case "windows":
+		return '\\'
+	default:
+		return '/'
+	}
 }
