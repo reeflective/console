@@ -6,7 +6,7 @@ import (
 	"github.com/maxlandon/readline"
 )
 
-func (c *CommandCompleter) completeExpansionVariables(lastWord string, grps []*readline.CompletionGroup) (last string, completions []*readline.CompletionGroup) {
+func (c *CommandCompleter) completeExpansionVariables(lastWord string, exp rune, grps []*readline.CompletionGroup) (last string, completions []*readline.CompletionGroup) {
 	cc := c.console.CurrentMenu()
 
 	sep := grps[0].PathSeparator
@@ -15,28 +15,33 @@ func (c *CommandCompleter) completeExpansionVariables(lastWord string, grps []*r
 	allVars := strings.Split(lastWord, string(sep))
 	lastVar := allVars[len(allVars)-1]
 
-	for exp, completer := range cc.expansionComps {
+	escape := ""
+	if exp == '%' {
+		escape = string(exp)
+	}
 
-		for _, grp := range completer() {
-			var suggs []string
-			var evaluated = map[string]string{}
+	completer, _ := cc.expansionComps[exp]
 
-			for _, v := range grp.Suggestions {
-				if strings.HasPrefix(string(exp)+v, lastVar) {
-					suggs = append(suggs, string(exp)+v+string(sep))
-					evaluated[string(exp)+v+string(sep)] = grp.Descriptions[v]
-					continue
-				}
-				if _, exists := grp.Aliases[v]; exists {
-					suggs = append(suggs, string(exp)+v+string(sep))
-					evaluated[string(exp)+v+string(sep)] = grp.Descriptions[v]
-					continue
-				}
+	for _, grp := range completer() {
+
+		var suggs []string
+		var evaluated = map[string]string{}
+
+		for _, v := range grp.Suggestions {
+			if strings.HasPrefix(string(exp)+v, lastVar) {
+				suggs = append(suggs, escape+string(exp)+v+string(sep))
+				evaluated[escape+string(exp)+v+string(sep)] = grp.Descriptions[v]
+				continue
 			}
-			grp.Suggestions = suggs
-			grp.Descriptions = evaluated
-			completions = append(completions, grp)
+			if _, exists := grp.Aliases[v]; exists {
+				suggs = append(suggs, escape+string(exp)+v+string(sep))
+				evaluated[escape+string(exp)+v+string(sep)] = grp.Descriptions[v]
+				continue
+			}
 		}
+		grp.Suggestions = suggs
+		grp.Descriptions = evaluated
+		completions = append(completions, grp)
 	}
 
 	return lastVar, completions
