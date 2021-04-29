@@ -11,7 +11,7 @@ The purpose of this library is to offer a complete off-the-shelf console applica
 - Easily provide completions for any command/subcommand, any arguments, or any option arguments.
 - If you get how to declare a go-flags compatible command, you can declare commands for this console.
 
-[readme-main-gif](https://github.com/maxlandon/gonsole/blob/assets/readme-main.gif)
+![readme-main-gif](https://github.com/maxlandon/gonsole/blob/assets/readme-main.gif)
 
 
 ----
