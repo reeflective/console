@@ -14,7 +14,7 @@ func (c *CommandCompleter) syntaxHighlighter(input []rune) (line string) {
 	// Format and sanitize input
 	args, last, lastWord := formatInputHighlighter(input)
 
-	// Remain is all arguments that have not been highlighted, we need it for completing long commands
+	var highlighted = []string{}
 	var remain = args
 
 	// Detect base command automatically
@@ -25,71 +25,49 @@ func (c *CommandCompleter) syntaxHighlighter(input []rune) (line string) {
 		return string(input)
 	}
 
-	// Base command
+	// Recursively analyse commands and their options, etc
 	if commandFound(command) {
-
-		// Get the corresponding *Command from the console
-		gCommand := c.console.FindCommand(command.Name)
-		if gCommand == nil {
-			return
-		}
-
-		// Highlight the word, and return the shorter list of arguments to process.
-		line, remain = c.highlightCommand(line, remain, command)
-
-		// SubCommand
-		if sub, ok := subCommandFound(lastWord, args, command); ok {
-			subgCommand := gCommand.FindCommand(sub.Name)
-			if gCommand != nil {
-				line, remain = c.handleSubCommandSyntax(line, remain, command, sub, subgCommand)
-			}
-		}
+		highlighted, remain = c.handleSubCommandSyntax(lastWord, highlighted, remain, command, command)
 	}
 
-	// Process any expanded variables found, between others
-	line = c.processRemain(line, remain)
+	// Process any expanded variables found
+	processed := c.processEnvVars(highlighted, remain)
+
+	// Finally, join all elements with a space: even spaces themselves
+	// are in the highlighted list, but as "" each.
+	line = strings.Join(processed, " ")
 
 	return
 }
 
-func (c *CommandCompleter) handleSubCommandSyntax(processed string, args []string, parent, command *flags.Command, gCommand *Command) (line string, remain []string) {
+func (c *CommandCompleter) handleSubCommandSyntax(lastWord string, processed, args []string, parent, command *flags.Command) (highlighted, remain []string) {
 
-	line, remain = c.highlightCommand(processed, args, command)
+	highlighted, remain = c.highlightCommand(processed, args, command)
 
 	// SubCommand
-	if sub, ok := subCommandFound(c.lastWord, args, command); ok {
-		subgCommand := gCommand.FindCommand(sub.Name)
-		if gCommand != nil {
-			line, remain = c.handleSubCommandSyntax(line, remain, command, sub, subgCommand)
+	if sub, ok := subCommandFound(lastWord, args, command); ok {
+		if gCommand := c.console.FindCommand(command.Name); gCommand != nil {
+			highlighted, remain = c.handleSubCommandSyntax(lastWord, highlighted, remain, command, sub)
 		}
 	}
+
 	return
 }
 
-func (c *CommandCompleter) highlightCommand(processed string, args []string, command *flags.Command) (line string, remain []string) {
+func (c *CommandCompleter) highlightCommand(processed, args []string, command *flags.Command) (highlighted, remain []string) {
 	var color = c.getTokenHighlighting("{command}")
-	line += color + args[0] + readline.RESET + " "
-	remain = args[1:]
-	return processed + line, remain
-}
 
-func (c *CommandCompleter) highlightSubCommand(input string, args []string, command *flags.Command) (line string, remain []string) {
-	line = input
-	var color = c.getTokenHighlighting("{command}")
-	line += color + args[0] + readline.RESET + " "
-	remain = args[1:]
-	return
-}
-
-func (c *CommandCompleter) processRemain(input string, remain []string) (line string) {
-
-	// Check the last is not the last space in input
-	if len(remain) == 1 && remain[0] == " " {
-		return input
+	for i, arg := range args {
+		if arg == command.Name {
+			highlighted = append(highlighted, color+arg+readline.RESET)
+			remain = args[i+1:]
+			break
+		}
+		highlighted = append(highlighted, arg)
 	}
 
-	// line = input + strings.Join(remain, " ")
-	line = c.processEnvVars(input, remain)
+	highlighted = append(processed, highlighted...)
+
 	return
 }
 
@@ -129,15 +107,12 @@ func (c *CommandCompleter) evaluateExpansion(arg string) (expanded string) {
 }
 
 // processEnvVars - Highlights environment variables. NOTE: Rewrite with logic from console/env.go
-func (c *CommandCompleter) processEnvVars(input string, remain []string) (line string) {
-
-	var processed []string
-
-	inputSlice := strings.Split(input, " ")
+func (c *CommandCompleter) processEnvVars(highlighted []string, remain []string) (processed []string) {
 
 	// Check already processed input
-	for _, arg := range inputSlice {
+	for _, arg := range highlighted {
 		if arg == "" || arg == " " {
+			processed = append(processed, arg)
 			continue
 		}
 		processed = append(processed, c.evaluateExpansion(arg))
@@ -145,17 +120,13 @@ func (c *CommandCompleter) processEnvVars(input string, remain []string) (line s
 
 	// Check remaining args (non-processed)
 	for _, arg := range remain {
-		if arg == "" {
+		if arg == "" || arg == " " {
+			processed = append(processed, arg)
 			continue
 		}
 
 		processed = append(processed, c.evaluateExpansion(arg))
 	}
-
-	line = strings.Join(processed, " ")
-
-	// Very important, keeps the line clear when erasing
-	// line += " "
 
 	return
 }

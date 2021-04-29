@@ -103,6 +103,7 @@ func (c *Console) parseAllExpansionVariables(args []string) (processed []string,
 	}
 
 	for _, arg := range args {
+		var expanded bool
 		for exp, completer := range c.CurrentMenu().expansionComps {
 
 			pathSeparator := completer()[0].PathSeparator
@@ -116,17 +117,24 @@ func (c *Console) parseAllExpansionVariables(args []string) (processed []string,
 				// If its not a path
 				if len(envArgs) == 1 {
 					processed = append(processed, handleCuratedVar(arg, exp, completer()))
+					expanded = true
+					break
 				}
 
 				// If len of the env var split is > 1, its a path
 				if len(envArgs) > 1 {
 					processed = append(processed, handleEmbeddedVar(arg, exp, pathSeparator, completer()))
+					expanded = true
+					break
 				}
 
-			} else if arg != "" && arg != " " {
-				// Else, if arg is not an environment variable, return it as is
-				processed = append(processed, arg)
+				// } else if arg != "" && arg != " " {
+				//         // Else, if arg is not an environment variable, return it as is
+				//         processed = append(processed, arg)
 			}
+		}
+		if !expanded {
+			processed = append(processed, arg)
 		}
 	}
 
