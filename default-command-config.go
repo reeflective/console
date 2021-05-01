@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/evilsocket/islazy/fs"
 	"github.com/maxlandon/readline"
 	"gopkg.in/AlecAivazis/survey.v1"
 )
@@ -277,11 +278,12 @@ func (c *configExport) Execute(args []string) (err error) {
 
 	// Else save to file
 	save := c.Options.Save
+	fullPath, _ := fs.Expand(save) // Get absolute path
 	if save == "" {
 		save, _ = os.Getwd()
 	}
 	shaID := md5.New()
-	saveTo, err := saveLocation(save, fmt.Sprintf("gonsole_%x.cfg", hex.EncodeToString(shaID.Sum([]byte{})[:5])))
+	saveTo, err := saveLocation(fullPath, fmt.Sprintf("gonsole_%x.cfg", hex.EncodeToString(shaID.Sum([]byte{})[:5])))
 	if err != nil {
 		fmt.Printf(errorStr+"%s\n", err)
 		return

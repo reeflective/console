@@ -15,6 +15,7 @@ func (c *CommandCompleter) completeExpansionVariables(lastWord string, exp rune,
 	allVars := strings.Split(lastWord, string(sep))
 	lastVar := allVars[len(allVars)-1]
 
+	// An eventual escape we need to avoid bugs due to the %, that serves as Go string formatter.
 	escape := ""
 	if exp == '%' {
 		escape = string(exp)
@@ -59,7 +60,7 @@ func (c *Console) ParseExpansionVariables(args []string, pathSeparator rune) (pr
 		var expanded bool
 		for exp, completer := range c.CurrentMenu().expansionComps {
 
-			// Anywhere a $ is assigned means there is an env variable
+			// Anywhere the rune is means there is an env variable
 			if strings.Contains(arg, string(exp)) {
 
 				// Split in case env is embedded in path
@@ -78,11 +79,6 @@ func (c *Console) ParseExpansionVariables(args []string, pathSeparator rune) (pr
 					expanded = true
 					break
 				}
-				//
-				// } else if arg != "" && arg != " " {
-				// Else, if arg is not an environment variable, return it as is
-
-				// processed = append(processed, arg)
 			}
 		}
 
@@ -108,7 +104,7 @@ func (c *Console) parseAllExpansionVariables(args []string) (processed []string,
 
 			pathSeparator := completer()[0].PathSeparator
 
-			// Anywhere a $ is assigned means there is an env variable
+			// Anywhere the rune is means there is an env variable
 			if strings.Contains(arg, string(exp)) {
 
 				// Split in case env is embedded in path
@@ -127,10 +123,6 @@ func (c *Console) parseAllExpansionVariables(args []string) (processed []string,
 					expanded = true
 					break
 				}
-
-				// } else if arg != "" && arg != " " {
-				//         // Else, if arg is not an environment variable, return it as is
-				//         processed = append(processed, arg)
 			}
 		}
 		if !expanded {
@@ -145,8 +137,6 @@ func (c *Console) parseAllExpansionVariables(args []string) (processed []string,
 func handleCuratedVar(arg string, exp rune, grps []*readline.CompletionGroup) (value string) {
 	if strings.HasPrefix(arg, string(exp)) && arg != "" && arg != string(exp) {
 		envVar := strings.TrimPrefix(arg, string(exp))
-		// var expValue string
-		// var found bool
 		for _, grp := range grps {
 			val, ok := grp.Descriptions[envVar]
 			_, exists := grp.Aliases[envVar]
@@ -156,16 +146,9 @@ func handleCuratedVar(arg string, exp rune, grps []*readline.CompletionGroup) (v
 				return val
 			}
 			return val
-			// expValue = val
 		}
-		// if found {
-		//         return expValue
-		// }
 		return envVar
 	}
-	// if arg != "" && arg == "~" {
-	//         return clientEnv["HOME"]
-	// }
 
 	return arg
 }
@@ -201,8 +184,6 @@ func handleEmbeddedVar(arg string, exp rune, pathSeparator rune, grps []*readlin
 				path = append(path, expValue)
 			}
 
-			// } else if arg != "" && arg == "~" {
-			//         path = append(path, clientEnv["HOME"])
 		} else if arg != " " && arg != "" {
 			path = append(path, arg)
 		}

@@ -29,7 +29,7 @@ type Config struct {
 // use this function in order to ensure there are no nil maps anywhere, and with defaults.
 func NewDefaultConfig() *Config {
 	return &Config{
-		InputMode:           InputVim,
+		InputMode:           InputEmacs,
 		Prompts:             map[string]*PromptConfig{},
 		Hints:               true,
 		MaxTabCompleterRows: 50,
