@@ -67,8 +67,6 @@ go get -u github.com/maxlandon/gonsole
 ---- 
 ## Documentation Contents
 
-Below the documentation Table of Contents:
-
 ### Developers
 * [Menus](https://github.com/maxlandon/gonsole/wiki/Menus)
 * [Configurations Overview](https://github.com/maxlandon/gonsole/wiki/Configurations-Overview)
