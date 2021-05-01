@@ -5,17 +5,91 @@ Gonsole - Integrated Console Application library
 This package rests on a [readline](https://github.com/maxlandon/readline) console library, (giving advanced completion, hint, input and history system), 
 and the [go-flags](https://github.com/jessievdk/go-flags) commands library. Also added, a bit of optional boilerplate for better user experience.
 
+![readme-main-gif](https://github.com/maxlandon/gonsole/blob/assets/readme-main.gif)
+
 The purpose of this library is to offer a complete off-the-shelf console application, with some key aspects: 
 - Better overall features than what is seen in most projects, including those not written in Go.
 - A simple but powerful way of transforming code (structs and anything they might embed), into commands.
 - Easily provide completions for any command/subcommand, any arguments, or any option arguments.
 - If you get how to declare a go-flags compatible command, you can declare commands for this console.
 
-![readme-main-gif](https://github.com/maxlandon/gonsole/blob/assets/readme-main.gif)
+
+## Simple Usage
+
+The library is made to work with sane but powerful defaults. Paste the following, run it,
+and take a look around to get a feel, without your commands. Default editing mode is Vim.
+THis example doesn't have an exit command: you'll need to close your terminal.
+
+```go
+
+func main() {
+
+	// Instantiate a new console, with a single, default menu.
+	// All defaults are set, and nothing is needed to make it work
+	console := gonsole.NewConsole()
+
+	// By default the shell as created a single menu and
+	// made it current, so you can access it and set it up.
+	menu := console.CurrentMenu()
+
+	// Set the prompt (config, for usability purposes). Each menu has its own.
+	// See the documentation for more prompt setup possibilities.
+	prompt := menu.PromptConfig()
+	prompt.Left = "application-name"
+	prompt.Multiline = false
+
+	// Add a default help command, that can be used with any command, however nested:
+	// 'help <command> <subcommand> <subcommand'
+	// The console creates it and attaches it to all existing contexts.
+	// "core" is the name of the group in which we will put this command.
+	console.AddHelpCommand("core")
+
+	// Add a configuration command if you want your users to be able
+	// to modify it on the fly, export it as files or as JSON.
+	// Please see the documentation and/or use this example to
+	// see what can be done with this.
+	console.AddConfigCommand("config", "core")
+
+	// Everything is ready for a tour.
+	// Run the console and take a look around.
+	console.Run()
+}
+```
+
+If you're still here, at least you want to declare and bind commands. Just as everything else possible with
+this library, it is explained in the [Wiki](https://github.com/maxlandon/gonsole/wiki), although with more 
+pictures than text (I like pictures), because the code is heavily documented (I don't like to repeat myself).
+Using the library, as usual:
+```
+go get -u github.com/maxlandon/gonsole
+```
+
+---- 
+## Documentation Contents
+
+Below the documentation Table of Contents:
+
+### Developers
+* [Menus](https://github.com/maxlandon/gonsole/wiki/Menus)
+* [Configurations Overview](https://github.com/maxlandon/gonsole/wiki/Configurations-Overview)
+* [Setting Prompts & Input Modes](https://github.com/maxlandon/gonsole/wiki/Prompts-&-Input-Modes)
+* [Default commands](https://github.com/maxlandon/gonsole/wiki/Default-Commands)
+* [Declaring commands](https://github.com/maxlandon/gonsole/wiki/Declaring-Commands)
+* [Querying state from commands](https://github.com/maxlandon/gonsole/wiki/Querying-State-From-Commands)
+* [Completions (writing and binding)](https://github.com/maxlandon/gonsole/wiki/Completions)
+* [Additional Expansion completions](https://github.com/maxlandon/gonsole/wiki/Expansion-Completers)
+* [History Sources Declaration](https://github.com/maxlandon/gonsole/wiki/History-Sources-Declaration)
+* [Asynchronous Logs & Prompt Refresh](https://github.com/maxlandon/gonsole/wiki/Prompt-Refresh)
+
+### Users
+- [Vim Keys & Shortcuts](https://github.com/maxlandon/gonsole/wiki/Vim-Keys-&-Shortcuts)
+- [History sources](https://github.com/maxlandon/gonsole/wiki/History-Sources)
+- [Completions & Tab Search](https://github.com/maxlandon/gonsole/wiki/Completions-&-Tab-Search)
+- [Help and config commands](https://github.com/maxlandon/gonsole/wiki/Help-&-Config-Commands)
 
 
 ----
-## Features Summary
+## Features 
 
 The list of features supported or provided by this library can fall into 2 different categories:
 the shell/console interface part, and the commands/parsing logic part.  Some of the features below
@@ -62,58 +136,6 @@ are simply extrated from my [readline](https://github.com/maxlandon/readline) li
 - History is searchable like completions.
 - Default history is an in-memory list.
 - Quick history navigation with *Up*/*Down* arrow keys in Emacs mode, and *j*/*k* keys in Vim mode.
-
-
-## Simple Usage
-
-The library is made to work with sane but powerful defaults. Paste the following, run it,
-and take a look around to get a feel, without your commands. Default editing mode is Vim.
-THis example doesn't have an exit command: you'll need to close your terminal.
-
-```go
-
-func main() {
-
-	// Instantiate a new console, with a single, default menu.
-	// All defaults are set, and nothing is needed to make it work
-	console := gonsole.NewConsole()
-
-	// By default the shell as created a single menu and
-	// made it current, so you can access it and set it up.
-	menu := console.CurrentMenu()
-
-	// Set the prompt (config, for usability purposes). Each menu has its own.
-	// See the documentation for more prompt setup possibilities.
-	prompt := menu.PromptConfig()
-	prompt.Left = "application-name"
-	prompt.Multiline = false
-
-	// Add a default help command, that can be used with any command, however nested:
-	// 'help <command> <subcommand> <subcommand'
-	// The console creates it and attaches it to all existing contexts.
-	// "core" is the name of the group in which we will put this command.
-	console.AddHelpCommand("core")
-
-	// Add a configuration command if you want your users to be able
-	// to modify it on the fly, export it as files or as JSON.
-	// Please see the documentation and/or use this example to
-	// see what can be done with this.
-	console.AddConfigCommand("config", "core")
-
-	// Everything is ready for a tour.
-	// Run the console and take a look around.
-	console.Run()
-}
-
-```
-
-If you're still here, at least you want to declare and bind commands. Just as everything else possible with
-this library, it is explained in the [Wiki](https://github.com/maxlandon/gonsole/wiki), although with more 
-pictures than text (I like pictures), because the code is heavily documented (I don't like to repeat myself).
-Using the library, as usual:
-```
-go get -u github.com/maxlandon/gonsole
-```
 
 
 ## Status & Support 
