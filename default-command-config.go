@@ -159,27 +159,6 @@ func (c *config) Execute(args []string) (err error) {
 	pad = fmt.Sprintf("%-15s", "Newline")
 	fmt.Printf(" "+pad+"    %s%t%s\n", readline.BOLD, promptConf.NewlineAfter, readline.RESET)
 
-	// Check if this config has been saved (they should be identical)
-	// req := &clientpb.GetConsoleConfigReq{}
-	// res, err := transport.RPC.LoadConsoleConfig(menu.Background(), req, grpc.EmptyCallOption{})
-	// if err != nil {
-	//         fmt.Printf(util.Warn + "Could not check if current config is saved\n")
-	//         return
-	// }
-	// // An error thrown in the request means we did not find the configuration.
-	// if res.Response.Err != "" {
-	//         fmt.Printf(util.Warn + "Current configuration is not saved, type 'config save' to do so.\n")
-	//         return
-	// }
-	//
-	// cf := res.Config
-	// if (cf.ServerPromptRight == conf.ServerPrompt.Right) && (cf.ServerPromptLeft == conf.ServerPrompt.Left) &&
-	//         (cf.SliverPromptRight == conf.SliverPrompt.Right) && (cf.SliverPromptLeft == conf.SliverPrompt.Left) &&
-	//         (cf.Vim == conf.Vim) && (cf.Hints == conf.Hints) {
-	//         fmt.Printf(util.Info + "Current configuration is saved\n")
-	// } else {
-	//         fmt.Printf(util.Warn + "Current configuration is not saved, type 'config save' to do so.\n")
-	// }
 	return
 }
 
@@ -455,10 +434,11 @@ func (p *promptSet) Execute(args []string) (err error) {
 // promptSetMultiline - Set multiline prompt strings for one of the available menus.
 type promptSetMultiline struct {
 	Positional struct {
-		Prompt string `description:"multine prompt string. Leave empty and '--enable' to activate. Pass '' to deactivate"`
+		Prompt string `description:"multine prompt string"`
 	} `positional-args:"yes"`
 	Options struct {
 		Enable  bool   `long:"enable" short:"e" description:"if true, the prompt will be a 2-line prompt"`
+		Disable bool   `long:"disable" short:"d" description:"if true, disable the multiline prompt"`
 		Context string `long:"menu" short:"c" description:"name of the menu for which to set the prompt (completed)" default:"current"`
 	} `group:"export options"`
 	console *Console
@@ -486,21 +466,22 @@ func (p *promptSetMultiline) Execute(args []string) (err error) {
 
 	conf := p.console.config
 
-	if p.Positional.Prompt == "\"\"" || p.Positional.Prompt == "''" {
-		p.console.shell.Multiline = false
-		conf.Prompts[cc.Name].Multiline = false
-		fmt.Printf(info + "Detected empty prompt string: deactivating the corresponding prompt.\n")
-		return
+	if p.Positional.Prompt != "" {
+		p.console.shell.MultilinePrompt = p.Positional.Prompt
+		conf.Prompts[cc.Name].MultilinePrompt = p.Positional.Prompt
+		fmt.Printf(info+"Setting raw multiline prompt to: %s", p.Positional.Prompt)
 	}
 
-	if p.Positional.Prompt == "" && p.Options.Enable {
+	if p.Options.Enable {
 		p.console.shell.Multiline = true
 		conf.Prompts[cc.Name].Multiline = true
 		return
 	}
-
-	p.console.shell.MultilinePrompt = p.Positional.Prompt
-	conf.Prompts[cc.Name].MultilinePrompt = p.Positional.Prompt
+	if p.Options.Disable {
+		p.console.shell.Multiline = false
+		conf.Prompts[cc.Name].Multiline = false
+		return
+	}
 
 	return
 }
