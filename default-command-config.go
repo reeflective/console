@@ -360,7 +360,7 @@ func (h *highlightSyntax) Execute(args []string) (err error) {
 // promptSet - Set prompt strings for one of the available menus.
 type promptSet struct {
 	Positional struct {
-		Prompt string `description:"prompt string. Pass an empty '' to deactivate it (default colors/effect/items completed)" required:"yes"`
+		Prompt []string `description:"prompt string. Pass an empty '' to deactivate it (default colors/effect/items completed)" required:"1"`
 	} `positional-args:"yes" required:"yes"`
 	Options struct {
 		Right         bool   `long:"right" short:"r" description:"apply changes to the right-side prompt"`
@@ -381,6 +381,9 @@ func (p *promptSet) Execute(args []string) (err error) {
 		return
 	}
 
+	// By default, we only keep existing spaces, but any redundance will go away...
+	prompt := strings.Join(p.Positional.Prompt, " ")
+
 	var cc *Menu
 	if p.Options.Context == "current" {
 		cc = p.console.current
@@ -398,18 +401,18 @@ func (p *promptSet) Execute(args []string) (err error) {
 	var side string
 	if p.Options.Right {
 		side = "(right)"
-		cc.Prompt.right = p.Positional.Prompt
-		conf.Prompts[cc.Name].Right = p.Positional.Prompt
+		cc.Prompt.right = prompt
+		conf.Prompts[cc.Name].Right = prompt
 	}
 	if p.Options.Left {
 		side = "(left)"
-		cc.Prompt.left = p.Positional.Prompt
-		conf.Prompts[cc.Name].Left = p.Positional.Prompt
+		cc.Prompt.left = prompt
+		conf.Prompts[cc.Name].Left = prompt
 	}
 	if !p.Options.Left && !p.Options.Right {
 		side = "(left)"
-		cc.Prompt.left = p.Positional.Prompt
-		conf.Prompts[cc.Name].Left = p.Positional.Prompt
+		cc.Prompt.left = prompt
+		conf.Prompts[cc.Name].Left = prompt
 	}
 
 	// TODO: should be changed because not handy to use like this
@@ -424,12 +427,12 @@ func (p *promptSet) Execute(args []string) (err error) {
 		conf.Prompts[cc.Name].NewlineBefore = true
 	}
 
-	if p.Positional.Prompt == "\"\"" || p.Positional.Prompt == "''" {
+	if prompt == "\"\"" || prompt == "''" {
 		fmt.Printf(info + "Detected empty prompt string: deactivating the corresponding prompt.\n")
 		return
 	}
 
-	fmt.Printf(info+"Server prompt %s : %s\n", side, readline.Bold(p.Positional.Prompt))
+	fmt.Printf(info+"Server prompt %s : %s\n", side, readline.Bold(prompt))
 	return
 }
 

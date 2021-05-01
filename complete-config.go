@@ -51,9 +51,7 @@ func (c *CommandCompleter) promptItems(lastWord string) (prefix string, comps []
 	}
 	sort.Strings(keys)
 	for _, item := range keys {
-		// if strings.HasPrefix(item, lastWord) {
 		sComp.Suggestions = append(sComp.Suggestions, item)
-		// }
 	}
 	comps = append(comps, sComp)
 
