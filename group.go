@@ -32,12 +32,14 @@ func (c *Console) bindCommandGroup(parent commandParser, grp *commandGroup) {
 
 	// For each command in the group, yield a flags.Command
 	for _, cmd := range grp.cmds {
+		var skipHidden bool
 	nextCommand:
 		for _, cmdFilter := range cmd.Filters {
 			// Do not generate the command if one of its
 			// filters is active.
 			for _, filter := range c.filters {
 				if filter == cmdFilter {
+					skipHidden = true
 					continue nextCommand
 				}
 			}
@@ -45,9 +47,13 @@ func (c *Console) bindCommandGroup(parent commandParser, grp *commandGroup) {
 			cmd.cmd = cmd.generator(parent, cmd.SubcommandsOptional)
 		}
 
-		// Bind any subcommands of this cmd
-		for _, subgroup := range cmd.groups {
-			c.bindCommandGroup(cmd.cmd, subgroup)
+		// Bind any subcommands of this cmd if it was registered
+		if skipHidden {
+			skipHidden = false
+		} else {
+			for _, subgroup := range cmd.groups {
+				c.bindCommandGroup(cmd.cmd, subgroup)
+			}
 		}
 	}
 }
