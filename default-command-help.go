@@ -19,7 +19,7 @@ func (c *Console) AddHelpCommand(group string) {
 			"",
 			group,
 			[]string{""},
-			func() interface{} { return &commandHelp{console: c} })
+			func() Commander { return &commandHelp{console: c} })
 		help.AddArgumentCompletion("Command", c.Completer.menuCommands)
 	}
 }

@@ -84,7 +84,7 @@ func (m *Menu) AddGlobalOptions(shortDescription, longDescription string, data f
 }
 
 // AddCommand - Add a command to this menu. This command will be available when this menu is active.
-func (m *Menu) AddCommand(name, short, long, group string, filters []string, data func() interface{}) *Command {
+func (m *Menu) AddCommand(name, short, long, group string, filters []string, data func() Commander) *Command {
 	return m.cmd.AddCommand(name, short, long, group, filters, data)
 }
 

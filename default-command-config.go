@@ -32,7 +32,7 @@ func (c *Console) AddConfigCommand(name, group string) {
 			"",
 			group,
 			[]string{""},
-			func() interface{} { return &config{console: c} })
+			func() Commander { return &config{console: c} })
 		conf.SubcommandsOptional = true
 
 		// Set values
@@ -41,14 +41,14 @@ func (c *Console) AddConfigCommand(name, group string) {
 			"",
 			"builtin",
 			[]string{""},
-			func() interface{} { return &configSet{console: c} })
+			func() Commander { return &configSet{console: c} })
 
 		input := set.AddCommand("input",
 			"set the input editing mode of the console (Vim/Emacs) (all menus)",
 			"",
 			"",
 			[]string{""},
-			func() interface{} { return &inputMode{console: c} })
+			func() Commander { return &inputMode{console: c} })
 		input.AddArgumentCompletion("Input", c.Completer.inputModes)
 
 		hints := set.AddCommand("hints",
@@ -56,7 +56,7 @@ func (c *Console) AddConfigCommand(name, group string) {
 			"",
 			"",
 			[]string{""},
-			func() interface{} { return &hintsDisplay{console: c} })
+			func() Commander { return &hintsDisplay{console: c} })
 		hints.AddArgumentCompletion("Display", c.Completer.hints)
 
 		set.AddCommand("max-tab-completer-rows",
@@ -64,14 +64,14 @@ func (c *Console) AddConfigCommand(name, group string) {
 			"",
 			"",
 			[]string{""},
-			func() interface{} { return &maxTabCompleterRows{console: c} })
+			func() Commander { return &maxTabCompleterRows{console: c} })
 
 		prompt := set.AddCommand("prompt",
 			"set right/left prompt strings (per menu, default is current)",
 			"",
 			"",
 			[]string{""},
-			func() interface{} { return &promptSet{console: c} })
+			func() Commander { return &promptSet{console: c} })
 		prompt.AddArgumentCompletionDynamic("Prompt", c.Completer.promptItems)
 		prompt.AddOptionCompletion("Context", c.Completer.menus)
 
@@ -80,7 +80,7 @@ func (c *Console) AddConfigCommand(name, group string) {
 			"",
 			"",
 			[]string{""},
-			func() interface{} { return &promptSetMultiline{console: c} })
+			func() Commander { return &promptSetMultiline{console: c} })
 		multiline.AddArgumentCompletionDynamic("Prompt", c.Completer.promptItems)
 
 		highlight := set.AddCommand("highlight",
@@ -88,7 +88,7 @@ func (c *Console) AddConfigCommand(name, group string) {
 			"",
 			"",
 			[]string{""},
-			func() interface{} { return &highlightSyntax{console: c} })
+			func() Commander { return &highlightSyntax{console: c} })
 		highlight.AddArgumentCompletion("Color", c.Completer.promptColors)
 		highlight.AddArgumentCompletion("Token", c.Completer.highlightTokens)
 
@@ -98,7 +98,7 @@ func (c *Console) AddConfigCommand(name, group string) {
 			"",
 			"builtin",
 			[]string{""},
-			func() interface{} { return &configExport{console: c} })
+			func() Commander { return &configExport{console: c} })
 		export.AddOptionCompletionDynamic("Save", c.Completer.LocalPath)
 
 	}
@@ -106,7 +106,7 @@ func (c *Console) AddConfigCommand(name, group string) {
 
 // AddConfigSubCommand - Allows the user to bind specialized subcommands to the config root command. This is useful if, for
 // example, you want to save the console configuration on a remote server.
-func (c *Console) AddConfigSubCommand(name, short, long, group string, filters []string, data func() interface{}) {
+func (c *Console) AddConfigSubCommand(name, short, long, group string, filters []string, data func() Commander) {
 	for _, cc := range c.menus {
 		for _, cmd := range cc.Commands() {
 			if cmd.Name == c.configCommandName {

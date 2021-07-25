@@ -8,6 +8,12 @@ import (
 	"github.com/maxlandon/readline"
 )
 
+// Commander - A reexport of the go-flags Commander interface, which defines
+// the only function that any command must implement to be a valid console Command.
+// This Commander type is returned by the gonsole.Command.Data field, in order
+// to generate a fresh command instance at each execution loop.
+type Commander = flags.Commander
+
 // Command - A struct storing basic command info, functions used for command
 // instantiation, completion generation, and any number of subcommand groups.
 type Command struct {
@@ -30,7 +36,7 @@ type Command struct {
 	// Data - A function that must yield a pointer to a struct (which is, and will become a command instance)
 	// Compatible interfaces must match https://github.com/jessevdk/go-flags.git requirements. Please refer
 	// to either the go-flags documentation, or this library's one.
-	Data      func() interface{}
+	Data      func() Commander
 	generator func(cParser commandParser, subOptional bool) *flags.Command
 	cmd       *flags.Command
 
@@ -68,7 +74,7 @@ func NewCommand() *Command {
 // calling this function directly like gonsole.Console.AddCommand(), be aware that this will bind the command to the
 // default menu named "". If you don't intend to use multiple menus this is fine, but if you do, you should
 // create and name each of your menus, and add commands to them, like Console.NewContext("name").AddCommand("", "", ...)
-func (c *Command) AddCommand(name, short, long, group string, filters []string, data func() interface{}) *Command {
+func (c *Command) AddCommand(name, short, long, group string, filters []string, data func() Commander) *Command {
 
 	if data == nil {
 		return nil
@@ -191,7 +197,7 @@ func (c *Command) Add(cmd *Command) *Command {
 
 // AddCommand - Add a command to the default console menu, named "". Please check gonsole.CurrentContext().AddCommand(),
 // if you intend to use multiple menus, for more detailed explanations
-func (c *Console) AddCommand(name, short, long, group string, filters []string, data func() interface{}) *Command {
+func (c *Console) AddCommand(name, short, long, group string, filters []string, data func() Commander) *Command {
 	return c.current.cmd.AddCommand(name, short, long, group, filters, data)
 }
 
