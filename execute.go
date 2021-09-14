@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/jessevdk/go-flags"
+	"google.golang.org/grpc/status"
 )
 
 // execute - The user has entered a command input line, the arguments
@@ -33,7 +34,7 @@ func (c *Console) execute(args []string) {
 		// Cast the error raised by the parser.
 		parserErr, ok := err.(*flags.Error)
 		if !ok {
-			return
+			printError(err)
 		}
 
 		// If the command was not recognized and the current
@@ -61,4 +62,11 @@ func (c *Console) execute(args []string) {
 	}
 
 	return
+}
+
+// printError - This function unwraps an error type, which might or might not
+// be originating from gRPC, and prints it to the screen with a newline added.
+func printError(err error) {
+	errStatus := status.Convert(err)
+	fmt.Printf(errStatus.Message() + "\n")
 }
