@@ -35,6 +35,7 @@ func (c *Console) execute(args []string) {
 		parserErr, ok := err.(*flags.Error)
 		if !ok {
 			printError(err)
+			return
 		}
 
 		// If the command was not recognized and the current
