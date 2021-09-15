@@ -106,15 +106,15 @@ func (c *Console) AddConfigCommand(name, group string) {
 
 // AddConfigSubCommand - Allows the user to bind specialized subcommands to the config root command. This is useful if, for
 // example, you want to save the console configuration on a remote server.
-func (c *Console) AddConfigSubCommand(name, short, long, group string, filters []string, data func() Commander) {
+func (c *Console) AddConfigSubCommand(name, short, long, group string, filters []string, data func() Commander) *Command {
 	for _, cc := range c.menus {
 		for _, cmd := range cc.Commands() {
 			if cmd.Name == c.configCommandName {
-				cmd.AddCommand(name, short, long, group, filters, data)
+				return cmd.AddCommand(name, short, long, group, filters, data)
 			}
 		}
 	}
-	return
+	return nil
 }
 
 // config - Manage console configuration. Prints current by default
