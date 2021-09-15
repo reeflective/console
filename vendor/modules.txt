@@ -5,6 +5,12 @@ github.com/acarl005/stripansi
 ## explicit
 github.com/evilsocket/islazy/fs
 github.com/evilsocket/islazy/tui
+# github.com/golang/protobuf v1.4.3
+github.com/golang/protobuf/proto
+github.com/golang/protobuf/ptypes
+github.com/golang/protobuf/ptypes/any
+github.com/golang/protobuf/ptypes/duration
+github.com/golang/protobuf/ptypes/timestamp
 # github.com/jessevdk/go-flags v1.5.0
 ## explicit
 github.com/jessevdk/go-flags
@@ -14,7 +20,7 @@ github.com/kballard/go-shellquote
 github.com/mattn/go-colorable
 # github.com/mattn/go-isatty v0.0.8
 github.com/mattn/go-isatty
-# github.com/maxlandon/readline v0.1.0-beta.0.20210725170202-3c7ec2ce14c7
+# github.com/maxlandon/readline v0.1.0-beta.0.20210915230901-72c1f2edcc01
 ## explicit
 github.com/maxlandon/readline
 # github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b
@@ -26,6 +32,43 @@ github.com/olekukonko/ts
 golang.org/x/sys/internal/unsafeheader
 golang.org/x/sys/unix
 golang.org/x/sys/windows
+# google.golang.org/genproto v0.0.0-20200526211855-cb27e3aa2013
+google.golang.org/genproto/googleapis/rpc/status
+# google.golang.org/grpc v1.40.0
+## explicit
+google.golang.org/grpc/codes
+google.golang.org/grpc/internal/status
+google.golang.org/grpc/status
+# google.golang.org/protobuf v1.25.0
+google.golang.org/protobuf/encoding/prototext
+google.golang.org/protobuf/encoding/protowire
+google.golang.org/protobuf/internal/descfmt
+google.golang.org/protobuf/internal/descopts
+google.golang.org/protobuf/internal/detrand
+google.golang.org/protobuf/internal/encoding/defval
+google.golang.org/protobuf/internal/encoding/messageset
+google.golang.org/protobuf/internal/encoding/tag
+google.golang.org/protobuf/internal/encoding/text
+google.golang.org/protobuf/internal/errors
+google.golang.org/protobuf/internal/fieldsort
+google.golang.org/protobuf/internal/filedesc
+google.golang.org/protobuf/internal/filetype
+google.golang.org/protobuf/internal/flags
+google.golang.org/protobuf/internal/genid
+google.golang.org/protobuf/internal/impl
+google.golang.org/protobuf/internal/mapsort
+google.golang.org/protobuf/internal/pragma
+google.golang.org/protobuf/internal/set
+google.golang.org/protobuf/internal/strs
+google.golang.org/protobuf/internal/version
+google.golang.org/protobuf/proto
+google.golang.org/protobuf/reflect/protoreflect
+google.golang.org/protobuf/reflect/protoregistry
+google.golang.org/protobuf/runtime/protoiface
+google.golang.org/protobuf/runtime/protoimpl
+google.golang.org/protobuf/types/known/anypb
+google.golang.org/protobuf/types/known/durationpb
+google.golang.org/protobuf/types/known/timestamppb
 # gopkg.in/AlecAivazis/survey.v1 v1.8.8
 ## explicit
 gopkg.in/AlecAivazis/survey.v1
