@@ -1,6 +1,8 @@
 package gonsole
 
 import (
+	"sync"
+
 	"github.com/jessevdk/go-flags"
 	"github.com/maxlandon/readline"
 )
@@ -37,6 +39,9 @@ type Menu struct {
 
 	// The menu sometimes needs access to some console state.
 	console *Console
+
+	// Concurrency management
+	mutex *sync.RWMutex
 }
 
 func newMenu(c *Console) *Menu {
@@ -49,6 +54,7 @@ func newMenu(c *Console) *Menu {
 		cmd:            NewCommand(),
 		expansionComps: map[rune]CompletionFunc{},
 		console:        c,
+		mutex:          &sync.RWMutex{},
 	}
 	return menu
 }
@@ -56,6 +62,8 @@ func newMenu(c *Console) *Menu {
 // PromptConfig - Returns the prompt object used to setup the prompt. It is actually
 // a configuration, because it can also be printed and exported by a config command.
 func (m *Menu) PromptConfig() *PromptConfig {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
 	return m.console.config.Prompts[m.Name]
 }
 
@@ -63,45 +71,61 @@ func (m *Menu) PromptConfig() *PromptConfig {
 // anything to them, these changes will persist for the lifetime of the application,
 // or until you deregister this command or one of its childs.
 func (m *Menu) Commands() (cmds []*Command) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
 	return m.cmd.Commands()
 }
 
 // CommandGroups - Returns the command's child commands, structured in their respective groups.
 // Commands having been assigned no specific group are the group named "".
 func (m *Menu) CommandGroups() (grps []*commandGroup) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
 	return m.cmd.groups
 }
 
 // OptionGroups - Returns all groups of options that are bound to this command. These
 // groups (and their options) are available for use even in the command's child commands.
 func (m *Menu) OptionGroups() (grps []*optionGroup) {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
 	return m.cmd.opts
 }
 
 // AddGlobalOptions - Add global options for this menu command parser. Will appear in all commands.
 func (m *Menu) AddGlobalOptions(shortDescription, longDescription string, data func() interface{}) {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
 	m.cmd.AddGlobalOptions(shortDescription, longDescription, data)
 }
 
 // AddCommand - Add a command to this menu. This command will be available when this menu is active.
 func (m *Menu) AddCommand(name, short, long, group string, filters []string, data func() Commander) *Command {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
 	return m.cmd.AddCommand(name, short, long, group, filters, data)
 }
 
 // SetHistoryCtrlR - Set the history source triggered with Ctrl-R
 func (m *Menu) SetHistoryCtrlR(name string, hist readline.History) {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
 	m.historyCtrlRName = name
 	m.historyCtrlR = hist
 }
 
 // SetHistoryAltR - Set the history source triggered with Alt-r
 func (m *Menu) SetHistoryAltR(name string, hist readline.History) {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
 	m.historyAltRName = name
 	m.historyAltR = hist
 }
 
 // initParser - Called each time the readline loops, before rebinding all command instances.
 func (m *Menu) initParser(opts flags.Options) {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
 	m.parser = flags.NewNamedParser(m.Name, opts)
 }
 
@@ -111,10 +135,10 @@ func (m *Menu) initParser(opts flags.Options) {
 // configurations, sets of expanded variables, and others.
 func (c *Console) NewMenu(name string) (ctx *Menu) {
 	c.mutex.RLock()
+	defer c.mutex.RUnlock()
 	ctx = newMenu(c)
 	ctx.Name = name
 	c.menus[name] = ctx
-	c.mutex.RUnlock()
 
 	// Load default prompt configuration
 	c.config.Prompts[ctx.Name] = newDefaultPromptConfig(ctx.Name)
@@ -163,17 +187,23 @@ func (c *Console) CurrentMenu() *Menu {
 
 // AddGlobalOptions - Add global options for this menu command parser. Will appear in all commands.
 func (c *Console) AddGlobalOptions(shortDescription, longDescription string, data func() interface{}) {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
 	c.menus[""].cmd.AddGlobalOptions(shortDescription, longDescription, data)
 }
 
 // SetHistoryCtrlR - Set the history source triggered with Ctrl-R
 func (c *Console) SetHistoryCtrlR(name string, hist readline.History) {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
 	c.menus[""].historyCtrlRName = name
 	c.menus[""].historyCtrlR = hist
 }
 
 // SetHistoryAltR - Set the history source triggered with Alt-r
 func (c *Console) SetHistoryAltR(name string, hist readline.History) {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
 	c.menus[""].historyAltRName = name
 	c.menus[""].historyAltR = hist
 }
