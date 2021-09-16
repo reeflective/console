@@ -22,6 +22,8 @@ import (
 // for any menu, and to save such elements into configurations, ready for export. You can
 // choose both the command name and the group, for avoiding command collision with your owns.
 func (c *Console) AddConfigCommand(name, group string) {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
 	c.configCommandName = name
 
 	for _, cc := range c.menus {
@@ -107,6 +109,8 @@ func (c *Console) AddConfigCommand(name, group string) {
 // AddConfigSubCommand - Allows the user to bind specialized subcommands to the config root command. This is useful if, for
 // example, you want to save the console configuration on a remote server.
 func (c *Console) AddConfigSubCommand(name, short, long, group string, filters []string, data func() Commander) *Command {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
 	for _, cc := range c.menus {
 		for _, cmd := range cc.Commands() {
 			if cmd.Name == c.configCommandName {
