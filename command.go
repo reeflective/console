@@ -137,6 +137,8 @@ func (c *Command) AddCommand(name, short, long, group string, filters []string, 
 // This means that these commands in the list are temporary ones, they will be respawned
 // at the next execution readline loop. Do NOT bind/assign anything to them, it will NOT persist.
 func (c *Command) GoFlagsCommands() (cmds []*flags.Command) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
 	for _, group := range c.groups {
 		for _, cmd := range group.cmds {
 			if cmd.cmd != nil {
@@ -151,6 +153,8 @@ func (c *Command) GoFlagsCommands() (cmds []*flags.Command) {
 // anything to them, these changes will persist for the lifetime of the application,
 // or until you deregister this command or one of its childs.
 func (c *Command) Commands() (cmds []*Command) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
 	for _, group := range c.groups {
 		for _, cmd := range group.cmds {
 			cmds = append(cmds, cmd)
@@ -162,12 +166,15 @@ func (c *Command) Commands() (cmds []*Command) {
 // CommandGroups - Returns the command's child commands, structured in their respective groups.
 // Commands having been assigned no specific group are the group named "".
 func (c *Command) CommandGroups() (grps []*commandGroup) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
 	return c.groups
 }
 
 // getCommandGroup - Get the group for a command.
 func (c *Command) getCommandGroup(cmd *flags.Command) string {
-
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
 	// Sliver commands are searched for if we are in this menu
 	for _, group := range c.groups {
 		for _, c := range group.cmds {
@@ -185,11 +192,15 @@ func (c *Command) getCommandGroup(cmd *flags.Command) string {
 // OptionGroups - Returns all groups of options that are bound to this command. These
 // groups (and their options) are available for use even in the command's child commands.
 func (c *Command) OptionGroups() (grps []*optionGroup) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
 	return c.opts
 }
 
 // Add - Same as AddCommand("", "", ...), but passing a populated Command struct.
 func (c *Command) Add(cmd *Command) *Command {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
 	command := c.AddCommand(cmd.Name, cmd.ShortDescription, cmd.LongDescription, cmd.Group, cmd.Filters, cmd.Data)
 	command.SubcommandsOptional = cmd.SubcommandsOptional
 	return command
@@ -198,11 +209,15 @@ func (c *Command) Add(cmd *Command) *Command {
 // AddCommand - Add a command to the default console menu, named "". Please check gonsole.CurrentContext().AddCommand(),
 // if you intend to use multiple menus, for more detailed explanations
 func (c *Console) AddCommand(name, short, long, group string, filters []string, data func() Commander) *Command {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
 	return c.current.cmd.AddCommand(name, short, long, group, filters, data)
 }
 
 // Add - Same as AddCommand("", "", ...), but passing a populated Command struct.
 func (c *Console) Add(cmd *Command) *Command {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
 	command := c.current.AddCommand(cmd.Name, cmd.ShortDescription, cmd.LongDescription, cmd.Group, cmd.Filters, cmd.Data)
 	command.SubcommandsOptional = cmd.SubcommandsOptional
 	return command
@@ -214,6 +229,8 @@ func (c *Console) Add(cmd *Command) *Command {
 // If "windows" is used as the argument here, all windows commands for the current
 // menu are subsquently hidden, until ShowCommands("windows") is called.
 func (c *Console) HideCommands(filter string) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
 	for _, f := range c.filters {
 		if f == filter {
 			return
@@ -292,6 +309,8 @@ func (c *Console) FindCommand(name string) (command *Command) {
 // each command. We do not generate those that are filtered with an active filter,
 // so that users of the go-flags parser don't have to perform filtering.
 func (c *Console) bindCommands() {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
 	cc := c.current
 
 	// First, reset the parser for the current menu.
