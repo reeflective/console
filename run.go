@@ -12,6 +12,12 @@ import (
 func (c *Console) Run() (err error) {
 
 	for {
+		// Reload the configuration: this should never change most, because from
+		// another execution to another (in most commands) this not ever modified.
+		// But we ensure the console is always up-to-date with user-entered-but-
+		// not-saved console settings.
+		c.reloadConfig()
+
 		// Recompute the prompt for the current menu
 		// First check and pull from configuration.
 		c.current.Prompt.refreshPromptSettings()

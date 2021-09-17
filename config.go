@@ -126,4 +126,7 @@ func (c *Console) reloadConfig() {
 	} else {
 		c.shell.InputMode = readline.Vim
 	}
+
+	// Setup low level completion details
+	c.shell.MaxTabCompleterRows = c.config.MaxTabCompleterRows
 }
