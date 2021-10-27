@@ -20,7 +20,7 @@ github.com/kballard/go-shellquote
 github.com/mattn/go-colorable
 # github.com/mattn/go-isatty v0.0.8
 github.com/mattn/go-isatty
-# github.com/maxlandon/readline v0.1.0-beta.0.20210915230901-72c1f2edcc01
+# github.com/maxlandon/readline v0.1.0-beta.0.20211027082627-c31f2255cd08
 ## explicit
 github.com/maxlandon/readline
 # github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b

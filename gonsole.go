@@ -120,3 +120,11 @@ func NewConsole() (c *Console) {
 
 	return
 }
+
+// SystemEditor - This function is a renamed-reexport of the underlying readline.StartEditorWithBuffer
+// function, which enables you to conveniently edit files/buffers from within the console application.
+// Naturally, the function will block until the editor is exited, and the updated buffer is returned.
+func (c *Console) SystemEditor(buffer []byte) (updated []byte, err error) {
+	// return c.shell.S
+	return
+}
