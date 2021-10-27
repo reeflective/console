@@ -125,6 +125,6 @@ func NewConsole() (c *Console) {
 // function, which enables you to conveniently edit files/buffers from within the console application.
 // Naturally, the function will block until the editor is exited, and the updated buffer is returned.
 func (c *Console) SystemEditor(buffer []byte) (updated []byte, err error) {
-	// return c.shell.S
-	return
+	runeUpdated, err := c.shell.StartEditorWithBuffer([]rune(string(buffer)))
+	return []byte(string(runeUpdated)), err
 }
