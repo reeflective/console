@@ -124,7 +124,9 @@ func NewConsole() (c *Console) {
 // SystemEditor - This function is a renamed-reexport of the underlying readline.StartEditorWithBuffer
 // function, which enables you to conveniently edit files/buffers from within the console application.
 // Naturally, the function will block until the editor is exited, and the updated buffer is returned.
-func (c *Console) SystemEditor(buffer []byte) (updated []byte, err error) {
-	runeUpdated, err := c.shell.StartEditorWithBuffer([]rune(string(buffer)))
+// The filename parameter can be used to pass a specific filename.ext pattern, which might be useful
+// if the editor has builtin filetype plugin functionality.
+func (c *Console) SystemEditor(buffer []byte, filename string) (updated []byte, err error) {
+	runeUpdated, err := c.shell.StartEditorWithBuffer([]rune(string(buffer)), filename)
 	return []byte(string(runeUpdated)), err
 }
