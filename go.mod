@@ -1,4 +1,4 @@
-module github.com/maxlandon/gonsole
+module github.com/reeflective/console
 
 go 1.16
 

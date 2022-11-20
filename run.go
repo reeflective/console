@@ -1,4 +1,4 @@
-package gonsole
+package console
 
 import (
 	"fmt"
@@ -31,7 +31,7 @@ func (c *Console) Run() (err error) {
 		c.bindCommands()
 
 		// Run user-provided pre-loop hooks
-		c.runPreLoopHooks()
+		// c.runPreLoopHooks()
 
 		// Leave a newline before redrawing the prompt
 		if c.LeaveNewline {

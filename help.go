@@ -1,4 +1,4 @@
-package gonsole
+package console
 
 import (
 	"fmt"

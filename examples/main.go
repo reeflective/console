@@ -1,6 +1,6 @@
 package main
 
-import "github.com/maxlandon/gonsole"
+import "github.com/reeflective/console"
 
 func main() {
 
