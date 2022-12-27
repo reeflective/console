@@ -3,157 +3,106 @@ package console
 import (
 	"sync"
 
-	"github.com/jessevdk/go-flags"
-	"github.com/maxlandon/readline"
+	"github.com/reeflective/readline"
+	"github.com/rsteube/carapace"
+	"github.com/spf13/cobra"
 )
 
 // Menu - A menu is a simple way to seggregate commands based on
 // the environment to which they belong. For instance, when using a menu
 // specific to some host/user, or domain of activity, commands will vary.
 type Menu struct {
-	Name   string  // The name of the context, used for many things here and there.
-	Prompt *Prompt // A dedicated prompt with its own callbacks and colors
+	name    string
+	active  bool
+	prompt  *Prompt
+	console *Console
 
-	// UnknownCommandHandler - The user can specify a function that will
-	// be executed if the error raised by the application parser is a
-	// ErrUnknownCommand error. This might be used for executing the
-	// input line directly via a system shell, or any os.Exec mean...
-	UnknownCommandHandler func(args []string) error
+	// A menu being very similar to a shell context, it embeds a single cobra
+	// root command, which is considered in its traditional role here: a global parser.
+	*cobra.Command
 
-	// Each menu has its own command parser, which executes dispatched commands
-	parser *flags.Parser
-
-	// Command - The menu embeds a command so that users
-	// can more explicitly register commands to a given menu.
-	cmd *Command
-
-	// Each menu can have two specific history sources
-	historyCtrlRName string
-	historyCtrlR     readline.History
-	historyAltRName  string
-	historyAltR      readline.History
+	// The completer allows to further register completions, including those taking
+	// care of parsing/expanding environment variables.
+	*carapace.Carapace
 
 	// expansionComps - A list of completion generators that are triggered when
 	// the given string is detected (anywhere, even in other completions) in the input line.
-	expansionComps map[rune]CompletionFunc
+	expansionComps map[rune]carapace.CompletionCallback
 
-	// The menu sometimes needs access to some console state.
-	console *Console
+	// History sources peculiar to this menu.
+	historyNames []string
+	histories    map[string]readline.History
 
 	// Concurrency management
 	mutex *sync.RWMutex
 }
 
-func newMenu(c *Console) *Menu {
+func newMenu(name string, console *Console) *Menu {
 	menu := &Menu{
-		Prompt: &Prompt{
-			Callbacks: map[string]func() string{},
-			Colors:    defaultColorCallbacks,
-			console:   c,
-		},
-		cmd:            NewCommand(),
-		expansionComps: map[rune]CompletionFunc{},
-		console:        c,
+		console:        console,
+		name:           name,
+		prompt:         newPrompt(console),
+		Command:        &cobra.Command{},
+		expansionComps: make(map[rune]carapace.CompletionCallback),
+		histories:      make(map[string]readline.History),
 		mutex:          &sync.RWMutex{},
 	}
+
 	return menu
 }
 
-// PromptConfig - Returns the prompt object used to setup the prompt. It is actually
-// a configuration, because it can also be printed and exported by a config command.
-func (m *Menu) PromptConfig() *PromptConfig {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-	return m.console.config.Prompts[m.Name]
+// Name returns the name of this menu.
+func (m *Menu) Name() string {
+	return m.name
 }
 
-// Commands - Returns the list of child gonsole.Commands for this command. You can set
-// anything to them, these changes will persist for the lifetime of the application,
-// or until you deregister this command or one of its childs.
-func (m *Menu) Commands() (cmds []*Command) {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-	return m.cmd.Commands()
+// Prompt returns the prompt object for this menu.
+func (m *Menu) Prompt() *Prompt {
+	return m.prompt
 }
 
-// CommandGroups - Returns the command's child commands, structured in their respective groups.
-// Commands having been assigned no specific group are the group named "".
-func (m *Menu) CommandGroups() (grps []*commandGroup) {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-	return m.cmd.groups
+// AddHistorySource adds a source of history commands that will
+// be accessible to the shell when the menu is active.
+func (m *Menu) AddHistorySource(name string, source readline.History) {
+	m.historyNames = append(m.historyNames, name)
+	m.histories[name] = source
 }
 
-// OptionGroups - Returns all groups of options that are bound to this command. These
-// groups (and their options) are available for use even in the command's child commands.
-func (m *Menu) OptionGroups() (grps []*optionGroup) {
-	m.mutex.Lock()
-	defer m.mutex.Unlock()
-	return m.cmd.opts
-}
+// menus manages all created menus for the console application.
+type menus map[string]*Menu
 
-// AddGlobalOptions - Add global options for this menu command parser. Will appear in all commands.
-func (m *Menu) AddGlobalOptions(shortDescription, longDescription string, data func() interface{}) {
-	m.mutex.RLock()
-	defer m.mutex.RUnlock()
-	m.cmd.AddGlobalOptions(shortDescription, longDescription, data)
-}
+// current returns the current menu.
+func (m *menus) current() *Menu {
+	for _, menu := range *m {
+		if menu.active {
+			return menu
+		}
+	}
 
-// AddCommand - Add a command to this menu. This command will be available when this menu is active.
-func (m *Menu) AddCommand(name, short, long, group string, filters []string, data func() Commander) *Command {
-	m.mutex.RLock()
-	defer m.mutex.RUnlock()
-	return m.cmd.AddCommand(name, short, long, group, filters, data)
-}
-
-// SetHistoryCtrlR - Set the history source triggered with Ctrl-R
-func (m *Menu) SetHistoryCtrlR(name string, hist readline.History) {
-	m.mutex.RLock()
-	defer m.mutex.RUnlock()
-	m.historyCtrlRName = name
-	m.historyCtrlR = hist
-}
-
-// SetHistoryAltR - Set the history source triggered with Alt-r
-func (m *Menu) SetHistoryAltR(name string, hist readline.History) {
-	m.mutex.RLock()
-	defer m.mutex.RUnlock()
-	m.historyAltRName = name
-	m.historyAltR = hist
-}
-
-// initParser - Called each time the readline loops, before rebinding all command instances.
-func (m *Menu) initParser(opts flags.Options) {
-	m.mutex.RLock()
-	defer m.mutex.RUnlock()
-	m.parser = flags.NewNamedParser(m.Name, opts)
+	// Else return the default menu.
+	return (*m)[""]
 }
 
 // NewMenu - Create a new command menu, to which the user
 // can attach any number of commands (with any nesting), as
 // well as some specific items like history sources, prompt
 // configurations, sets of expanded variables, and others.
-func (c *Console) NewMenu(name string) (ctx *Menu) {
+func (c *Console) NewMenu(name string) *Menu {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
-	ctx = newMenu(c)
-	ctx.Name = name
-	c.menus[name] = ctx
+	menu := newMenu(name, c)
+	c.menus[name] = menu
 
-	// Load default prompt configuration
-	c.config.Prompts[ctx.Name] = newDefaultPromptConfig(ctx.Name)
-	return
+	return menu
 }
 
-// GetMenu - Given a name, return the appropriate menu.
-// If the menu does not exists, it returns nil
-func (c *Console) GetMenu(name string) (ctx *Menu) {
+// CurrentMenu - Return the current console menu. Because the Context
+// is just a reference, any modifications to this menu will persist.
+func (c *Console) CurrentMenu() *Menu {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
-	if menu, exists := c.menus[name]; exists {
-		return menu
-	}
-	return
+
+	return c.menus.current()
 }
 
 // SwitchMenu - Given a name, the console switches its command menu:
@@ -163,47 +112,21 @@ func (c *Console) GetMenu(name string) (ctx *Menu) {
 func (c *Console) SwitchMenu(menu string) {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
-	for _, ctx := range c.menus {
-		if ctx.Name == menu {
-			c.current = ctx
+
+	// Only switch if the target menu was found.
+	if target, found := c.menus[menu]; found && target != nil {
+		if c.menus.current() != nil {
+			c.menus.current().active = false
+		}
+
+		target.active = true
+
+		// Remove the currently bound history sources
+		// (old menu) and bind the ones peculiar to this one.
+		c.shell.DeleteHistorySource()
+
+		for _, name := range target.historyNames {
+			c.shell.AddHistorySource(name, target.histories[name])
 		}
 	}
-
-	// Contexts have some specific configuration values, reload them.
-	c.reloadConfig()
-
-	// Bind history sources
-	c.shell.SetHistoryCtrlR(c.current.historyCtrlRName, c.current.historyCtrlR)
-	c.shell.SetHistoryAltR(c.current.historyAltRName, c.current.historyAltR)
-}
-
-// CurrentMenu - Return the current console menu. Because the Context
-// is just a reference, any modifications to this menu will persist.
-func (c *Console) CurrentMenu() *Menu {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-	return c.current
-}
-
-// AddGlobalOptions - Add global options for this menu command parser. Will appear in all commands.
-func (c *Console) AddGlobalOptions(shortDescription, longDescription string, data func() interface{}) {
-	c.mutex.RLock()
-	defer c.mutex.RUnlock()
-	c.menus[""].cmd.AddGlobalOptions(shortDescription, longDescription, data)
-}
-
-// SetHistoryCtrlR - Set the history source triggered with Ctrl-R
-func (c *Console) SetHistoryCtrlR(name string, hist readline.History) {
-	c.mutex.RLock()
-	defer c.mutex.RUnlock()
-	c.menus[""].historyCtrlRName = name
-	c.menus[""].historyCtrlR = hist
-}
-
-// SetHistoryAltR - Set the history source triggered with Alt-r
-func (c *Console) SetHistoryAltR(name string, hist readline.History) {
-	c.mutex.RLock()
-	defer c.mutex.RUnlock()
-	c.menus[""].historyAltRName = name
-	c.menus[""].historyAltR = hist
 }
