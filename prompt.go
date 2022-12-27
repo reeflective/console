@@ -2,12 +2,12 @@ package console
 
 import (
 	"fmt"
-	"oh-my-posh/engine"
-	"oh-my-posh/platform"
-	"oh-my-posh/properties"
 	"os"
 
 	"github.com/reeflective/readline"
+	"oh-my-posh/engine"
+	"oh-my-posh/platform"
+	"oh-my-posh/properties"
 )
 
 // Prompt wraps an oh-my-posh prompt engine, so as to be able

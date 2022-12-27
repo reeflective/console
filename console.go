@@ -1,8 +1,6 @@
 package console
 
 import (
-	"regexp"
-	"strings"
 	"sync"
 
 	"github.com/reeflective/readline"
@@ -16,8 +14,7 @@ type Console struct {
 	// including but not limited to: inputs, completions, hints, history.
 	shell *readline.Instance
 
-	// Contexts - The various menus hold a list of command instantiators
-	// structured by groups. These groups are needed for completions and helps.
+	// Different menus with different command trees, prompt engines, etc.
 	menus menus
 
 	// Execution --------------------------------------------------------------------
@@ -53,11 +50,11 @@ type Console struct {
 	filters []string
 }
 
-// NewConsole - Instantiates a new console application, with sane but powerful defaults.
+// New - Instantiates a new console application, with sane but powerful defaults.
 // This instance can then be passed around and used to bind commands, setup additional
 // things, print asynchronous messages, or modify various operating parameters on the fly.
-func NewConsole() *Console {
-	c := &Console{
+func New() *Console {
+	console := &Console{
 		shell: readline.NewInstance(),
 		menus: make(menus),
 		mutex: &sync.RWMutex{},
@@ -65,14 +62,14 @@ func NewConsole() *Console {
 
 	// Make a default menu and make it current.
 	// Each menu is created with a default prompt engine.
-	defaultMenu := c.NewMenu("")
+	defaultMenu := console.NewMenu("")
 	defaultMenu.active = true
 
 	// Command completion, syntax highlighting, etc.
-	c.shell.Completer = c.complete
-	c.shell.SyntaxHighlighter = c.highlightSyntax
+	console.shell.Completer = console.complete
+	console.shell.SyntaxHighlighter = console.highlightSyntax
 
-	return c
+	return console
 }
 
 // Shell returns the console readline shell instance, so that the user can
@@ -87,46 +84,6 @@ func (c *Console) reloadConfig() {
 
 	menu := c.menus.current()
 	menu.prompt.bind(c.shell)
-}
-
-// sanitizeInput - Trims spaces and other unwished elements from the input line.
-func (c *Console) sanitizeInput(line string) (sanitized []string, empty bool) {
-	// Assume the input is not empty
-	empty = false
-
-	// Trim border spaces
-	trimmed := strings.TrimSpace(line)
-	if len(line) < 1 {
-		empty = true
-		return
-	}
-
-	// Parse arguments for quotes, and split according to these quotes first:
-	// they might influence heavily on the go-flags argument parsing done further
-	// Split all strings with '' and ""
-	r := regexp.MustCompile(`[^\s"']+|"([^"]*)"|'([^']*)'`)
-	unfiltered := r.FindAllString(trimmed, -1)
-
-	var test []string
-	for _, arg := range unfiltered {
-		if strings.HasPrefix(arg, "'") && strings.HasSuffix(arg, "'") {
-			trim := strings.TrimPrefix(arg, "'")
-			trim = strings.TrimSuffix(trim, "'")
-			test = append(test, trim)
-			continue
-		}
-		test = append(test, arg)
-	}
-
-	// Catch any eventual empty items
-	for _, arg := range test {
-		// for _, arg := range unfiltered {
-		if arg != "" {
-			sanitized = append(sanitized, arg)
-		}
-	}
-
-	return
 }
 
 // SystemEditor - This function is a renamed-reexport of the underlying readline.StartEditorWithBuffer
