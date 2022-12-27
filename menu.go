@@ -41,7 +41,7 @@ func newMenu(name string, console *Console) *Menu {
 	menu := &Menu{
 		console:        console,
 		name:           name,
-		prompt:         newPrompt(console),
+		prompt:         &Prompt{console: console},
 		Command:        &cobra.Command{},
 		expansionComps: make(map[rune]carapace.CompletionCallback),
 		histories:      make(map[string]readline.History),

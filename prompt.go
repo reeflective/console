@@ -5,6 +5,9 @@ import (
 	"oh-my-posh/engine"
 	"oh-my-posh/platform"
 	"oh-my-posh/properties"
+	"os"
+
+	"github.com/reeflective/readline"
 )
 
 // Prompt wraps an oh-my-posh prompt engine, so as to be able
@@ -14,6 +17,44 @@ import (
 type Prompt struct {
 	*engine.Engine
 	console *Console
+}
+
+// LoadConfig loads the prompt JSON configuration at the specified path.
+// It returns an error if the file is not found, or could not be read.
+// WARNING: Due to the way oh-my-posh loads the configuration (and the
+// library it uses to load it), a configuration can only be loaded ONCE
+// in a program's lifetime.
+func (p *Prompt) LoadConfig(path string) error {
+	if _, err := os.Stat(path); err != nil {
+		return err
+	}
+
+	flags := &platform.Flags{
+		Shell:  "plain",
+		Config: path,
+	}
+
+	p.Engine = engine.New(flags)
+
+	return nil
+}
+
+// bind reassigns the prompt printing functions to the shell helpers.
+func (p *Prompt) bind(shell *readline.Instance) {
+	shell.Prompt.Primary(p.PrintPrimary)
+	shell.Prompt.Right(p.PrintRPrompt)
+
+	secondary := func() string {
+		return p.PrintExtraPrompt(engine.Secondary)
+	}
+	shell.Prompt.Secondary(secondary)
+
+	transient := func() string {
+		return p.PrintExtraPrompt(engine.Transient)
+	}
+	shell.Prompt.Transient(transient)
+
+	shell.Prompt.Tooltip(p.PrintTooltip)
 }
 
 // Segment represents a type able to render itself as a prompt segment string.
@@ -27,10 +68,6 @@ type Segment interface {
 // AddSegment enables to register a prompt segment to the prompt engine.
 // This segment can then be configured and used in the prompt configuration file.
 func (p *Prompt) AddSegment(name string, prompt Segment) {
-	if p.Engine == nil {
-		p.Engine = newDefaultEngine()
-	}
-
 	if prompt == nil {
 		return
 	}
@@ -39,7 +76,7 @@ func (p *Prompt) AddSegment(name string, prompt Segment) {
 		Segment: prompt,
 	}
 
-	p.Engine.AddSegment(engine.SegmentType(name), segment)
+	engine.Segments[engine.SegmentType(name)] = segment
 }
 
 // LogTransient prints a string message (a log, or more broadly, an
@@ -83,21 +120,6 @@ func (s *segment) Init(props properties.Properties, env platform.Environment) {
 	s.env = env
 }
 
-// newPrompt initializes a prompt system/engine for the given menu,
-// loading any configuration that is relevant to it.
-func newPrompt(console *Console) *Prompt {
-	flags := &platform.Flags{
-		Shell: "plain",
-	}
-
-	p := &Prompt{
-		Engine:  engine.New(flags),
-		console: console,
-	}
-
-	return p
-}
-
 // makes a prompt engine with default/builtin configuration.
 func newDefaultEngine() *engine.Engine {
 	flags := &platform.Flags{
@@ -105,4 +127,12 @@ func newDefaultEngine() *engine.Engine {
 	}
 
 	return engine.New(flags)
+}
+
+func (c *Console) checkPrompts() {
+	for _, menu := range c.menus {
+		if menu.prompt.Engine == nil {
+			menu.prompt.Engine = newDefaultEngine()
+		}
+	}
 }
