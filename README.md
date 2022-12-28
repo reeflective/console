@@ -6,7 +6,6 @@
   <br> <h1> Console </h1>
 
   <p>  Application library for Cobra commands  </p>
-
 </div>
 
 
