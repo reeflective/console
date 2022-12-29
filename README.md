@@ -32,7 +32,7 @@
   </a>
 
   <a href="https://codecov.io/gh/reeflective/console">
-    <img src="https://codecov.io/gh/reeflective/console/branch/master/graph/badge.svg"
+    <img src="https://codecov.io/gh/reeflective/console/branch/main/graph/badge.svg"
       alt="codecov" />
   </a>
 
@@ -43,7 +43,7 @@
 </p>
 
 Console is an all-in-one console application library built on top of a [readline](https://github.com/reeflective/readline) shell and using [Cobra](https://github.com/spf13/cobra) commands. 
-It aims so as to provide users with a modern interface at at minimal cost while allowing them to focus on developing 
+It aims to provide users with a modern interface at at minimal cost while allowing them to focus on developing 
 their commands and application core: the console will then transparently interface with these commands, and provide
 the various features below almost for free.
 
@@ -66,6 +66,7 @@ the various features below almost for free.
 ### Other features 
 - Support for an arbitrary number of history sources, per menu.
 - Support for [oh-my-posh](https://github.com/JanDeDobbeleer/oh-my-posh) prompts, per menu and with custom configuration files for each.
+- Also with oh-my-posh, ability to write and bind application-specific prompt segments.
 
 <!-- ![readme-main-gif](https://github.com/maxlandon/gonsole/blob/assets/readme-main.gif) -->
 
