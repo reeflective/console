@@ -197,3 +197,11 @@ double:
 done:
 	return buf.String(), input, nil
 }
+
+func trimSpacesMatch(remain []string) (trimmed []string) {
+	for _, word := range remain {
+		trimmed = append(trimmed, strings.TrimSpace(word))
+	}
+
+	return
+}
