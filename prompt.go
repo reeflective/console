@@ -4,10 +4,10 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/jandedobbeleer/oh-my-posh/engine"
+	"github.com/jandedobbeleer/oh-my-posh/platform"
+	"github.com/jandedobbeleer/oh-my-posh/properties"
 	"github.com/reeflective/readline"
-	"oh-my-posh/engine"
-	"oh-my-posh/platform"
-	"oh-my-posh/properties"
 )
 
 // Prompt wraps an oh-my-posh prompt engine, so as to be able
@@ -21,9 +21,6 @@ type Prompt struct {
 
 // LoadConfig loads the prompt JSON configuration at the specified path.
 // It returns an error if the file is not found, or could not be read.
-// WARNING: Due to the way oh-my-posh loads the configuration (and the
-// library it uses to load it), a configuration can only be loaded ONCE
-// in a program's lifetime.
 func (p *Prompt) LoadConfig(path string) error {
 	if _, err := os.Stat(path); err != nil {
 		return err
@@ -76,7 +73,11 @@ func (p *Prompt) AddSegment(name string, prompt Segment) {
 		Segment: prompt,
 	}
 
-	engine.Segments[engine.SegmentType(name)] = segment
+	segmentFunc := func() engine.SegmentWriter {
+		return segment
+	}
+
+	engine.Segments[engine.SegmentType(name)] = segmentFunc
 }
 
 // LogTransient prints a string message (a log, or more broadly, an

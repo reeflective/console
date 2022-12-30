@@ -17,6 +17,9 @@ type Menu struct {
 	prompt  *Prompt
 	console *Console
 
+	// Maps interrupt signals (CtrlC/IOF, etc) to specific error handlers.
+	interruptHandlers map[error]func(c *Console)
+
 	// A menu being very similar to a shell context, it embeds a single cobra
 	// root command, which is considered in its traditional role here: a global parser.
 	*cobra.Command
@@ -39,13 +42,14 @@ type Menu struct {
 
 func newMenu(name string, console *Console) *Menu {
 	menu := &Menu{
-		console:        console,
-		name:           name,
-		prompt:         &Prompt{console: console},
-		Command:        &cobra.Command{},
-		expansionComps: make(map[rune]carapace.CompletionCallback),
-		histories:      make(map[string]readline.History),
-		mutex:          &sync.RWMutex{},
+		console:           console,
+		name:              name,
+		prompt:            &Prompt{console: console},
+		Command:           &cobra.Command{},
+		interruptHandlers: make(map[error]func(c *Console)),
+		expansionComps:    make(map[rune]carapace.CompletionCallback),
+		histories:         make(map[string]readline.History),
+		mutex:             &sync.RWMutex{},
 	}
 
 	return menu
@@ -64,8 +68,10 @@ func (m *Menu) Prompt() *Prompt {
 // AddHistorySource adds a source of history commands that will
 // be accessible to the shell when the menu is active.
 func (m *Menu) AddHistorySource(name string, source readline.History) {
+	m.mutex.RLock()
 	m.historyNames = append(m.historyNames, name)
 	m.histories[name] = source
+	m.mutex.RUnlock()
 }
 
 // menus manages all created menus for the console application.
