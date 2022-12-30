@@ -7,6 +7,7 @@ import (
 	"github.com/jandedobbeleer/oh-my-posh/engine"
 	"github.com/jandedobbeleer/oh-my-posh/platform"
 	"github.com/jandedobbeleer/oh-my-posh/properties"
+	"github.com/jandedobbeleer/oh-my-posh/shell"
 	"github.com/reeflective/readline"
 )
 
@@ -27,7 +28,7 @@ func (p *Prompt) LoadConfig(path string) error {
 	}
 
 	flags := &platform.Flags{
-		Shell:  "plain",
+		Shell:  shell.PLAIN,
 		Config: path,
 	}
 
@@ -124,7 +125,7 @@ func (s *segment) Init(props properties.Properties, env platform.Environment) {
 // makes a prompt engine with default/builtin configuration.
 func newDefaultEngine() *engine.Engine {
 	flags := &platform.Flags{
-		Shell: "plain",
+		Shell: shell.PLAIN,
 	}
 
 	return engine.New(flags)

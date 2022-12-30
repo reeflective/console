@@ -1,6 +1,7 @@
 package console
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/reeflective/readline"
@@ -51,6 +52,17 @@ func newMenu(name string, console *Console) *Menu {
 		histories:         make(map[string]readline.History),
 		mutex:             &sync.RWMutex{},
 	}
+
+	// Add a default in memory history to each menu
+	if name != "" {
+		name = "(" + name + ")"
+	}
+
+	histName := fmt.Sprintf("local history %s", name)
+	hist := new(readline.MemoryHistory)
+
+	menu.historyNames = append(menu.historyNames, histName)
+	menu.histories[histName] = hist
 
 	return menu
 }

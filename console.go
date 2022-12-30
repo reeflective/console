@@ -72,6 +72,12 @@ func New() *Console {
 	defaultMenu := console.NewMenu("")
 	defaultMenu.active = true
 
+	// Set the history for this menu
+	console.shell.DeleteHistorySource()
+	for _, name := range defaultMenu.historyNames {
+		console.shell.AddHistorySource(name, defaultMenu.histories[name])
+	}
+
 	// Command completion, syntax highlighting, etc.
 	console.shell.Completer = console.complete
 	console.shell.SyntaxHighlighter = console.highlightSyntax
