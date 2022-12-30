@@ -10,69 +10,92 @@ import (
 // readline instance so that you can reuse the readline API for multiple entry
 // captures without having to repeatedly unload configuration.
 type Instance struct {
-	//
-	// Input Modes  -------------------------------------------------------------------------------
+	// The prompt supports all oh-my-posh prompt types (primary/rprompt/secondary/transient/tooltip)
+	// In addition, the shell offers some functions to refresh the prompt on demand, with varying
+	// behavior options (refresh below a message, or in place, etc)
+	Prompt *prompt
 
-	// InputMode - The shell can be used in Vim editing mode, or Emacs (classic).
-	InputMode InputMode
-
-	// Vim parameters/functions
-	// ShowVimMode - If set to true, a string '[i]' or '[N]' indicating the
-	// current Vim mode will be appended to the prompt variable, therefore added to
-	// the user's custom prompt is set. Applies for both single and multiline prompts
-	// TODO: Write prompt segments/indicators for Vim mode and modifiers.
-	ShowVimMode bool
-	// Would not need this.
-	VimModeColorize bool // If set to true, varies colors of the VimModePrompt
+	// Configuration stores all keymaps, prompt styles and other completion/helper settings.
+	config *config
 
 	//
-	// Prompt -------------------------------------------------------------------------------------
+	// Keymaps ------------------------------------------------------------------------------------
 
-	isMultiline     bool   // If set to true, the shell will have a two-line prompt.
-	promptMultiline string // If multiline is true, this is the content of the 2nd line.
+	main    keymapMode             // The main/global keymap, partially overridden by any local keymap.
+	local   keymapMode             // The local keymap is used when completing menus, using Vim operators, etc.
+	widgets map[keymapMode]widgets // Widgets wrapped into EventCallbacks at bind time
 
-	prompt          string // If multiline true, the full prompt string / If false, the 1st line of the prompt
-	promptRight     string
-	promptSecondary string
-	promptTransient string
-	realPrompt      []rune // The prompt that is actually on the same line as the beginning of the input line.
-	defaultPrompt   []rune
-	inputAt         int
-	stillOnRefresh  bool // True if some logs have printed asynchronously since last loop. Check refresh prompt funcs
+	// widgetPrefixMatched is a widget that perfectly matched a given input key, but was also
+	// found along other widgets matching the key only as prefix. This is used so that when reading
+	// the next key, if no match is found, the key is used by this widget.
+	widgetPrefixMatched EventCallback
+
+	// interruptHandlers are all special handlers being called when the shell receives an interrupt
+	// signal key, like CtrlC/CtrlD. These are not directly assigned in the various keymaps, and are
+	// matched against input keys before any other keymap.
+	interruptHandlers map[string]func() error
 
 	//
+	// Vim Operating Parameters -------------------------------------------------------------------
+
+	iterations        string     // Global iterations.
+	negativeArg       bool       // Emacs supports negative iterations.
+	registers         *registers // All memory text registers, can be consulted with Alt"
+	registersComplete bool       // When the completer is for registers, used to reset
+	isViopp           bool       // Keeps track of vi operator pending mode BEFORE trying to match the current key.
+	iterationsViopp   string     // Iterations specific to viopp mode. (2y2w => "2"w)
+	pendingActions    []action   // Widgets that have registered themselves as waiting for another action to be ran.
+
 	// Input Line ---------------------------------------------------------------------------------
+
+	// GetMultiLine is a callback to your host program. Since multiline support
+	// is handled by the application rather than readline itself, this callback
+	// is required when calling $EDITOR. However if this function is not set
+	// then readline will just use the current line.
+	GetMultiLine func([]rune) []rune
+
+	// EnableGetCursorPos will allow the shell to send a special sequence
+	// to the the terminal to get the current cursor X and Y coordinates.
+	EnableGetCursorPos bool
+
+	// SyntaxHighlight is a helper function to provide syntax highlighting.
+	// Once enabled, set to nil to disable again.
+	SyntaxHighlighter func([]rune) string
 
 	// PasswordMask is what character to hide password entry behind.
 	// Once enabled, set to 0 (zero) to disable the mask again.
 	PasswordMask rune
 
 	// readline operating parameters
-	line  []rune // This is the input line, with entered text: full line = mlnPrompt + line
-	pos   int
-	posX  int // Cursor position X
-	fullX int // X coordinate of the full input line, including the prompt if needed.
-	posY  int // Cursor position Y (if multiple lines span)
-	fullY int // Y offset to the end of input line.
+	keys      string // Contains all keys (input by user) not yet consumed by the shell widgets.
+	line      []rune // This is the input line, with entered text: full line = mlnPrompt + line
+	accepted  bool   // Set by 'accept-line' widget, to notify return the line to the caller
+	err       error  // Errors returned by interrupt signal handlers
+	inferLine bool   // When a "accept-line-and-down-history" widget wants to immediately retrieve/use a line.
+	pos       int    // Cursor position in the entire line.
+	posX      int    // Cursor position X
+	posY      int    // Cursor position Y (if multiple lines span)
+	fullX     int    // X coordinate of the full input line, including the prompt if needed.
+	fullY     int    // Y offset to the end of input line.
 
 	// Buffer received from host programms
 	multilineBuffer []byte
 	multilineSplit  []string
 	skipStdinRead   bool
 
-	// SyntaxHighlight is a helper function to provide syntax highlighting.
-	// Once enabled, set to nil to disable again.
-	SyntaxHighlighter func([]rune) string
+	// selection management
+	visualLine   bool     // Is the visual mode VISUAL_LINE
+	mark         int      // Visual selection mark. -1 when unactive
+	activeRegion bool     // Is a current range region active ?
+	regions      []region // Regions are some parts of the input line with special highlighting.
 
 	//
 	// Completion ---------------------------------------------------------------------------------
 
-	// TabCompleter is a simple function that offers completion suggestions.
+	// Completer is a function that produces completions.
 	// It takes the readline line ([]rune) and cursor pos.
-	// Returns a prefix string, and several completion groups with their items and description
-	// Asynchronously add/refresh completions
-	TabCompleter      func([]rune, int, DelayedTabContext) (string, []*CompletionGroup)
-	delayedTabContext DelayedTabContext
+	// It return a type holding all completions and their associated settings.
+	Completer func([]rune, int) Completions
 
 	// SyntaxCompletion is used to autocomplete code syntax (like braces and
 	// quotation marks). If you want to complete words or phrases then you might
@@ -85,57 +108,41 @@ type Instance struct {
 	DelayedSyntaxWorker func([]rune) []rune
 	delayedSyntaxCount  int64
 
-	// MaxTabCompletionRows is the maximum number of rows to display in the tab
-	// completion grid.
-	MaxTabCompleterRows int // = 4
+	// The current completer to use to produce completions: normal/history/registers
+	// Used so that autocomplete can use the correct completer all along.
+	completer func()
 
 	// tab completion operating parameters
-	tcGroups []*CompletionGroup // All of our suggestions tree is in here
-	tcPrefix string             // The current tab completion prefix  against which to build candidates
-
-	modeTabCompletion    bool
-	compConfirmWait      bool // When too many completions, we ask the user to confirm with another Tab keypress.
-	tabCompletionSelect  bool // We may have completions printed, but no selected candidate yet
-	tabCompletionReverse bool // Groups sometimes use this indicator to know how they should handle their index
-	tcUsedY              int  // Comprehensive offset of the currently built completions
-
-	// Candidate /  virtual completion string / etc
-	currentComp  []rune // The currently selected item, not yet a real part of the input line.
-	lineComp     []rune // Same as rl.line, but with the currentComp inserted.
-	lineRemain   []rune // When we complete in the middle of a line, we cut and keep the remain.
-	compAddSpace bool   // If true, any candidate inserted into the real line is done with an added space.
-
-	//
-	// Completion Search  (Normal & History) -----------------------------------------------------
-
-	modeTabFind  bool           // This does not change, because we will search in all options, no matter the group
-	tfLine       []rune         // The current search pattern entered
-	modeAutoFind bool           // for when invoked via ^R or ^F outside of [tab]
-	searchMode   FindMode       // Used for varying hints, and underlying functions called
-	regexSearch  *regexp.Regexp // Holds the current search regex match
-	mainHist     bool           // Which history stdin do we want
-	histHint     []rune         // We store a hist hint, for dual history sources
+	tcGroups        []*comps       // All of our suggestions tree is in here
+	tcPrefix        string         // The current tab completion prefix  against which to build candidates
+	compConfirmWait bool           // When too many completions, we ask the user to confirm with another Tab keypress.
+	tcUsedY         int            // Comprehensive offset of the currently built completions
+	comp            []rune         // The currently selected item, not yet a real part of the input line.
+	compSuffix      suffixMatcher  // The suffix matcher is kept for removal after actually inserting the candidate.
+	compLine        []rune         // Same as rl.line, but with the currentComp inserted.
+	compLineRest    []rune         // When we complete in the middle of a line, we cut and keep the remain.
+	tfLine          []rune         // The current search pattern entered
+	tfPos           int            // Cursor position in the isearch buffer
+	isearch         *regexp.Regexp // Holds the current search regex match
 
 	//
 	// History -----------------------------------------------------------------------------------
 
-	// mainHistory - current mapped to CtrlR by default, with rl.SetHistoryCtrlR()
-	mainHistory  History
-	mainHistName string
-	// altHistory is an alternative history input, in case a console user would
-	// like to have two different history flows. Mapped to CtrlE by default, with rl.SetHistoryCtrlE()
-	altHistory  History
-	altHistName string
+	// Current line undo/redo history.
+	undoHistory      []undoItem
+	undoPos          int
+	isUndoing        bool
+	undoSkipAppend   bool
+	forcedUndoAppend bool // A widget may force its operation to append to undo history (eg. dw).
 
-	// HistoryAutoWrite defines whether items automatically get written to
-	// history.
-	// Enabled by default. Set to false to disable.
-	HistoryAutoWrite bool // = true
-
-	// history operating params
-	lineBuf    string
-	histPos    int
-	histNavIdx int // Used for quick history navigation.
+	// Past history
+	histories        map[string]History // Sources of history lines
+	historyNames     []string           // Names of histories stored in rl.histories
+	historySourcePos int                // The index of the currently used history
+	lineBuf          string             // The current line saved when we are on another history line
+	histPos          int                // Index used for navigating the history lines with arrows/j/k
+	histHint         []rune             // We store a hist hint, for dual history sources
+	histSuggested    []rune             // The last matching history line matching the current input.
 
 	//
 	// Hints -------------------------------------------------------------------------------------
@@ -145,40 +152,15 @@ type Instance struct {
 	// It returns the hint text to display.
 	HintText func([]rune, int) []rune
 
-	// HintColor any ANSI escape codes you wish to use for hint formatting. By
-	// default this will just be blue.
-	HintFormatting string
-
-	hintText []rune // The actual hint text
-	hintY    int    // Offset to hints, if it spans multiple lines
-
-	//
-	// Vim Operatng Parameters -------------------------------------------------------------------
-
-	modeViMode       viMode //= vimInsert
-	viIteration      string
-	viUndoHistory    []undoItem
-	viUndoSkipAppend bool
-	viIsYanking      bool
-	registers        *registers // All memory text registers, can be consulted with Alt"
+	hint  []rune // The actual hint text
+	hintY int    // Offset to hints, if it spans multiple lines
 
 	//
 	// Other -------------------------------------------------------------------------------------
 
-	// TempDirectory is the path to write temporary files when editing a line in
-	// $EDITOR. This will default to os.TempDir()
+	// TempDirectory is the path to write temporary files when
+	// editing a line in $EDITOR. This will default to os.TempDir().
 	TempDirectory string
-
-	// GetMultiLine is a callback to your host program. Since multiline support
-	// is handled by the application rather than readline itself, this callback
-	// is required when calling $EDITOR. However if this function is not set
-	// then readline will just use the current line.
-	GetMultiLine func([]rune) []rune
-
-	EnableGetCursorPos bool
-
-	// event
-	evtKeyPress map[string]func(string, []rune, int) *EventReturn
 
 	// concurency
 	mutex sync.Mutex
@@ -189,29 +171,25 @@ func NewInstance() *Instance {
 	rl := new(Instance)
 
 	// Prompt
-	rl.isMultiline = false
-	rl.prompt = "$ "
-	rl.defaultPrompt = []rune{' ', '$', ' '}
-	rl.inputAt = len(rl.computePrompt())
+	rl.Prompt = &prompt{
+		primary: "$ ",
+	}
+	rl.Prompt.compute(rl)
 
-	// Input Editing
-	rl.InputMode = Emacs
-	rl.ShowVimMode = true // In case the user sets input mode to Vim, everything is ready.
+	rl.loadDefaultConfig()
+	rl.bindWidgets()
+	rl.loadInterruptHandlers()
 
-	// Completion
-	rl.MaxTabCompleterRows = 50
+	rl.initLine()
+	rl.initRegisters()
 
 	// History
-	rl.mainHistory = new(ExampleHistory) // In-memory history by default.
-	rl.HistoryAutoWrite = true
+	rl.historyNames = append(rl.historyNames, "local history")
+	rl.histories = make(map[string]History)
+	rl.histories["local history"] = new(defaultHistory)
 
 	// Others
-	rl.HintFormatting = seqFgBlue
-	rl.evtKeyPress = make(map[string]func(string, []rune, int) *EventReturn)
 	rl.TempDirectory = os.TempDir()
-
-	// Registers
-	rl.initRegisters()
 
 	return rl
 }

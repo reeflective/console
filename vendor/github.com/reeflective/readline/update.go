@@ -3,26 +3,19 @@ package readline
 // initHelpers is called once at the very beginning of a readline start.
 func (rl *Instance) initHelpers() {
 	rl.resetHintText()
-	rl.resetTabCompletion()
+	rl.resetCompletion()
+	rl.completer = nil
 	rl.getHintText()
 }
 
-// updateHelpers is a key part of the whole refresh process:
+// redisplay is a key part of the whole refresh process:
 // it should coordinate reprinting the input line, any hints and completions
 // and manage to get back to the current (computed) cursor coordinates
-func (rl *Instance) updateHelpers() {
-	// Load all hints & completions before anything.
-	// Thus overwrites anything having been dirtily added/forced/modified, like rl.SetHintText()
+func (rl *Instance) redisplay() {
+	rl.Prompt.update(rl)
+	rl.autoComplete()
 	rl.getHintText()
-	if rl.modeTabCompletion {
-		rl.getTabCompletion()
-	}
-
-	// We clear everything
 	rl.clearHelpers()
-
-	// We are at the prompt line (with the latter
-	// not printed yet), then reprint everything
 	rl.renderHelpers()
 }
 
@@ -35,24 +28,33 @@ func (rl *Instance) updateReferences() {
 	rl.posY = 0
 	rl.fullY = 0
 
+	if rl.pos < 0 {
+		rl.pos = 0
+	}
+
 	var fullLine, cPosLine int
-	if len(rl.currentComp) > 0 {
-		fullLine = len(rl.lineComp)
-		cPosLine = len(rl.lineComp[:rl.pos])
+	if len(rl.comp) > 0 {
+		fullLine = len(rl.compLine)
+		cPosLine = len(rl.compLine[:rl.pos])
 	} else {
 		fullLine = len(rl.line)
 		cPosLine = len(rl.line[:rl.pos])
 	}
 
+	// Adjust if we have an autosuggested history
+	if len(rl.histSuggested) > 0 {
+		fullLine = fullLine + len(rl.histSuggested)
+	}
+
 	// We need the X offset of the whole line
-	toEndLine := rl.inputAt + fullLine
+	toEndLine := rl.Prompt.inputAt + fullLine
 	fullOffset := toEndLine / GetTermWidth()
 	rl.fullY = fullOffset
 	fullRest := toEndLine % GetTermWidth()
 	rl.fullX = fullRest
 
 	// Use rl.pos value to get the offset to go TO/FROM the CURRENT POSITION
-	lineToCursorPos := rl.inputAt + cPosLine
+	lineToCursorPos := rl.Prompt.inputAt + cPosLine
 	offsetToCursor := lineToCursorPos / GetTermWidth()
 	cPosRest := lineToCursorPos % GetTermWidth()
 
@@ -77,11 +79,8 @@ func (rl *Instance) updateReferences() {
 }
 
 func (rl *Instance) resetHelpers() {
-	rl.modeAutoFind = false
-
-	// Now reset all below-input helpers
 	rl.resetHintText()
-	rl.resetTabCompletion()
+	rl.resetCompletion()
 }
 
 // clearHelpers - Clears everything: prompt, input, hints & comps,
@@ -105,8 +104,11 @@ func (rl *Instance) clearHelpers() {
 // and replaces the cursor to its current position. This function never
 // computes or refreshes any value, except from inside the echo function.
 func (rl *Instance) renderHelpers() {
-	// Optional, because neutral on placement
-	rl.echo()
+	if rl.config.HistoryAutosuggest {
+		rl.autosuggestHistory(rl.getLineVirtual())
+	}
+
+	rl.printLine()
 
 	// Go at beginning of first line after input remainder
 	moveCursorDown(rl.fullY - rl.posY)
@@ -115,21 +117,22 @@ func (rl *Instance) renderHelpers() {
 	// Print hints, check for any confirmation hint current.
 	// (do not overwrite the confirmation question hint)
 	if !rl.compConfirmWait {
-		if len(rl.hintText) > 0 {
+		if len(rl.hint) > 0 {
 			print("\n")
 		}
 		rl.writeHintText()
 		moveCursorBackwards(GetTermWidth())
 
-		// Print completions and go back to beginning of this line
+		// Print completions and go back
+		// to beginning of this line
 		print("\n")
-		rl.writeTabCompletion()
+		rl.printCompletions()
 		moveCursorBackwards(GetTermWidth())
 		moveCursorUp(rl.tcUsedY)
 	}
 
-	// If we are still waiting for the user to confirm too long completions
-	// Immediately refresh the hints
+	// If we are still waiting for the user to confirm
+	// long completions, immediately refresh the hints.
 	if rl.compConfirmWait {
 		print("\n")
 		rl.writeHintText()
@@ -138,7 +141,7 @@ func (rl *Instance) renderHelpers() {
 	}
 
 	// Anyway, compensate for hint printout
-	if len(rl.hintText) > 0 {
+	if len(rl.hint) > 0 {
 		moveCursorUp(rl.hintY)
 	} else if !rl.compConfirmWait {
 		moveCursorUp(1)

@@ -6,7 +6,7 @@ require (
 	github.com/jandedobbeleer/oh-my-posh v12.34.2+incompatible
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/reeflective/flags v0.0.0-20221227223942-7974e9681270
-	github.com/reeflective/readline v0.1.0-beta.0.20221121152614-375cb08d8135
+	github.com/reeflective/readline v0.1.0-beta.0.20221228215536-01b482899e37
 	github.com/rsteube/carapace v0.29.1
 	github.com/spf13/cobra v1.6.1
 )
@@ -22,6 +22,7 @@ require (
 	github.com/apparentlymart/go-textseg/v13 v13.0.0 // indirect
 	github.com/esimov/stackblur-go v1.1.0 // indirect
 	github.com/fogleman/gg v1.3.0 // indirect
+	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/go-playground/locales v0.14.0 // indirect
 	github.com/go-playground/universal-translator v0.18.0 // indirect
@@ -47,6 +48,7 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/power-devops/perfstat v0.0.0-20221212215047-62379fc7944b // indirect
+	github.com/reiver/go-caret v0.0.0-20190726191135-0ad7aa63f55f // indirect
 	github.com/rivo/uniseg v0.4.3 // indirect
 	github.com/rsteube/carapace-bin v0.19.0 // indirect
 	github.com/shirou/gopsutil/v3 v3.22.10 // indirect

@@ -5,38 +5,100 @@ type undoItem struct {
 	pos  int
 }
 
-func (rl *Instance) undoAppendHistory() {
-	defer func() { rl.viUndoSkipAppend = false }()
+// will only skip appending to undo history if not forced
+// to append by another pending/running widget.
+func (rl *Instance) skipUndoAppend() {
+	rl.undoSkipAppend = true
+}
 
-	if rl.viUndoSkipAppend {
+func (rl *Instance) undoHistoryAppend() {
+	defer rl.resetUndoDirectives()
+
+	if rl.undoSkipAppend {
 		return
 	}
 
-	rl.viUndoHistory = append(rl.viUndoHistory, undoItem{
+	// When the line is identical to the previous undo, we skip it.
+	if len(rl.undoHistory) > 0 {
+		if rl.undoHistory[len(rl.undoHistory)-1].line == string(rl.line) {
+			return
+		}
+	}
+
+	// When we add an item to the undo history, the history
+	// is cut from the current undo hist position onwards.
+	rl.undoHistory = rl.undoHistory[:len(rl.undoHistory)-rl.undoPos]
+
+	rl.undoHistory = append(rl.undoHistory, undoItem{
 		line: string(rl.line),
 		pos:  rl.pos,
 	})
 }
 
-func (rl *Instance) undoLast() {
+func (rl *Instance) undo() {
+	rl.undoSkipAppend = true
+	rl.isUndoing = true
+	if len(rl.undoHistory) == 0 {
+		return
+	}
+
+	if rl.undoPos == 0 {
+		rl.lineBuf = string(rl.line)
+	}
+
 	var undo undoItem
+
+	// When undoing, we loop through preceding undo items
+	// as long as they are identical to the current line.
 	for {
-		if len(rl.viUndoHistory) == 0 {
+		rl.undoPos++
+
+		// Exit if we reached the end.
+		if rl.undoPos > len(rl.undoHistory) {
+			rl.undoPos = len(rl.undoHistory)
 			return
 		}
-		undo = rl.viUndoHistory[len(rl.viUndoHistory)-1]
-		rl.viUndoHistory = rl.viUndoHistory[:len(rl.viUndoHistory)-1]
-		if string(undo.line) != string(rl.line) {
+
+		// Break as soon as we find a non-matching line.
+		undo = rl.undoHistory[len(rl.undoHistory)-rl.undoPos]
+		if undo.line != string(rl.line) {
 			break
 		}
 	}
 
+	// Use the undo we found
 	rl.line = []rune(undo.line)
 	rl.pos = undo.pos
+}
 
-	if rl.modeViMode != vimInsert && len(rl.line) > 0 && rl.pos == len(rl.line) {
-		rl.pos--
+func (rl *Instance) redo() {
+	rl.undoSkipAppend = true
+	rl.isUndoing = true
+	if len(rl.undoHistory) == 0 {
+		return
 	}
 
-	rl.updateHelpers()
+	rl.undoPos--
+
+	if rl.undoPos < 1 {
+		rl.undoPos = 0
+
+		rl.line = []rune(rl.lineBuf)
+		rl.pos = len(rl.lineBuf)
+		return
+	}
+
+	undo := rl.undoHistory[len(rl.undoHistory)-rl.undoPos]
+	rl.line = []rune(undo.line)
+	rl.pos = undo.pos
+}
+
+func (rl *Instance) resetUndoDirectives() {
+	rl.undoSkipAppend = false
+
+	if !rl.isUndoing {
+		rl.undoPos = 0
+	}
+
+	rl.isUndoing = false
 }

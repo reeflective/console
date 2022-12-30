@@ -17,12 +17,7 @@ func tokeniseLine(line []rune, linePos int) ([]string, int, int) {
 
 	for i, r := range line {
 		switch {
-		case (r >= 33 && 47 >= r) ||
-			(r >= 58 && 64 >= r) ||
-			(r >= 91 && 94 >= r) ||
-			r == 96 ||
-			(r >= 123 && 126 >= r):
-
+		case isPunctuation(r):
 			if i > 0 && line[i-1] != r {
 				split = append(split, "")
 			}
@@ -41,23 +36,18 @@ func tokeniseLine(line []rune, linePos int) ([]string, int, int) {
 			punc = false
 		}
 
+		// Not caught when we are appending to the end
+		// of the line, where rl.pos = linePos + 1, so...
 		if i == linePos {
 			index = len(split) - 1
 			pos = len(split[index]) - 1
 		}
-
 	}
 
-	// Hackish: if we are at the end of the line,
-	// currently appending to it, we return the pos
-	// as we would do when matching linePos
+	// ... so we ajust here for this case.
 	if linePos == len(line) {
-		if index == 0 {
-			index = len(split) - 1
-		}
-		if pos == 0 {
-			pos = len(split[index])
-		}
+		index = len(split) - 1
+		pos = len(split[index])
 	}
 
 	return split, index, pos
@@ -83,10 +73,18 @@ func tokeniseSplitSpaces(line []rune, linePos int) ([]string, int, int) {
 			split[len(split)-1] += string(r)
 		}
 
+		// Not caught when we are appending to the end
+		// of the line, where rl.pos = linePos + 1, so...
 		if i == linePos {
 			index = len(split) - 1
 			pos = len(split[index]) - 1
 		}
+	}
+
+	// ... so we ajust here for this case.
+	if linePos == len(line) {
+		index = len(split) - 1
+		pos = len(split[index])
 	}
 
 	return split, index, pos
@@ -170,15 +168,17 @@ func tokeniseBrackets(line []rune, linePos int) ([]string, int, int) {
 
 func rTrimWhiteSpace(oldString string) (newString string) {
 	return strings.TrimRight(oldString, " ")
-	// TODO: support tab chars
-	/*defer fmt.Println(">" + oldString + "<" + newString + ">")
-	newString = oldString
-	for len(oldString) > 0 {
-		if newString[len(newString)-1] == ' ' || newString[len(newString)-1] == '\t' {
-			newString = newString[:len(newString)-1]
-		} else {
-			break
-		}
+}
+
+// isPunctuation returns true if the rune is non-blank word delimiter.
+func isPunctuation(r rune) bool {
+	if (r >= 33 && 47 >= r) ||
+		(r >= 58 && 64 >= r) ||
+		(r >= 91 && 94 >= r) ||
+		r == 96 ||
+		(r >= 123 && 126 >= r) {
+		return true
 	}
-	return*/
+
+	return false
 }

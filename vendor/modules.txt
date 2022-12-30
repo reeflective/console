@@ -30,6 +30,9 @@ github.com/esimov/stackblur-go
 # github.com/fogleman/gg v1.3.0
 ## explicit
 github.com/fogleman/gg
+# github.com/fsnotify/fsnotify v1.6.0
+## explicit; go 1.16
+github.com/fsnotify/fsnotify
 # github.com/go-ole/go-ole v1.2.6
 ## explicit; go 1.12
 github.com/go-ole/go-ole
@@ -174,9 +177,12 @@ github.com/reeflective/flags/internal/scan
 github.com/reeflective/flags/internal/tag
 github.com/reeflective/flags/internal/validation
 github.com/reeflective/flags/validator
-# github.com/reeflective/readline v0.1.0-beta.0.20221121152614-375cb08d8135
-## explicit; go 1.16
+# github.com/reeflective/readline v0.1.0-beta.0.20221228215536-01b482899e37
+## explicit; go 1.19
 github.com/reeflective/readline
+# github.com/reiver/go-caret v0.0.0-20190726191135-0ad7aa63f55f
+## explicit
+github.com/reiver/go-caret
 # github.com/rivo/uniseg v0.4.3
 ## explicit; go 1.18
 github.com/rivo/uniseg

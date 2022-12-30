@@ -8,6 +8,9 @@ import (
 	"sync"
 )
 
+// validRegisterKeys - All valid register IDs (keys) for read/write Vim registers
+var validRegisterKeys = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/-\""
+
 // registers - Contains all memory registers resulting from delete/paste/search
 // or other operations in the command line input.
 type registers struct {
@@ -28,22 +31,6 @@ func (rl *Instance) initRegisters() {
 		ro:    map[string][]rune{},
 		mutex: &sync.Mutex{},
 	}
-}
-
-// inputRegisters shows the application clipboard registers.
-func (rl *Instance) inputRegisters() (ret bool) {
-	if rl.modeViMode != vimInsert {
-		return true
-	}
-	rl.modeTabCompletion = true
-	rl.modeAutoFind = true
-	rl.searchMode = RegisterFind
-	// Else we might be asked to confirm printing (if too many suggestions), or not.
-	rl.getTabCompletion()
-	rl.viUndoSkipAppend = true
-	rl.renderHelpers()
-
-	return
 }
 
 // saveToRegister - Passing a function that will move around the line in the desired way, we get
@@ -68,11 +55,8 @@ func (rl *Instance) saveToRegister(adjust int) {
 		buffer = rl.line[begin:end]
 	}
 
-	// Make an immutable copy of the buffer before saving it
 	buf := string(buffer)
 
-	// Put the buffer in the appropriate registers.
-	// By default, always in the unnamed one first.
 	rl.saveBufToRegister([]rune(buf))
 }
 
@@ -105,11 +89,8 @@ func (rl *Instance) saveToRegisterTokenize(tokeniser tokeniser, jumper func(toke
 		buffer = rl.line[begin:end]
 	}
 
-	// Make an immutable copy of the buffer before saving it
 	buf := string(buffer)
 
-	// Put the buffer in the appropriate registers.
-	// By default, always in the unnamed one first.
 	rl.saveBufToRegister([]rune(buf))
 }
 
@@ -117,19 +98,16 @@ func (rl *Instance) saveToRegisterTokenize(tokeniser tokeniser, jumper func(toke
 // let the caller pass directly this buffer, yet relying on the register system to
 // determine which register will store the buffer.
 func (rl *Instance) saveBufToRegister(buffer []rune) {
-	// We must make an immutable version of the buffer first.
 	buf := string(buffer)
 
 	// When exiting this function the currently selected register is dropped,
 	defer rl.registers.resetRegister()
 
-	// If the buffer is empty, just return
 	if len(buffer) == 0 || buf == "" {
 		return
 	}
 
 	// Put the buffer in the appropriate registers.
-	// By default, always in the unnamed one first.
 	rl.registers.unnamed = []rune(buf)
 
 	// If there is an active register, directly give it the buffer.
@@ -150,7 +128,6 @@ func (rl *Instance) saveBufToRegister(buffer []rune) {
 // The user asked to paste a buffer onto the line, so we check from which register
 // we are supposed to select the buffer, and return it to the caller for insertion.
 func (rl *Instance) pasteFromRegister() (buffer []rune) {
-	// When exiting this function the currently selected register is dropped,
 	defer rl.registers.resetRegister()
 
 	// If no actively selected register, return the unnamed buffer
@@ -162,7 +139,6 @@ func (rl *Instance) pasteFromRegister() (buffer []rune) {
 	// Else find the active register, and return its content.
 	num, err := strconv.Atoi(activeRegister)
 
-	// Either from the numbered ones.
 	if err == nil {
 		buf, found := rl.registers.num[num]
 		if found {
@@ -170,12 +146,12 @@ func (rl *Instance) pasteFromRegister() (buffer []rune) {
 		}
 		return
 	}
-	// or the lettered ones
+
 	buf, found := rl.registers.alpha[activeRegister]
 	if found {
 		return buf
 	}
-	// Or the read-only ones
+
 	buf, found = rl.registers.ro[activeRegister]
 	if found {
 		return buf
@@ -267,68 +243,67 @@ func (r *registers) resetRegister() {
 }
 
 // The user can show registers completions and insert, no matter the cursor position.
-func (rl *Instance) completeRegisters() (groups []*CompletionGroup) {
-	// We set the hint exceptionally
-	hint := BLUE + "-- registers --" + RESET
-	rl.hintText = []rune(hint)
+func (rl *Instance) completeRegisters() Completions {
+	comps := Message(seqFgBlue + "-- registers --" + seqReset)
 
-	// Make the groups
-	anonRegs := &CompletionGroup{
-		DisplayType:  TabDisplayMap,
-		MaxLength:    20,
-		Descriptions: map[string]string{},
+	unnamed := Completion{
+		Value:   string(rl.registers.unnamed),
+		Display: seqDim + "\"\"" + seqDimReset + " " + string(rl.registers.unnamed),
 	}
+	comps.values = append(comps.values, unnamed)
 
-	// Unnamed (the added space is because we must have a unique key.
-	// This space is trimmed when the buffer is being passed to users)
-	anonRegs.Suggestions = append(anonRegs.Suggestions, string(rl.registers.unnamed))
-	anonRegs.Descriptions[string(rl.registers.unnamed)] = DIM + "\"" + "\"" + RESET
+	comps.values = append(comps.values, rawValues(rl.completeNumRegs())...)
+	comps.values = append(comps.values, rawValues(rl.completeAlphaRegs())...)
+	comps = comps.NoSort()
 
-	groups = append(groups, anonRegs)
+	return comps
+}
 
-	// Numbered registers
-	numRegs := &CompletionGroup{
-		Name:         DIM + "num ([0-9])" + RESET,
-		DisplayType:  TabDisplayMap,
-		MaxLength:    20,
-		Descriptions: map[string]string{},
-	}
+func (rl *Instance) completeNumRegs() []Completion {
+	regs := make([]Completion, 0)
+	tag := seqDim + "num ([0-9])" + seqReset
+
 	var nums []int
 	for reg := range rl.registers.num {
 		nums = append(nums, reg)
 	}
+
 	sort.Ints(nums)
-	for _, val := range nums {
-		buf := rl.registers.num[val]
-		numRegs.Suggestions = append(numRegs.Suggestions, string(buf))
-		numRegs.Descriptions[string(buf)] = fmt.Sprintf("%s\"%d%s", DIM, val, RESET)
+
+	for _, reg := range nums {
+		buf := rl.registers.num[reg]
+		comp := Completion{
+			Tag:     tag,
+			Value:   string(buf),
+			Display: fmt.Sprintf("%s\"%d%s %s", seqDim, reg, seqDimReset, string(buf)),
+		}
+
+		regs = append(regs, comp)
 	}
 
-	if len(numRegs.Suggestions) > 0 {
-		groups = append(groups, numRegs)
-	}
+	return regs
+}
 
-	// Letter registers
-	alphaRegs := &CompletionGroup{
-		Name:         DIM + "alpha ([a-z], [A-Z])" + RESET,
-		DisplayType:  TabDisplayMap,
-		MaxLength:    20,
-		Descriptions: map[string]string{},
-	}
+func (rl *Instance) completeAlphaRegs() []Completion {
+	regs := make([]Completion, 0)
+	tag := seqDim + "alpha ([a-z], [A-Z])" + seqReset
+
 	var lett []string
 	for reg := range rl.registers.alpha {
 		lett = append(lett, reg)
 	}
 	sort.Strings(lett)
+
 	for _, reg := range lett {
 		buf := rl.registers.alpha[reg]
-		alphaRegs.Suggestions = append(alphaRegs.Suggestions, string(buf))
-		alphaRegs.Descriptions[string(buf)] = DIM + "\"" + reg + RESET
+		comp := Completion{
+			Tag:     tag,
+			Value:   string(buf),
+			Display: fmt.Sprintf("%s\"%s%s %s", seqDim, reg, seqDimReset, string(buf)),
+		}
+
+		regs = append(regs, comp)
 	}
 
-	if len(alphaRegs.Suggestions) > 0 {
-		groups = append(groups, alphaRegs)
-	}
-
-	return
+	return regs
 }

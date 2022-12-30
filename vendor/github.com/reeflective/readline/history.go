@@ -1,6 +1,7 @@
 package readline
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 )
@@ -28,51 +29,66 @@ type History interface {
 	Dump() interface{}
 }
 
-// SetHistoryCtrlR - Set the history source triggered with Ctrl-r combination
-func (rl *Instance) SetHistoryCtrlR(name string, history History) {
-	rl.mainHistName = name
-	rl.mainHistory = history
+// AddHistorySource adds a source of history lines bound to a given name
+// (printed above this source when used). All history sources can be used
+// when completing history, and repeatedly using the completion key will
+// cycle through them.
+// When only the default in-memory history is bound, it is replaced with
+// the provided ones. All following sources are added to the list.
+func (rl *Instance) AddHistorySource(name string, history History) {
+	if len(rl.histories) == 1 && rl.historyNames[0] == "local history" {
+		delete(rl.histories, "local history")
+		rl.historyNames = make([]string, 0)
+	}
+
+	rl.historyNames = append(rl.historyNames, name)
+	rl.histories[name] = history
 }
 
-// GetHistoryCtrlR - Returns the history source triggered by Ctrl-r
-func (rl *Instance) GetHistoryCtrlR() History {
-	return rl.mainHistory
+// DeleteHistorySource deletes one or more history source by name.
+// If no arguments are passed, all currently bound sources are removed.
+func (rl *Instance) DeleteHistorySource(sources ...string) {
+	if len(sources) == 0 {
+		rl.histories = make(map[string]History)
+		rl.historyNames = make([]string, 0)
+
+		return
+	}
+
+	for _, name := range sources {
+		delete(rl.histories, name)
+		for i, hname := range rl.historyNames {
+			if hname == name {
+				rl.historyNames = append(rl.historyNames[:i], rl.historyNames[i+1:]...)
+				break
+			}
+		}
+	}
 }
 
-// SetHistoryAltR - Set the history source triggered with Alt-r combination
-func (rl *Instance) SetHistoryAltR(name string, history History) {
-	rl.altHistName = name
-	rl.altHistory = history
-}
-
-// GetHistoryAltR - Returns the history source triggered by Alt-r
-func (rl *Instance) GetHistoryAltR() History {
-	return rl.altHistory
-}
-
-// ExampleHistory is an example of a LineHistory interface:
-type ExampleHistory struct {
+// defaultHistory is an example of a LineHistory interface:
+type defaultHistory struct {
 	items []string
 }
 
 // Write to history
-func (h *ExampleHistory) Write(s string) (int, error) {
+func (h *defaultHistory) Write(s string) (int, error) {
 	h.items = append(h.items, s)
 	return len(h.items), nil
 }
 
 // GetLine returns a line from history
-func (h *ExampleHistory) GetLine(i int) (string, error) {
+func (h *defaultHistory) GetLine(i int) (string, error) {
 	return h.items[i], nil
 }
 
 // Len returns the number of lines in history
-func (h *ExampleHistory) Len() int {
+func (h *defaultHistory) Len() int {
 	return len(h.items)
 }
 
 // Dump returns the entire history
-func (h *ExampleHistory) Dump() interface{} {
+func (h *defaultHistory) Dump() interface{} {
 	return h.items
 }
 
@@ -102,29 +118,73 @@ func (h *NullHistory) Dump() interface{} {
 
 // initHistory is ran once at the beginning of an instance start.
 func (rl *Instance) initHistory() {
-	// We need this set to the last command, so that we can access it quickly
-	rl.histPos = 0
-	rl.viUndoHistory = []undoItem{{line: "", pos: 0}}
+	rl.historySourcePos = 0
+	rl.undoHistory = []undoItem{{line: "", pos: 0}}
+
+	// Only reset the history position when we don't
+	// need it to retrieve a line before anything else.
+	if !rl.inferLine {
+		rl.histPos = 0
+	}
 }
 
-// Browse historic lines:
-func (rl *Instance) walkHistory(i int) {
-	var (
-		old, new string
-		dedup    bool
-		err      error
-	)
-
-	// Work with correct history source (depends on CtrlR/CtrlE)
-	var history History
-	if !rl.mainHist {
-		history = rl.altHistory
-	} else {
-		history = rl.mainHistory
+// when the last widget invoked accepted a line with a supplementary
+// directive to retrieve a history line (by match or index), find it.
+func (rl *Instance) initHistoryLine() {
+	if !rl.inferLine {
+		return
 	}
 
-	// Nothing happens if the history is nil
-	if history == nil {
+	switch rl.histPos {
+	case -1:
+		rl.histPos = 0
+	case 0:
+		rl.inferNextHistory()
+	default:
+		rl.walkHistory(-1)
+	}
+
+	rl.inferLine = false
+}
+
+func (rl *Instance) nextHistorySource() {
+	for i := range rl.historyNames {
+		if i == rl.historySourcePos+1 {
+			rl.historySourcePos = i
+			break
+		} else if i == len(rl.historyNames)-1 {
+			rl.historySourcePos = 0
+		}
+	}
+}
+
+func (rl *Instance) prevHistorySource() {
+	for i := range rl.historyNames {
+		if i == rl.historySourcePos-1 {
+			rl.historySourcePos = i
+			break
+		} else if i == len(rl.historyNames)-1 {
+			rl.historySourcePos = len(rl.historyNames) - 1
+		}
+	}
+}
+
+func (rl *Instance) currentHistory() History {
+	return rl.histories[rl.historyNames[rl.historySourcePos]]
+}
+
+// walkHistory - Browse historic lines
+func (rl *Instance) walkHistory(i int) {
+	var (
+		new string
+		err error
+	)
+
+	// Always use the main/first history.
+	rl.historySourcePos = 0
+	history := rl.currentHistory()
+
+	if history == nil || history.Len() == 0 {
 		return
 	}
 
@@ -134,101 +194,114 @@ func (rl *Instance) walkHistory(i int) {
 		rl.lineBuf = string(rl.line)
 	}
 
-	switch rl.histPos + i {
-	case 0, history.Len() + 1:
+	rl.histPos += i
+
+	switch {
+	case rl.histPos > history.Len():
+		// The history is greater than the length of history: maintain
+		// it at the last index, to keep the same line in the buffer.
+		rl.histPos = history.Len()
+	case rl.histPos < 0:
+		// We can never go lower than the last history line, which is our current line.
 		rl.histPos = 0
+	case rl.histPos == 0:
+		// The 0 index is our current line
 		rl.line = []rune(rl.lineBuf)
 		rl.pos = len(rl.lineBuf)
-		return
-	case -1:
-		rl.histPos = 0
-		rl.lineBuf = string(rl.line)
-	default:
-		dedup = true
-		old = string(rl.line)
-		new, err = history.GetLine(history.Len() - rl.histPos - 1)
+	}
+
+	// We now have the correct history index. Use it to find the history line.
+	// If the history position is not zero, we need to use a history line.
+	if rl.histPos > 0 {
+		new, err = history.GetLine(history.Len() - rl.histPos)
 		if err != nil {
 			rl.resetHelpers()
 			print("\r\n" + err.Error() + "\r\n")
-			print(rl.prompt)
+			// NOTE: Same here ? Should we print the prompt more properly ?
+			print(rl.Prompt.primary)
 			return
 		}
 
 		rl.clearLine()
-		rl.histPos += i
 		rl.line = []rune(new)
 		rl.pos = len(rl.line)
-		if rl.pos > 0 {
-			rl.pos--
-		}
-	}
-
-	// Update the line, and any helpers
-	rl.updateHelpers()
-
-	// In order to avoid having to type j/k twice each time for history navigation,
-	// we walk once again. This only ever happens when we aren't out of bounds.
-	if dedup && old == new {
-		rl.walkHistory(i)
 	}
 }
 
 // completeHistory - Populates a CompletionGroup with history and returns it the shell
 // we populate only one group, so as to pass it to the main completion engine.
-func (rl *Instance) completeHistory() (hist []*CompletionGroup) {
-	hist = make([]*CompletionGroup, 1)
-	hist[0] = &CompletionGroup{
-		DisplayType: TabDisplayMap,
-		MaxLength:   10,
+func (rl *Instance) completeHistory(forward bool) Completions {
+	if len(rl.histories) == 0 {
+		return Completions{}
 	}
 
-	// Switch to completion flux first
-	var history History
-	if !rl.mainHist {
-		if rl.altHistory == nil {
-			return
-		}
-		history = rl.altHistory
-		rl.histHint = []rune(rl.altHistName + ": ")
+	history := rl.currentHistory()
+	if history == nil {
+		return Completions{}
+	}
+
+	rl.histHint = []rune(rl.historyNames[rl.historySourcePos])
+
+	// Set the hint line with everything
+	rl.histHint = append([]rune(seqBold+seqFgCyanBright+string(rl.histHint)+seqReset), rl.tfLine...)
+	rl.histHint = append(rl.histHint, []rune(seqReset)...)
+
+	compLines := make([]Completion, 0)
+
+	// Set up iteration clauses
+	var histPos int
+	var done func(i int) bool
+	var move func(inc int) int
+
+	if forward {
+		histPos = -1
+		done = func(i int) bool { return i < history.Len() }
+		move = func(pos int) int { return pos + 1 }
 	} else {
-		if rl.mainHistory == nil {
-			return
-		}
-		history = rl.mainHistory
-		rl.histHint = []rune(rl.mainHistName + ": ")
+		histPos = history.Len()
+		done = func(i int) bool { return i > 0 }
+		move = func(pos int) int { return pos - 1 }
 	}
 
-	hist[0].init(rl)
+	// And generate the completions.
+NEXT_LINE:
+	for done(histPos) {
+		histPos = move(histPos)
 
-	var (
-		line string
-		num  string
-		err  error
-	)
-
-	// rl.tcPrefix = string(rl.line) // We use the current full line for filtering
-
-	for i := history.Len() - 2; i >= 1; i-- {
-		line, err = history.GetLine(i)
+		line, err := history.GetLine(histPos)
 		if err != nil {
 			continue
 		}
 
-		if !strings.HasPrefix(line, rl.tcPrefix) {
+		if !strings.HasPrefix(line, rl.tcPrefix) || strings.TrimSpace(line) == "" {
 			continue
 		}
 
 		line = strings.ReplaceAll(line, "\n", ` `)
 
-		if hist[0].Descriptions[line] != "" {
-			continue
+		for _, comp := range compLines {
+			if comp.Display == line {
+				continue NEXT_LINE
+			}
 		}
 
-		hist[0].Suggestions = append(hist[0].Suggestions, line)
-		num = strconv.Itoa(i)
+		// Proper pad for indexes
+		indexStr := strconv.Itoa(histPos)
+		pad := strings.Repeat(" ", len(strconv.Itoa(history.Len()))-len(indexStr))
+		display := fmt.Sprintf("%s%s %s%s", seqDim, indexStr+pad, seqDimReset, line)
 
-		hist[0].Descriptions[line] = "\033[38;5;237m" + num + RESET
+		value := Completion{
+			Display: display,
+			Value:   line,
+		}
+
+		compLines = append(compLines, value)
+
 	}
 
-	return
+	comps := CompleteRaw(compLines)
+	comps = comps.NoSort()
+	comps.PREFIX = string(rl.line)
+
+	return comps
 }

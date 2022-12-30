@@ -1,320 +1,202 @@
 package readline
 
 import (
-	"fmt"
 	"strings"
+	"unicode/utf8"
 
 	ansi "github.com/acarl005/stripansi"
 )
 
-// SetPrompt will define the readline prompt string.
-// It also calculates the runes in the string as well as any non-printable escape codes.
-func (rl *Instance) SetPrompt(s string) {
-	rl.prompt = s
+// prompt stores all prompt functions and strings,
+// and is in charge of printing them as well as
+// computing any resulting offsets.
+type prompt struct {
+	primary  string
+	primaryF func() string
+
+	right  string
+	rightF func() string
+
+	secondary  string
+	secondaryF func() string
+
+	transient  string
+	transientF func() string
+
+	tooltip  string
+	tooltipF func(tip string) string
+
+	// True if some logs have printed asynchronously
+	// since last loop. Check refresh prompt funcs.
+	stillOnRefresh bool
+
+	// The offset used on the first line, where either
+	// the full prompt (or the last line) is. Used for
+	// correctly replacing the cursor.
+	inputAt int
 }
 
-// SetPromptRight sets the right-most prompt for the shell
-func (rl *Instance) SetPromptRight(s string) {
-	rl.promptRight = s
+// Primary uses a function returning the string to use as the primary prompt
+func (p *prompt) Primary(prompt func() string) {
+	p.primaryF = prompt
 }
 
-// SetPromptTransient sets a transient prompt for the shell
-func (rl *Instance) SetPromptTransient(s string) {
-	rl.promptTransient = s
+// Right uses a function returning the string to use as the right prompt
+func (p *prompt) Right(prompt func() string) {
+	p.rightF = prompt
 }
 
-// SetPromptSecondary sets the secondary prompt for the shell.
-func (rl *Instance) SetPromptSecondary(s string) {
-	rl.promptSecondary = s
+// Secondary uses a function returning the prompt to use as the secondary prompt.
+func (p *prompt) Secondary(prompt func() string) {
+	p.secondaryF = prompt
 }
 
-// RefreshPromptLog - A simple function to print a string message (a log, or more broadly,
-// an asynchronous event) without bothering the user, and by "pushing" the prompt below the message.
-func (rl *Instance) RefreshPromptLog(log string) (err error) {
-	// We adjust cursor movement, depending on which mode we're currently in.
-	if !rl.modeTabCompletion {
-		rl.tcUsedY = 1
-		// Account for the hint line
-	} else if rl.modeTabCompletion && rl.modeAutoFind {
-		rl.tcUsedY = 0
-	} else {
-		rl.tcUsedY = 1
-	}
-
-	// Prompt offset
-	if rl.isMultiline {
-		rl.tcUsedY += 1
-	} else {
-		rl.tcUsedY += 0
-	}
-
-	// Clear the current prompt and everything below
-	print(seqClearLine)
-	if rl.stillOnRefresh {
-		moveCursorUp(1)
-	}
-	rl.stillOnRefresh = true
-	moveCursorUp(rl.hintY + rl.tcUsedY)
-	moveCursorBackwards(GetTermWidth())
-	print("\r\n" + seqClearScreenBelow)
-
-	// Print the log
-	fmt.Printf(log)
-
-	// Add a new line between the message and the prompt, so not overloading the UI
-	print("\n")
-
-	// Print the prompt
-	if rl.isMultiline {
-		rl.tcUsedY += 3
-		fmt.Println(rl.prompt)
-
-	} else {
-		rl.tcUsedY += 2
-		fmt.Print(rl.prompt)
-	}
-
-	// Refresh the line
-	rl.updateHelpers()
-
-	return
+// Transient uses a function returning the prompt to use as a transient prompt.
+func (p *prompt) Transient(prompt func() string) {
+	p.transientF = prompt
 }
 
-// RefreshPromptInPlace - Refreshes the prompt in the very same place he is.
-func (rl *Instance) RefreshPromptInPlace(prompt string) (err error) {
-	// We adjust cursor movement, depending on which mode we're currently in.
-	// Prompt data intependent
-	if !rl.modeTabCompletion {
-		rl.tcUsedY = 1
-		// Account for the hint line
-	} else if rl.modeTabCompletion && rl.modeAutoFind {
-		rl.tcUsedY = 0
-	} else {
-		rl.tcUsedY = 1
-	}
-
-	// Update the prompt if a special has been passed.
-	if prompt != "" {
-		rl.prompt = prompt
-	}
-
-	if rl.isMultiline {
-		rl.tcUsedY += 1
-	}
-
-	// Clear the input line and everything below
-	print(seqClearLine)
-	moveCursorUp(rl.hintY + rl.tcUsedY)
-	moveCursorBackwards(GetTermWidth())
-	print("\r\n" + seqClearScreenBelow)
-
-	// Add a new line if needed
-	if rl.isMultiline {
-		fmt.Println(rl.prompt)
-	} else {
-		fmt.Print(rl.prompt)
-	}
-
-	// Refresh the line
-	rl.updateHelpers()
-
-	return
-}
-
-// printPrompt assumes we are at the very beginning of the line
-// in which we will start printing the input buffer, and redraws
-// the various prompts, taking care of offsetting its initial position.
-func (rl *Instance) printPrompt() {
-	// 1 - Get the number of lines which we must go up before printing
-	var multilineOffset int
-	multilineOffset += strings.Count(rl.prompt, "\n")
-	multilineOffset += strings.Count(rl.promptRight, "\n")
-
-	moveCursorUp(multilineOffset)
-
-	// First draw the primary prompt. We are now where the input
-	// zone starts, but we still might have to print the right prompt.
-	print(rl.prompt)
-
-	if rl.promptRight != "" {
-		forwardOffset := GetTermWidth() - rl.inputAt - getRealLength(rl.promptRight)
-		moveCursorForwards(forwardOffset)
-		print(rl.promptRight)
-
-		// Normally we are on a newline, since we just completed the previous.
-		moveCursorUp(1)
-		moveCursorForwards(rl.inputAt)
-	}
-}
-
-// RefreshPromptCustom - Refresh the console prompt with custom values.
-// @prompt      => If not nil (""), will use this prompt instead of the currently set prompt.
-// @offset      => Used to set the number of lines to go upward, before reprinting. Set to 0 if not used.
-// @clearLine   => If true, will clean the current input line on the next refresh.
-func (rl *Instance) RefreshPromptCustom(prompt string, offset int, clearLine bool) (err error) {
-	// We adjust cursor movement, depending on which mode we're currently in.
-	if !rl.modeTabCompletion {
-		rl.tcUsedY = 1
-	} else if rl.modeTabCompletion && rl.modeAutoFind { // Account for the hint line
-		rl.tcUsedY = 0
-	} else {
-		rl.tcUsedY = 1
-	}
-
-	// Add user-provided offset
-	rl.tcUsedY += offset
-
-	// Go back to prompt position, then up to the user provided offset.
-	moveCursorBackwards(GetTermWidth())
-	moveCursorUp(rl.posY)
-	moveCursorUp(offset)
-
-	// Then clear everything below our new position
-	print(seqClearScreenBelow)
-
-	// Update the prompt if a special has been passed.
-	if prompt != "" {
-		rl.prompt = prompt
-	}
-
-	// Add a new line if needed
-	if rl.isMultiline && prompt == "" {
-	} else if rl.isMultiline {
-		fmt.Println(rl.prompt)
-	} else {
-		fmt.Print(rl.prompt)
-	}
-
-	// Refresh the line
-	rl.updateHelpers()
-
-	// If input line was empty, check that we clear it from detritus
-	// The three lines are borrowed from clearLine(), we don't need more.
-	if clearLine {
-		rl.clearLine()
-	}
-
-	return
+// Tooltip uses a function returning the prompt to use as a tooltip prompt.
+func (p *prompt) Tooltip(prompt func(tip string) string) {
+	p.tooltipF = prompt
 }
 
 // initPrompt is ran once at the beginning of an instance start.
-func (rl *Instance) initPrompt() {
-	// Here we have to either print prompt
-	// and return new line (multiline)
-	if rl.isMultiline {
-		fmt.Println(rl.prompt)
+func (p *prompt) init(rl *Instance) {
+	// Generate the prompt strings for this run
+	if p.primaryF != nil {
+		p.primary = p.primaryF()
 	}
-	rl.stillOnRefresh = false
-	rl.computePrompt() // initialise the prompt for first print
+	if p.rightF != nil {
+		p.right = p.rightF()
+	}
+	if p.transientF != nil {
+		p.transient = p.transientF()
+	}
+	if p.secondaryF != nil {
+		p.secondary = p.secondaryF()
+	}
+
+	// Compute some offsets needed by the last line.
+	rl.Prompt.compute(rl)
+
+	// Print the primary prompt, potentially excluding the last line.
+	print(p.getPrimary())
+	p.stillOnRefresh = false
 }
 
-// computePrompt - At any moment, returns an (1st or 2nd line) actualized prompt,
-// considering all input mode parameters and prompt string values.
-func (rl *Instance) computePrompt() (prompt []rune) {
-	switch rl.InputMode {
-	case Vim:
-		rl.computePromptVim()
-	case Emacs:
-		rl.computePromptEmacs()
+// getPromptPrimary returns either the entire prompt if
+// it's a single-line, or everything except the last line.
+func (p *prompt) getPrimary() string {
+	var primary string
+
+	lastLineIndex := strings.LastIndex(p.primary, "\n")
+	if lastLineIndex != -1 {
+		primary = p.primary[:lastLineIndex+1]
+	} else {
+		primary = p.primary
 	}
-	return
+
+	return primary
+}
+
+// Get the last line of the prompt to be printed.
+func (p *prompt) getPrimaryLastLine() string {
+	var lastLine string
+	lastLineIndex := strings.LastIndex(p.primary, "\n")
+	if lastLineIndex != -1 {
+		lastLine = p.primary[lastLineIndex+1:]
+	} else {
+		lastLine = p.primary
+	}
+
+	return lastLine
 }
 
 // computePromptAlt computes the correct lengths and offsets
 // for all prompt components, but does not print any of them.
-func (rl *Instance) computePromptAlt() {
-	// The length of the prompt on the last line is where
-	// the input line starts. Get this line and compute.
-	lastLineIndex := strings.LastIndex(rl.prompt, "\n")
+func (p *prompt) compute(rl *Instance) {
+	prompt := p.primary
+
+	lastLineIndex := strings.LastIndex(prompt, "\n")
 	if lastLineIndex != -1 {
-		rl.inputAt = getRealLength(rl.prompt[lastLineIndex:])
+		rl.Prompt.inputAt = getRealLength(prompt[lastLineIndex+1:])
 	} else {
-		rl.inputAt = getRealLength(rl.prompt[lastLineIndex:])
+		rl.Prompt.inputAt = getRealLength(prompt)
 	}
 }
 
-func (rl *Instance) computePromptVim() {
-	var vimStatus []rune // Here we use this as a temporary prompt string
-
-	// Compute Vim status string first
-	if rl.ShowVimMode {
-		switch rl.modeViMode {
-		case vimKeys:
-			vimStatus = []rune(vimKeysStr)
-		case vimInsert:
-			vimStatus = []rune(vimInsertStr)
-		case vimReplaceOnce:
-			vimStatus = []rune(vimReplaceOnceStr)
-		case vimReplaceMany:
-			vimStatus = []rune(vimReplaceManyStr)
-		case vimDelete:
-			vimStatus = []rune(vimDeleteStr)
-		}
-
-		vimStatus = rl.colorizeVimPrompt(vimStatus)
+// update is called after each key/widget processing, and refreshes
+// the prompts that need to be at these intervals
+func (p *prompt) update(rl *Instance) {
+	if rl.Prompt.tooltipF == nil {
+		return
 	}
 
-	// Append any optional prompts for multiline mode
-	if rl.isMultiline {
-		if rl.promptMultiline != "" {
-			rl.realPrompt = append(vimStatus, []rune(rl.promptMultiline)...)
-		} else {
-			rl.realPrompt = vimStatus
-			rl.realPrompt = append(rl.realPrompt, rl.defaultPrompt...)
-		}
-	}
-	// Equivalent for non-multiline
-	if !rl.isMultiline {
-		if rl.prompt != "" {
-			rl.realPrompt = append(vimStatus, []rune(" "+rl.prompt)...)
-		} else {
-			// Vim status might be empty, but we don't care
-			rl.realPrompt = append(rl.realPrompt, vimStatus...)
-		}
-		// We add the multiline prompt anyway, because it might be empty and thus have
-		// no effect on our user interface, or be specified and thus needed.
-		// if rl.MultilinePrompt != "" {
-		rl.realPrompt = append(rl.realPrompt, []rune(rl.promptMultiline)...)
-		// } else {
-		//         rl.realPrompt = append(rl.realPrompt, rl.defaultPrompt...)
-		// }
+	var tooltipWord string
+
+	shellWords := strings.Split(string(rl.line), " ")
+	if len(shellWords) > 0 {
+		tooltipWord = shellWords[0]
 	}
 
-	// Strip color escapes
-	rl.inputAt = getRealLength(string(rl.realPrompt))
+	rl.Prompt.tooltip = rl.Prompt.tooltipF(tooltipWord)
 }
 
-func (rl *Instance) computePromptEmacs() {
-	if rl.isMultiline {
-		if rl.promptMultiline != "" {
-			rl.realPrompt = []rune(rl.promptMultiline)
-		} else {
-			rl.realPrompt = rl.defaultPrompt
-		}
-	}
-	if !rl.isMultiline {
-		if rl.prompt != "" {
-			rl.realPrompt = []rune(rl.prompt)
-		}
-		// We add the multiline prompt anyway, because it might be empty and thus have
-		// no effect on our user interface, or be specified and thus needed.
-		// if rl.MultilinePrompt != "" {
-		rl.realPrompt = append(rl.realPrompt, []rune(rl.promptMultiline)...)
-		// } else {
-		//         rl.realPrompt = append(rl.realPrompt, rl.defaultPrompt...)
-		// }
+func (p *prompt) printLast(rl *Instance) {
+	// Either use RPROMPT or tooltip.
+	var rprompt string
+	if p.tooltip != "" {
+		rprompt = p.tooltip
+	} else {
+		rprompt = p.right
 	}
 
-	// Strip color escapes
-	rl.inputAt = getRealLength(string(rl.realPrompt))
+	// Print the primary prompt in any case.
+	defer print(p.getPrimaryLastLine())
+
+	if rprompt == "" {
+		return
+	}
+
+	// Only print the right prompt if the input line
+	// is shorter than the adjusted terminal width.
+	lineFits := (rl.Prompt.inputAt + len(rl.line) +
+		getRealLength(rprompt) + 1) < GetTermWidth()
+
+	if !lineFits {
+		return
+	}
+
+	// First go back to beginning of line, and clear everything
+	moveCursorBackwards(GetTermWidth())
+	print(seqClearLine)
+	print(seqClearScreenBelow)
+
+	// Go to where we must print the right prompt, print and go back
+	forwardOffset := GetTermWidth() - getRealLength(rprompt) - 1
+	moveCursorForwards(forwardOffset)
+	print(rprompt)
+	moveCursorBackwards(GetTermWidth())
 }
 
-func (rl *Instance) colorizeVimPrompt(p []rune) (cp []rune) {
-	if rl.VimModeColorize {
-		return []rune(fmt.Sprintf("%s%s%s", BOLD, string(p), RESET))
+func (p *prompt) printTransient(rl *Instance) {
+	if p.transient == "" {
+		return
 	}
 
-	return p
+	// First offset the newlines returned by our widgets,
+	// and clear everything below us.
+	moveCursorBackwards(GetTermWidth())
+	moveCursorUp(rl.fullY)
+	promptLines := strings.Count(p.primary, "\n")
+	moveCursorUp(promptLines)
+	print(seqClearLine)
+	print(seqClearScreenBelow)
+
+	// And print both the prompt and the input line.
+	print(p.transient)
+	println(string(rl.line))
 }
 
 // getRealLength - Some strings will have ANSI escape codes, which might be wrongly
@@ -322,5 +204,6 @@ func (rl *Instance) colorizeVimPrompt(p []rune) (cp []rune) {
 // components depend on other's length, so we always pass the string in this for
 // getting its real-printed length.
 func getRealLength(s string) (l int) {
-	return len(ansi.Strip(s))
+	colorStripped := ansi.Strip(s)
+	return utf8.RuneCountInString(colorStripped)
 }

@@ -1,302 +1,34 @@
 package readline
 
 import (
-	"fmt"
-	"os"
 	"strings"
+
+	ansi "github.com/acarl005/stripansi"
 )
 
-// inputMenuMove updates helpers when keys have an effect on them,
-// in normal (non-insert) editing mode, so most of the time in things
-// like completion menus.
-func (rl *Instance) inputMenuMove(r []rune) (ret bool) {
-	switch string(r) {
-
-	case seqShiftTab:
-		if rl.modeTabCompletion && !rl.compConfirmWait {
-			rl.tabCompletionReverse = true
-			rl.moveTabCompletionHighlight(-1, 0)
-			rl.updateVirtualComp()
-			rl.tabCompletionReverse = false
-			rl.renderHelpers()
-			rl.viUndoSkipAppend = true
-			return true
-		}
-
-	case seqUp:
-		if rl.modeTabCompletion {
-			rl.tabCompletionSelect = true
-			rl.tabCompletionReverse = true
-			rl.moveTabCompletionHighlight(-1, 0)
-			rl.updateVirtualComp()
-			rl.tabCompletionReverse = false
-			rl.renderHelpers()
-			return true
-		}
-		rl.mainHist = true
-		rl.walkHistory(1)
-
-	case seqDown:
-		if rl.modeTabCompletion {
-			rl.tabCompletionSelect = true
-			rl.moveTabCompletionHighlight(1, 0)
-			rl.updateVirtualComp()
-			rl.renderHelpers()
-			return true
-		}
-		rl.mainHist = true
-		rl.walkHistory(-1)
-
-	case seqForwards:
-		if rl.modeTabCompletion {
-			rl.tabCompletionSelect = true
-			rl.moveTabCompletionHighlight(1, 0)
-			rl.updateVirtualComp()
-			rl.renderHelpers()
-			return true
-		}
-		if (rl.modeViMode == vimInsert && rl.pos < len(rl.line)) ||
-			(rl.modeViMode != vimInsert && rl.pos < len(rl.line)-1) {
-			moveCursorForwards(1)
-			rl.pos++
-		}
-		rl.updateHelpers()
-		rl.viUndoSkipAppend = true
-
-	case seqBackwards:
-		if rl.modeTabCompletion {
-			rl.tabCompletionSelect = true
-			rl.tabCompletionReverse = true
-			rl.moveTabCompletionHighlight(-1, 0)
-			rl.updateVirtualComp()
-			rl.tabCompletionReverse = false
-			rl.renderHelpers()
-			return true
-		}
-		if rl.pos > 0 {
-			moveCursorBackwards(1)
-			rl.pos--
-		}
-		rl.viUndoSkipAppend = true
-		rl.updateHelpers()
-	}
-
-	return
-}
-
-// inputEscAll is different from inputEsc in that this
-// function is triggered when the shell is already in a
-// non insert state, which happens in some completion modes,
-// and in Vim mode.
-func (rl *Instance) inputEscAll(r []rune) (ret bool) {
-	switch {
-	case rl.modeAutoFind:
-		rl.resetTabFind()
-		rl.clearHelpers()
-		rl.resetTabCompletion()
-		rl.resetHelpers()
-		rl.renderHelpers()
-
-	case rl.modeTabFind:
-		rl.resetTabFind()
-		rl.resetTabCompletion()
-
-	case rl.modeTabCompletion:
-		rl.clearHelpers()
-		rl.resetTabCompletion()
-		rl.renderHelpers()
-
-	default:
-		// No matter the input mode, we exit
-		// any completion confirm if there's one.
-		if rl.compConfirmWait {
-			rl.compConfirmWait = false
-			rl.clearHelpers()
-			rl.renderHelpers()
-			return true
-		}
-
-		// If we are in Vim mode, the escape key has its usage.
-		// Otherwise in emacs mode the escape key does nothing.
-		if rl.InputMode == Vim {
-			rl.viEscape(r)
-			return true
-		}
-
-		// This refreshed and actually prints the new Vim status
-		// if we have indeed change the Vim mode.
-		rl.clearHelpers()
-		rl.renderHelpers()
-	}
-
-	return
-}
-
-func (rl *Instance) inputLineMove(r []rune) (ret bool) {
-	switch string(r) {
-	case seqCtrlLeftArrow:
-		rl.moveCursorByAdjust(rl.viJumpB(tokeniseLine))
-		rl.updateHelpers()
-		return true
-	case seqCtrlRightArrow:
-		rl.moveCursorByAdjust(rl.viJumpW(tokeniseLine))
-		rl.updateHelpers()
-		return true
-
-	case seqDelete:
-		if rl.modeTabFind {
-			rl.backspaceTabFind()
-		} else {
-			rl.deleteBackspace()
-		}
-	case seqHome, seqHomeSc:
-		if rl.modeTabCompletion {
-			return true
-		}
-		moveCursorBackwards(rl.pos)
-		rl.pos = 0
-		rl.viUndoSkipAppend = true
-
-	case seqEnd, seqEndSc:
-		if rl.modeTabCompletion {
-			return true
-		}
-		moveCursorForwards(len(rl.line) - rl.pos)
-		rl.pos = len(rl.line)
-		rl.viUndoSkipAppend = true
-
-	case seqAltR:
-		// TODO: Same here, that is a completion helper, should not be here.
-		rl.resetVirtualComp(false)
-		// For some modes only, if we are in vim Keys mode,
-		// we toogle back to insert mode. For others, we return
-		// without getting the completions.
-		if rl.modeViMode != vimInsert {
-			rl.modeViMode = vimInsert
-		}
-
-		rl.mainHist = false // true before
-		rl.searchMode = HistoryFind
-		rl.modeAutoFind = true
-		rl.modeTabCompletion = true
-
-		rl.modeTabFind = true
-		rl.updateTabFind([]rune{})
-		rl.viUndoSkipAppend = true
-	}
-
-	return
-}
-
-// inputInsertKey is the last helper that can be caught in the key dispatcher
-// process, and it will either use this key as an action modifier (Vim) or input
-// it into the current shell line.
-func (rl *Instance) inputInsertKey(r []rune) {
-	if rl.modeTabFind {
-		return
-	}
-
-	// alt+numeric append / delete
-	if len(r) == 2 && '1' <= r[1] && r[1] <= '9' {
-		if rl.modeViMode == vimDelete {
-			rl.viDelete(r[1])
-			return
-		}
-
-		line, err := rl.mainHistory.GetLine(rl.mainHistory.Len() - 1)
-		if err != nil {
-			return
-		}
-		if !rl.mainHist {
-			line, err = rl.altHistory.GetLine(rl.altHistory.Len() - 1)
-			if err != nil {
-				return
-			}
-		}
-
-		tokens, _, _ := tokeniseSplitSpaces([]rune(line), 0)
-		pos := int(r[1]) - 48 // convert ASCII to integer
-		if pos > len(tokens) {
-			return
-		}
-		rl.insert([]rune(tokens[pos-1]))
-
-		return
-	}
-
-	// The character has been inserted as a buffer, or caught
-	// as an action modifier, so we don't add it to our undo buffer.
-	rl.viUndoSkipAppend = true
-}
-
-func (rl *Instance) carriageReturn() {
-	rl.clearHelpers()
-	print("\r\n")
-	if rl.HistoryAutoWrite {
-		var err error
-
-		// Main history
-		if rl.mainHistory != nil {
-			rl.histPos, err = rl.mainHistory.Write(string(rl.line))
-			if err != nil {
-				print(err.Error() + "\r\n")
-			}
-		}
-		// Alternative history
-		if rl.altHistory != nil {
-			rl.histPos, err = rl.altHistory.Write(string(rl.line))
-			if err != nil {
-				print(err.Error() + "\r\n")
-			}
-		}
-	}
-}
-
-func (rl *Instance) clearScreen() {
-	print(seqClearScreen)
-	print(seqCursorTopLeft)
-	if rl.isMultiline {
-		// TODO: here rander prompt in function correctly, all prompts.
-		fmt.Println(rl.prompt)
-	}
-	print(seqClearScreenBelow)
-
-	rl.resetHintText()
-	rl.getHintText()
-	rl.renderHelpers()
-}
-
-// initLine is ran once at the beginning of an instance start.
+// initLine is ran once at the beginning of an instance readline run.
 func (rl *Instance) initLine() {
-	rl.line = []rune{}
-	rl.currentComp = []rune{} // No virtual completion yet
-	rl.lineComp = []rune{}    // So no virtual line either
-	rl.modeViMode = vimInsert
-	rl.pos = 0
-	rl.posY = 0
-}
-
-// readInput reads input from stdin and returns the result, length or an error.
-func (rl *Instance) readInput() (b []byte, i int, err error) {
-	rl.viUndoSkipAppend = false
-	b = make([]byte, 1024)
-
-	if !rl.skipStdinRead {
-		i, err = os.Stdin.Read(b)
-		if err != nil {
-			return
-		}
+	// We only reset the line when we don't need it
+	// to retrieve an matching one/ an history pos index.
+	if !rl.inferLine {
+		rl.line = []rune{}
+		rl.pos = 0
+		rl.posY = 0
 	}
 
-	rl.skipStdinRead = false
+	rl.comp = []rune{}     // No virtual completion yet
+	rl.compLine = []rune{} // So no virtual line either
 
-	return
+	rl.resetSelection()
+
+	// Highlighting
+	rl.resetRegions()
 }
 
 // When the DelayedSyntaxWorker gives us a new line, we need to check if there
 // is any processing to be made, that all lines match in terms of content.
 func (rl *Instance) updateLine(line []rune) {
-	if len(rl.currentComp) > 0 {
+	if len(rl.comp) > 0 {
 	} else {
 		rl.line = line
 	}
@@ -304,21 +36,75 @@ func (rl *Instance) updateLine(line []rune) {
 	rl.renderHelpers()
 }
 
-// getLine - In many places we need the current line input. We either return the real line,
+// getLineVirtual - In many places we need the current line input. We either return the real line,
 // or the one that includes the current completion candidate, if there is any.
-func (rl *Instance) getLine() []rune {
-	if len(rl.currentComp) > 0 {
-		return rl.lineComp
+func (rl *Instance) getLineVirtual() []rune {
+	if len(rl.comp) > 0 {
+		return rl.compLine
 	}
 	return rl.line
 }
 
-// echo - refresh the current input line, either virtually completed or not.
+// computeLine computes the number of lines that the input line spans.
+func (rl *Instance) computeLine() {
+	var usedLines, usedX int
+
+	var line string
+	if len(rl.comp) > 0 {
+		line = string(rl.compLine)
+	} else {
+		line = string(rl.line)
+	}
+
+	// We split the input line on every newline first
+	// We determine if each line alone spans more than one line.
+	for i, line := range strings.Split(line, "\n") {
+
+		lineLen := len(line)
+		usedX += lineLen
+
+		// Adjust for the first line that is printed after the prompt.
+		if i == 0 {
+			lineLen += rl.Prompt.inputAt
+		}
+
+		usedLines += lineLen / GetTermWidth()
+		remain := lineLen % GetTermWidth()
+		if remain != 0 {
+			usedLines++
+		}
+
+		// The last line gives us the full rest
+		if i == len(strings.Split(line, "\n"))-1 {
+			rl.fullX = remain
+		}
+	}
+
+	rl.fullY = usedLines
+}
+
+// computeCursorPos determines the X and Y coordinates of the cursor.
+func (rl *Instance) computeCursorPos() {
+	line := rl.getLineVirtual()
+
+	if rl.pos < 0 {
+		rl.pos = 0
+	} else if rl.pos > len(line) {
+		rl.pos = len(line)
+	}
+
+	// In Vim command mode, the cursor must be on the last character
+	if rl.main == vicmd && rl.pos == len(rl.line) && rl.pos > 0 {
+		rl.pos--
+	}
+}
+
+// printLine - refresh the current input line, either virtually completed or not.
 // also renders the current completions and hints. To be noted, the updateReferences()
 // function is only ever called once, and after having moved back to prompt position
 // and having printed the line: this is so that at any moment, everyone has the good
 // values for moving around, synchronized with the update input line.
-func (rl *Instance) echo() {
+func (rl *Instance) printLine() {
 	// Then we print the prompt, and the line,
 	switch {
 	case rl.PasswordMask != 0:
@@ -331,31 +117,33 @@ func (rl *Instance) echo() {
 		moveCursorUp(rl.posY)
 		print(seqClearScreenBelow)
 
-		// Print the prompt
-		// print(string(rl.realPrompt))
-
 		// We are the very beginning of the line ON WHICH we are
-		// going to write the input line, but the prompt, if any
-		// has erased.
-		// We need to go up the number of lines for the prompts,
-		// and then print them again.
-		rl.printPrompt()
+		// going to write the input line, not higher, even if the
+		// entire primary+right prompt span several lines.
+		rl.Prompt.printLast(rl)
 
 		// Assemble the line, taking virtual completions into account
-		var line []rune
-		if len(rl.currentComp) > 0 {
-			line = rl.lineComp
-		} else {
-			line = rl.line
-		}
+		line := rl.getLineVirtual()
+		highlighted := string(line) + " "
 
 		// Print the input line with optional syntax highlighting
 		if rl.SyntaxHighlighter != nil {
-			print(rl.SyntaxHighlighter(line) + " ")
-		} else {
-			print(string(line) + " ")
+			highlighted = rl.SyntaxHighlighter(line) + " "
+		}
+
+		// Adapt if there is a visual selection active
+		highlighted = rl.highlightLine([]rune(highlighted))
+
+		// And print
+		print(highlighted)
+
+		if len(rl.histSuggested) > 0 {
+			moveCursorBackwards(1)
+			print(seqDim + string(rl.histSuggested) + seqReset)
 		}
 	}
+
+	rl.computeCursorPos()
 
 	// Update references with new coordinates only now, because
 	// the new line may be longer/shorter than the previous one.
@@ -366,6 +154,32 @@ func (rl *Instance) echo() {
 	moveCursorUp(rl.fullY)
 	moveCursorDown(rl.posY)
 	moveCursorForwards(rl.posX)
+}
+
+func (rl *Instance) clearLine() {
+	if len(rl.line) == 0 {
+		return
+	}
+
+	// We need to go back to prompt
+	moveCursorUp(rl.posY)
+	moveCursorBackwards(GetTermWidth())
+	moveCursorForwards(rl.Prompt.inputAt)
+
+	// Clear everything after & below the cursor
+	print(seqClearScreenBelow)
+
+	// Real input line
+	rl.line = []rune{}
+	rl.compLine = []rune{}
+	rl.pos = 0
+	rl.posX = 0
+	rl.fullX = 0
+	rl.posY = 0
+	rl.fullY = 0
+
+	// Completions are also reset
+	rl.clearVirtualComp()
 }
 
 func (rl *Instance) insert(r []rune) {
@@ -387,8 +201,8 @@ func (rl *Instance) insert(r []rune) {
 
 	// We are inserting somewhere in the middle
 	case rl.pos < len(rl.line):
-		r := append(r, rl.line[rl.pos:]...)
-		rl.line = append(rl.line[:rl.pos], r...)
+		forwardLine := append(r, rl.line[rl.pos:]...)
+		rl.line = append(rl.line[:rl.pos], forwardLine...)
 
 	// We are at the end of the input line
 	case rl.pos == len(rl.line):
@@ -396,12 +210,34 @@ func (rl *Instance) insert(r []rune) {
 	}
 
 	rl.pos += len(r)
-
-	// This should also update the rl.pos
-	rl.updateHelpers()
 }
 
-func (rl *Instance) deleteX() {
+func (rl *Instance) carriageReturn() {
+	// Remove all helpers and line autosuggest
+	rl.histSuggested = []rune{}
+	rl.clearHelpers()
+	rl.printLine()
+	print("\r\n")
+
+	if rl.config.HistoryAutoWrite && !rl.inferLine {
+		var err error
+
+		// Main history
+		for _, history := range rl.histories {
+			if history == nil {
+				continue
+			}
+
+			rl.histPos, err = history.Write(string(rl.line))
+			if err != nil {
+				print(err.Error() + "\r\n")
+			}
+
+		}
+	}
+}
+
+func (rl *Instance) deletex() {
 	switch {
 	case len(rl.line) == 0:
 		return
@@ -415,18 +251,16 @@ func (rl *Instance) deleteX() {
 	default:
 		rl.line = append(rl.line[:rl.pos], rl.line[rl.pos+1:]...)
 	}
-
-	rl.updateHelpers()
 }
 
-func (rl *Instance) deleteBackspace() {
+func (rl *Instance) deleteX() {
 	switch {
 	case len(rl.line) == 0:
 		return
 	case rl.pos == 0:
-		rl.line = rl.line[1:]
+		return
 	case rl.pos > len(rl.line):
-		rl.backspace() // There is an infite loop going on here...
+		rl.pos = len(rl.line)
 	case rl.pos == len(rl.line):
 		rl.pos--
 		rl.line = rl.line[:rl.pos]
@@ -434,34 +268,6 @@ func (rl *Instance) deleteBackspace() {
 		rl.pos--
 		rl.line = append(rl.line[:rl.pos], rl.line[rl.pos+1:]...)
 	}
-
-	rl.updateHelpers()
-}
-
-func (rl *Instance) clearLine() {
-	if len(rl.line) == 0 {
-		return
-	}
-
-	// We need to go back to prompt
-	moveCursorUp(rl.posY)
-	moveCursorBackwards(GetTermWidth())
-	moveCursorForwards(rl.inputAt)
-
-	// Clear everything after & below the cursor
-	print(seqClearScreenBelow)
-
-	// Real input line
-	rl.line = []rune{}
-	rl.lineComp = []rune{}
-	rl.pos = 0
-	rl.posX = 0
-	rl.fullX = 0
-	rl.posY = 0
-	rl.fullY = 0
-
-	// Completions are also reset
-	rl.clearVirtualComp()
 }
 
 func (rl *Instance) deleteToBeginning() {
@@ -471,41 +277,62 @@ func (rl *Instance) deleteToBeginning() {
 	rl.pos = 0
 }
 
-// handleKeyPress is in charge of executing the handler that is register for a given keypress.
-func (rl *Instance) handleKeyPress(s string) (done, mustReturn bool, val string, err error) {
-	rl.clearHelpers()
+// substrPos gets the index pos of a char in the input line, starting
+// from cursor, either backward or forward. Returns -1 if not found.
+func (rl *Instance) substrPos(r rune, forward bool) (pos int) {
+	pos = -1
+	initPos := rl.pos
 
-	ret := rl.evtKeyPress[s](s, rl.line, rl.pos)
+	rl.findAndMoveCursor(string(r), 1, forward, false)
 
-	rl.clearLine()
-	rl.line = append(ret.NewLine, []rune{}...)
-	rl.updateHelpers() // rl.echo
-	rl.pos = ret.NewPos
-
-	if ret.ClearHelpers {
-		rl.resetHelpers()
-	} else {
-		rl.updateHelpers()
+	if rl.pos != initPos {
+		pos = rl.pos
+		rl.pos = initPos
 	}
 
-	if len(ret.HintText) > 0 {
-		rl.hintText = ret.HintText
-		rl.clearHelpers()
-		rl.renderHelpers()
-	}
-	if !ret.ForwardKey {
-		done = true
+	return
+}
 
+// lineSlice returns a subset of the current input line.
+func (rl *Instance) lineSlice(adjust int) (slice string) {
+	switch {
+	case rl.pos+adjust > len(rl.line):
+		slice = string(rl.line[rl.pos:])
+	case adjust < 0:
+		if rl.pos+adjust < 0 {
+			slice = string(rl.line[:rl.pos])
+		} else {
+			slice = string(rl.line[rl.pos+adjust : rl.pos])
+		}
+	default:
+		slice = string(rl.line[rl.pos : rl.pos+adjust])
+	}
+
+	return
+}
+
+// wrapText - Wraps a text given a specified width, and returns the formatted
+// string as well the number of lines it will occupy
+func wrapText(text string, lineWidth int) (wrapped string, lines int) {
+	words := strings.Fields(text)
+	if len(words) == 0 {
 		return
 	}
-
-	if ret.CloseReadline {
-		rl.clearHelpers()
-		mustReturn = true
-		val = string(rl.line)
-
-		return
+	wrapped = words[0]
+	spaceLeft := lineWidth - len(wrapped)
+	// There must be at least a line
+	if text != "" {
+		lines++
 	}
-
+	for _, word := range words[1:] {
+		if len(ansi.Strip(word))+1 > spaceLeft {
+			lines++
+			wrapped += "\n" + word
+			spaceLeft = lineWidth - len(word)
+		} else {
+			wrapped += " " + word
+			spaceLeft -= 1 + len(word)
+		}
+	}
 	return
 }
