@@ -1,0 +1,14 @@
+# List of PR labels for console 
+
+commands:
+- run.go
+- console.go
+menus:
+- menu.go
+prompts:
+- prompt.go
+readline:
+- syntax-highlighter.go
+completions:
+- tab-completer.go
+
