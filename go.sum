@@ -128,6 +128,8 @@ github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZN
 github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c/go.mod h1:OmDBASR4679mdNQnz2pUhc2G8CO2JrUAVFDRBDP/hJE=
 github.com/power-devops/perfstat v0.0.0-20221212215047-62379fc7944b h1:0LFwY6Q3gMACTjAbMZBjXAqTOzOwFaj2Ld6cjeQ7Rig=
 github.com/power-devops/perfstat v0.0.0-20221212215047-62379fc7944b/go.mod h1:OmDBASR4679mdNQnz2pUhc2G8CO2JrUAVFDRBDP/hJE=
+github.com/reeflective/carapace v0.25.2-0.20221230205418-4a4af82fcb3f h1:HUrUaQfCjtjMeiW1ltN9R/OaIcnSdYG1unJJQagF+hA=
+github.com/reeflective/carapace v0.25.2-0.20221230205418-4a4af82fcb3f/go.mod h1:/ALYHicIpak6TjQnKl7HupclqJydy2LQb6CkawYBxDo=
 github.com/reeflective/flags v0.0.0-20221227223942-7974e9681270 h1:HFgVrtZx53drxGoLBqp/9WzPXBO2P6LOWoBe8g2i6jg=
 github.com/reeflective/flags v0.0.0-20221227223942-7974e9681270/go.mod h1:G+auUBbDM+jB5sfDTWg93OrkzzVOHYlZheAjKILvVsc=
 github.com/reeflective/readline v0.1.0-beta.0.20221228215536-01b482899e37 h1:Rc+e6wwP04HmKVJ6fhSIinVlWBdXzBHilYhLASR3kYA=
@@ -141,8 +143,6 @@ github.com/rivo/uniseg v0.4.3/go.mod h1:FN3SvrM+Zdj16jyLfmOkMNblXMcoc8DfTHruCPUc
 github.com/rogpeppe/go-internal v1.6.1/go.mod h1:xXDCJY+GAPziupqXw64V24skbSoqbTEfhy4qGm1nDQc=
 github.com/rogpeppe/go-internal v1.8.0 h1:FCbCCtXNOY3UtUuHUYaghJg4y7Fd14rXifAYUAtL9R8=
 github.com/rogpeppe/go-internal v1.8.0/go.mod h1:WmiCO8CzOY8rg0OYDC4/i/2WRWAB6poM+XZ2dLUbcbE=
-github.com/rsteube/carapace v0.29.1 h1:KwBt50Q9XFNIbYURMNjIMxe3/LWKf2LCWeH4l0uxaRo=
-github.com/rsteube/carapace v0.29.1/go.mod h1:/ALYHicIpak6TjQnKl7HupclqJydy2LQb6CkawYBxDo=
 github.com/rsteube/carapace-bin v0.19.0 h1:pmWOrtO0Fz4G+55OKHjjA4ihIKZKzDZh3Z8X1pY8IBk=
 github.com/rsteube/carapace-bin v0.19.0/go.mod h1:yAF4advL85gx7ZFxYYsJu8Rgp2akz4TqvD6M0Bg0VGc=
 github.com/russross/blackfriday/v2 v2.1.0/go.mod h1:+Rmxgy9KzJVeS9/2gXHxylqXiyQDYRxCVz55jmeOWTM=
