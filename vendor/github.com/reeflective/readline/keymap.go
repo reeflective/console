@@ -11,14 +11,14 @@ type keymap map[string]string
 // These are the root keymaps used in the readline shell.
 // Their functioning is similar to how ZSH organizes keymaps.
 const (
-	// Editor
+	// Editor.
 	emacs  keymapMode = "emacs"
 	viins  keymapMode = "viins"
 	vicmd  keymapMode = "vicmd"
 	viopp  keymapMode = "viopp"
 	visual keymapMode = "visual"
 
-	// Completion and search
+	// Completion and search.
 	isearch    keymapMode = "isearch"
 	menuselect keymapMode = "menuselect"
 )
@@ -79,7 +79,7 @@ func (rl *Instance) matchKeymap(key string, mode keymapMode) (cb EventCallback, 
 	}
 
 	// Get the widgets for which the key matches exactly or by prefix.
-	cb, prefixed := rl.matchWidgets(key, matchWidgets, mode)
+	cb, prefixed := rl.matchWidgets(key, matchWidgets)
 
 	// When we have no match, and we are currently using the main
 	// keymap in insert mode, we litteraly insert the keys.

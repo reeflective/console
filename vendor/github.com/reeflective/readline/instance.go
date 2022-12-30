@@ -33,7 +33,7 @@ type Instance struct {
 	// interruptHandlers are all special handlers being called when the shell receives an interrupt
 	// signal key, like CtrlC/CtrlD. These are not directly assigned in the various keymaps, and are
 	// matched against input keys before any other keymap.
-	interruptHandlers map[string]func() error
+	interruptHandlers map[rune]func() error
 
 	//
 	// Vim Operating Parameters -------------------------------------------------------------------
@@ -78,7 +78,7 @@ type Instance struct {
 	fullX     int    // X coordinate of the full input line, including the prompt if needed.
 	fullY     int    // Y offset to the end of input line.
 
-	// Buffer received from host programms
+	// Buffer received from host programs
 	multilineBuffer []byte
 	multilineSplit  []string
 	skipStdinRead   bool
