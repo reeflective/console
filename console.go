@@ -32,7 +32,14 @@ type Console struct {
 
 	// PreCmdRunHooks - Once the user has entered a command, but before executing
 	// the target command, the console will execute every function in this list.
+	// These hooks are distinct from the cobra.PreRun() or OnInitialize hooks,
+	// and might be used in combination with them.
 	PreCmdRunHooks []func()
+
+	// PostCmdRunHooks are run after the target cobra command has been executed.
+	// These hooks are distinct from the cobra.PreRun() or OnFinalize hooks,
+	// and might be used in combination with them.
+	PostCmdRunHooks []func()
 
 	// True if the console is currently running a command. This is used by
 	// the various asynchronous log/message functions, which need to adapt their

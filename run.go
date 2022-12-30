@@ -2,148 +2,106 @@ package console
 
 import (
 	"fmt"
-	"regexp"
-	"strings"
+
+	"github.com/kballard/go-shellquote"
 )
 
 // Run - Start the console application (readline loop). Blocking.
 // The error returned will always be an error that the console
 // application does not understand or cannot handle.
 func (c *Console) Run() (err error) {
+	// Since we avoid loading prompt engines before running the application
+	// (due to a library consumer having to load a custom prompt configuration)
+	// we ensure all menus have a non-nil engine.
+	c.checkPrompts()
 
 	for {
-		// Reload the configuration: this should never change most, because from
-		// another execution to another (in most commands) this not ever modified.
-		// But we ensure the console is always up-to-date with user-entered-but-
-		// not-saved console settings.
-		c.reloadConfig()
-
-		// Recompute the prompt for the current menu
-		// First check and pull from configuration.
-		c.current.Prompt.refreshPromptSettings()
-
-		// Set the shell history sources with menu ones
-		c.shell.SetHistoryCtrlR(c.current.historyCtrlRName, c.current.historyCtrlR)
-		c.shell.SetHistoryAltR(c.current.historyAltRName, c.current.historyAltR)
-
-		// Instantiate and bind all commands for the current
-		// menu, respecting any filter used to hide some of them.
-		c.bindCommands()
-
-		// Run user-provided pre-loop hooks
-		// c.runPreLoopHooks()
-
-		// Leave a newline before redrawing the prompt
-		if c.LeaveNewline {
-			fmt.Println()
-		}
+		c.reloadConfig()          // Rebind the prompt helpers, and similar stuff.
+		c.runPreLoopHooks()       // Run user-provided pre-loop hooks
+		menu := c.menus.current() // We work with the active menu.
 
 		// Block and read user input. Provides completion, syntax, hints, etc.
-		// Various types of errors might arise from here. We handle them
-		// in a special function, where we can specify behavior for certain errors.
+		// Various types of errors might arise from here. We handle them in a
+		// special function, where we can specify behavior for certain errors.
 		line, err := c.shell.Readline()
 		if err != nil {
-			// Handle readline errors in a specialized function
-		}
+			menu.handleInterrupt(err)
 
-		// If the menu prompt is asked to leave a newline
-		// between prompt and output, we print it now.
-		if c.PreOutputNewline {
-			fmt.Println()
-		}
-
-		// The line might need some sanitization, like removing empty/redundant spaces,
-		// but also in case where there are weird slashes and other kung-fu bombs.
-		args, empty := c.sanitizeInput(line)
-		if empty {
 			continue
 		}
 
-		// Run user-provided pre-run line hooks, which may modify the input line
+		// Parse the raw command line into shell-compliant arguments.
+		args, err := shellquote.Split(line)
+		if err != nil {
+			fmt.Printf("Line error: %s\n", err.Error())
+
+			continue
+		}
+
+		// Run user-provided pre-run line hooks,
+		// which may modify the input line
 		args = c.runLineHooks(args)
 
-		// Parse any special rune tokens, before trying to evaluate any expanded variable.
-		tokenParsed, err := c.parseTokens(args)
-		if err != nil {
-			tokenParsed = args
-		}
-
-		// Parse the input line for any expanded variables, and evaluate them.
-		args, err = c.parseAllExpansionVariables(tokenParsed)
-		if err != nil {
-			fmt.Println(warn+"Failed to evaluate expanded variables: %s", err.Error())
-		}
-
-		// Run user-provided pre-run hooks
-		c.runPreRunHooks()
-
-		// We then pass the processed command line to the command parser,
-		// where any error arising from parsing or execution will be handled.
-		// Thus we don't need to handle any error here.
+		// Run all hooks and the command itself
 		c.execute(args)
 	}
 }
 
 func (c *Console) runPreLoopHooks() {
-	for _, hook := range c.PreLoopHooks {
+	for _, hook := range c.PreReadlineHooks {
 		hook()
 	}
+}
+
+func (c *Console) runLineHooks(args []string) []string {
+	processed := args
+
+	// Or modify them again
+	for _, hook := range c.PreCmdRunLineHooks {
+		processed, _ = hook(processed)
+	}
+
+	return processed
 }
 
 func (c *Console) runPreRunHooks() {
-	for _, hook := range c.PreRunHooks {
+	for _, hook := range c.PreCmdRunHooks {
 		hook()
 	}
 }
 
-func (c *Console) runLineHooks(args []string) (processed []string) {
-	// By default, pass args as they are
-	processed = args
-
-	// Or modify them again
-	for _, hook := range c.PreRunLineHooks {
-		processed, _ = hook(processed)
+func (c *Console) runPostRunHooks() {
+	for _, hook := range c.PostCmdRunHooks {
+		hook()
 	}
-	return
 }
 
-// sanitizeInput - Trims spaces and other unwished elements from the input line.
-func (c *Console) sanitizeInput(line string) (sanitized []string, empty bool) {
+// execute - The user has entered a command input line, the arguments
+// have been processed: we synchronize a few elements of the console,
+// then pass these arguments to the command parser for execution and error handling.
+func (c *Console) execute(args []string) {
+	c.runPreRunHooks()
 
-	// Assume the input is not empty
-	empty = false
+	// Asynchronous messages do not mess with the prompt from now on,
+	// until end of execution. Once we are done executing the command,
+	// they can again.
+	c.mutex.RLock()
+	c.isExecuting = true
+	c.mutex.RUnlock()
 
-	// Trim border spaces
-	trimmed := strings.TrimSpace(line)
-	if len(line) < 1 {
-		empty = true
-		return
-	}
+	defer func() {
+		c.mutex.RLock()
+		c.isExecuting = false
+		c.mutex.RUnlock()
+	}()
 
-	// Parse arguments for quotes, and split according to these quotes first:
-	// they might influence heavily on the go-flags argument parsing done further
-	// Split all strings with '' and ""
-	r := regexp.MustCompile(`[^\s"']+|"([^"]*)"|'([^']*)'`)
-	unfiltered := r.FindAllString(trimmed, -1)
+	// Assign those arguments to our parser
+	c.menus.current().SetArgs(args)
 
-	var test []string
-	for _, arg := range unfiltered {
-		if strings.HasPrefix(arg, "'") && strings.HasSuffix(arg, "'") {
-			trim := strings.TrimPrefix(arg, "'")
-			trim = strings.TrimSuffix(trim, "'")
-			test = append(test, trim)
-			continue
-		}
-		test = append(test, arg)
-	}
+	// Execute the command line, with the current menu' parser.
+	// Process the errors raised by the parser.
+	// A few of them are not really errors, and trigger some stuff.
+	c.menus.current().Execute()
 
-	// Catch any eventual empty items
-	for _, arg := range test {
-		// for _, arg := range unfiltered {
-		if arg != "" {
-			sanitized = append(sanitized, arg)
-		}
-	}
-
-	return
+	c.runPostRunHooks()
 }
