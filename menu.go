@@ -95,6 +95,30 @@ func (m *Menu) AddHistorySourceFile(name string, filepath string) {
 	m.mutex.RUnlock()
 }
 
+// DeleteHistorySource removes a history source from the menu.
+// This normally should only be used in two cases:
+// - You want to replace the default in-memory history with another one.
+// - You want to replace one of your history sources for some reason.
+func (m *Menu) DeleteHistorySource(name string) {
+	if name == m.Name() {
+		if name != "" {
+			name = "(" + name + ")"
+		}
+
+		name = fmt.Sprintf("local history %s", name)
+	}
+
+	delete(m.histories, name)
+
+	for i, hname := range m.historyNames {
+		if hname == name {
+			m.historyNames = append(m.historyNames[:i], m.historyNames[i+1:]...)
+
+			break
+		}
+	}
+}
+
 // menus manages all created menus for the console application.
 type menus map[string]*Menu
 
