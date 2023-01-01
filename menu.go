@@ -86,6 +86,15 @@ func (m *Menu) AddHistorySource(name string, source readline.History) {
 	m.mutex.RUnlock()
 }
 
+// AddHistorySourceFile adds a new source of history populated from
+// and writing to the specified "filepath" parameter.
+func (m *Menu) AddHistorySourceFile(name string, filepath string) {
+	m.mutex.RLock()
+	m.historyNames = append(m.historyNames, name)
+	m.histories[name], _ = readline.NewHistoryFromFile(filepath)
+	m.mutex.RUnlock()
+}
+
 // menus manages all created menus for the console application.
 type menus map[string]*Menu
 

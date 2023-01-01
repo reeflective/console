@@ -15,6 +15,10 @@ func (c *Console) Run() (err error) {
 	// we ensure all menus have a non-nil engine.
 	c.checkPrompts()
 
+	// Also, if the user specified custom histories to the
+	// current menu, they are not bound to the shell yet.
+	c.loadActiveHistories()
+
 	for {
 		c.reloadConfig()          // Rebind the prompt helpers, and similar stuff.
 		c.runPreLoopHooks()       // Run user-provided pre-loop hooks
@@ -44,6 +48,14 @@ func (c *Console) Run() (err error) {
 
 		// Run all hooks and the command itself
 		c.execute(args)
+	}
+}
+
+func (c *Console) loadActiveHistories() {
+	c.shell.DeleteHistorySource()
+
+	for _, name := range c.menus.current().historyNames {
+		c.shell.AddHistorySource(name, c.menus.current().histories[name])
 	}
 }
 
