@@ -1,0 +1,15 @@
+basic -f interrupt.go
+basic -cp=/home/user/backup/readline --email another@email.com
+
+testing that
+z readline
+
+
+
+help
+multiple-ambiguous --help
+help
+
+help
+basic -c
+basic

@@ -5,7 +5,7 @@
   </a>
   <br> <h1> Console </h1>
 
-  <p>  Application library for Cobra commands  </p>
+  <p>  Closed-loop application library for Cobra commands  </p>
 </div>
 
 
@@ -47,6 +47,7 @@ It aims to provide users with a modern interface at at minimal cost while allowi
 their commands and application core: the console will then transparently interface with these commands, and provide
 the various features below almost for free.
 
+
 ## Features
 
 ### Menus & Commands 
@@ -70,23 +71,23 @@ the various features below almost for free.
 
 <!-- ![readme-main-gif](https://github.com/maxlandon/gonsole/blob/assets/readme-main.gif) -->
 
----- 
+
 ## Documentation Contents
 
-### Developers
-* [Menus](https://github.com/maxlandon/gonsole/wiki/Menus)
-* [Configurations Overview](https://github.com/maxlandon/gonsole/wiki/Configurations-Overview)
-* [Setting Prompts & Input Modes](https://github.com/maxlandon/gonsole/wiki/Prompts-&-Input-Modes)
-* [Default commands](https://github.com/maxlandon/gonsole/wiki/Default-Commands)
-* [Declaring commands](https://github.com/maxlandon/gonsole/wiki/Declaring-Commands)
-* [Querying state from commands](https://github.com/maxlandon/gonsole/wiki/Querying-State-From-Commands)
-* [Completions (writing and binding)](https://github.com/maxlandon/gonsole/wiki/Completions)
-* [Additional Expansion completions](https://github.com/maxlandon/gonsole/wiki/Expansion-Completers)
-* [History Sources Declaration](https://github.com/maxlandon/gonsole/wiki/History-Sources-Declaration)
-* [Asynchronous Logs & Prompt Refresh](https://github.com/maxlandon/gonsole/wiki/Prompt-Refresh)
+You can install and use the [example application console](https://github.com/reeflective/console/tree/main/example). This example application 
+will give you a taste of the behavior and supported features. Additionally, the following 
+documentation is available in the [wiki](https://github.com/reeflective/console/wiki):
 
-### Users
-- [Vim Keys & Shortcuts](https://github.com/maxlandon/gonsole/wiki/Vim-Keys-&-Shortcuts)
-- [History sources](https://github.com/maxlandon/gonsole/wiki/History-Sources)
-- [Completions & Tab Search](https://github.com/maxlandon/gonsole/wiki/Completions-&-Tab-Search)
-- [Help and config commands](https://github.com/maxlandon/gonsole/wiki/Help-&-Config-Commands)
+* [Getting started](https://github.com/reeflective/console/Getting-Started) 
+* [Menus](https://github.com/reeflective/console/wiki/Menus)
+* [Prompts](https://github.com/reeflective/console/wiki/Prompts)
+* [Binding commands](https://github.com/reeflective/console/Binding-Commands)
+* [Accessing shell readline](https://github.com/reeflective/console/wiki/Readline-Shell)
+* [History Sources](https://github.com/reeflective/console/wiki/History-Sources)
+* [Default commands](https://github.com/maxlandon/gonsole/wiki/Default-Commands)
+* [Logging](https://github.com/reeflective/console/wiki/Logging)
+
+
+## Status
+
+
