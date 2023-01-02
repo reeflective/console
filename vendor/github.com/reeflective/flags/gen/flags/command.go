@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"reflect"
+	"strings"
 
 	"github.com/reeflective/flags"
 	"github.com/reeflective/flags/internal/scan"
@@ -31,8 +32,9 @@ func WithReset() func() {
 // - A struct containing substructs for postional parameters, and other with options.
 func Generate(data interface{}, opts ...flags.OptFunc) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:         os.Args[0],
-		Annotations: map[string]string{},
+		Use:              os.Args[0],
+		Annotations:      map[string]string{},
+		TraverseChildren: true,
 	}
 
 	// Scan the struct and bind all commands to this root.
@@ -73,9 +75,7 @@ func generate(cmd *cobra.Command, data interface{}, opts ...flags.OptFunc) {
 
 	// Subcommands, optional or not
 	if cmd.HasSubCommands() {
-		cmd.RunE = func(cmd *cobra.Command, args []string) error {
-			return nil
-		}
+		cmd.RunE = unknownSubcommandAction
 	} else if _, isCmd, impl := flags.IsCommand(reflect.ValueOf(data)); isCmd {
 		setRuns(cmd, impl)
 	}
@@ -92,11 +92,6 @@ func scanRoot(cmd *cobra.Command, group *cobra.Group, opts []flags.OptFunc) scan
 		if err != nil {
 			return true, fmt.Errorf("%w: %s", tag.ErrTag, err.Error())
 		}
-
-		// First, having a tag means this field should have our attention for
-		// something, whether it be an option, a positional, something to include
-		// as a module option, and so on. If we have to run some handlers no matter
-		// what the outcome is, we defer them first.
 
 		// If the field is marked as -one or more- positional arguments, we
 		// return either on a successful scan of them, or with an error doing so.
@@ -133,10 +128,8 @@ func command(cmd *cobra.Command, grp *cobra.Group, tag tag.MultiTag, val reflect
 
 	// ... and check the field implements at least the Commander interface
 	val, implements, cmdType := flags.IsCommand(val)
-	if !implements && len(name) != 0 && cmdType == nil {
-		return false, flags.ErrNotCommander
-	} else if !implements && len(name) == 0 {
-		return false, nil // Skip to next field
+	if !implements && len(name) == 0 {
+		return false, nil
 	}
 
 	// Always populate the maximum amount of information
@@ -157,12 +150,9 @@ func command(cmd *cobra.Command, grp *cobra.Group, tag tag.MultiTag, val reflect
 		return true, fmt.Errorf("%w: %s", scan.ErrScan, err.Error())
 	}
 
-	// If we have more than one subcommands and that we are NOT
-	// marked has having optional subcommands, remove our run function
-	// function, so that help printing can behave accordingly.
 	if _, isSet := tag.Get("subcommands-optional"); !isSet {
 		if len(subc.Commands()) > 0 {
-			cmd.RunE = nil
+			subc.RunE = unknownSubcommandAction
 		}
 	}
 
@@ -241,4 +231,23 @@ func setGroup(parent, subc *cobra.Command, parentGroup *cobra.Group, tagged stri
 	if group != nil {
 		subc.GroupID = group.ID
 	}
+}
+
+func unknownSubcommandAction(cmd *cobra.Command, args []string) error {
+	if len(args) == 0 {
+		return cmd.Help()
+	}
+
+	err := fmt.Sprintf("unknown subcommand %q for %q", args[0], cmd.Name())
+
+	if suggestions := cmd.SuggestionsFor(args[0]); len(suggestions) > 0 {
+		err += "\n\nDid you mean this?\n"
+		for _, s := range suggestions {
+			err += fmt.Sprintf("\t%v\n", s)
+		}
+
+		err = strings.TrimSuffix(err, "\n")
+	}
+
+	return fmt.Errorf(err)
 }

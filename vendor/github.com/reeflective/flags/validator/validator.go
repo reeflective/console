@@ -36,7 +36,7 @@ func (err *invalidVarError) Error() string {
 			tagname = strings.Trim(parts[1], "'")
 		}
 
-		return fmt.Sprintf("%s is not a valid %s", err.fieldValue, tagname)
+		return fmt.Sprintf("`%s` is not a valid %s", err.fieldValue, tagname)
 	}
 
 	// Or simply replace the empty key with the field name.

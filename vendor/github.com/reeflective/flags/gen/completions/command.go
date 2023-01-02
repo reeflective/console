@@ -23,10 +23,14 @@ func WithReset() func() {
 	return onFinalize
 }
 
-// Gen uses a carapace completion builder to register various completions
-// to its underlying cobra command, parsing again the native struct for type
-// and struct tags' information.
-// Returns the carapace, so you can work with completions should you like.
+// Gen uses a carapace completion builder to register various completions to its underlying
+// cobra command, parsing again the native struct for type and struct tags' information.
+// Arguments:
+// @cmd   - The application root cobra command, or an arbitrary one.
+// @data  - The struct containing commands/flags/positionals to scan for.
+// @comps - An optional, preexisting carapace engine. Most of the time, this can be nil.
+//
+// Returns the carapace, so you can further work with/register completions should you like to.
 func Generate(cmd *cobra.Command, data interface{}, comps *comp.Carapace) (*comp.Carapace, error) {
 	// Generate the completions a first time.
 	completions, err := generate(cmd.Root(), data, comps)

@@ -83,6 +83,12 @@ func ParseField(value reflect.Value, field reflect.StructField, optFuncs ...OptF
 	flag.Value = val
 	flagSet = append(flagSet, flag)
 
+	// The default value, if set through tags, is always
+	// overridden by the current value of the field.
+	if val.String() != "" {
+		flag.DefValue = append(flag.DefValue, val.String())
+	}
+
 	// If the user provided some custom flag
 	// value handlers/scanners, run on it.
 	if scanOpts.FlagFunc != nil {

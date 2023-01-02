@@ -44,9 +44,7 @@ func flagsGroup(cmd *cobra.Command, val reflect.Value, field *reflect.StructFiel
 
 	legacyGroup, legacyIsSet := mtag.Get("group")
 	commandGroup, commandsIsSet := mtag.Get("commands")
-	// description, _ := mtag.Get("description")
 
-	// if !legacyIsSet && !optionsIsSet && !commandsIsSet {
 	if !legacyIsSet && !commandsIsSet {
 		return false, nil
 	}
@@ -63,16 +61,6 @@ func flagsGroup(cmd *cobra.Command, val reflect.Value, field *reflect.StructFiel
 		ptrval = val.Addr()
 	}
 
-	// then settle on the name of the group, and the type of
-	// scan we must launch on it thereof.
-	// var groupName string
-
-	// if legacyIsSet {
-	// 	groupName = legacyGroup
-	// } else if optionsIsSet {
-	// 	groupName = optionsGroup
-	// }
-
 	// A group of options ("group" is the legacy name)
 	if legacyIsSet && legacyGroup != "" {
 		err := addFlagSet(cmd, mtag, ptrval.Interface(), opts)
@@ -86,6 +74,7 @@ func flagsGroup(cmd *cobra.Command, val reflect.Value, field *reflect.StructFiel
 		if !isStringFalsy(commandGroup) {
 			group = &cobra.Group{
 				Title: commandGroup,
+				ID:    commandGroup,
 			}
 			cmd.AddGroup(group)
 		}
@@ -125,7 +114,6 @@ func addFlagSet(cmd *cobra.Command, mtag tag.MultiTag, data interface{}, opts []
 		return err
 	}
 
-	// hidden, _ := mtag.Get("hidden")
 	flags.SetInterspersed(true)
 
 	persistent, _ := mtag.Get("persistent")

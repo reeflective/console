@@ -66,6 +66,12 @@ func getCompleters(args *positional.Args, comps *comp.Carapace) *compCache {
 	cache := newCompletionCache()
 
 	for _, arg := range args.Positionals() {
+		// By default, use the argument description as hint, in case there is
+		// no completion directive or implementation.
+		if completer, _ := hintCompletions(arg.Tag); completer != nil {
+			cache.add(arg.Index, completer)
+		}
+
 		// Make parser function, get completer implementations, how many arguments, etc.
 		if completer, _, _ := typeCompleter(arg.Value); completer != nil {
 			cache.add(arg.Index, completer)
@@ -85,7 +91,7 @@ func getCompleters(args *positional.Args, comps *comp.Carapace) *compCache {
 // argument, so that it can consume one/more of the positional words and add
 // completions to the cache if needed.
 func consumeWith(comps *compCache) positional.WordConsumer {
-	handler := func(args *positional.Args, arg *positional.Arg) error {
+	handler := func(args *positional.Args, arg *positional.Arg, _ int) error {
 		// First, pop all the words we KNOW we're not
 		// interested in, which is the number of minimum
 		// required words BEFORE us.

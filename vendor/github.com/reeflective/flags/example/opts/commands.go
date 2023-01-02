@@ -94,7 +94,7 @@ type DefaultOptions struct {
 	// Extensions illustrate the two possible uses of the `choice` tag:
 	// - With a single value, but with multiple tag uses.
 	// - With multiple values, space-separated.
-	Extensions []string `short:"e" long:"extensions" desc:"A flag with validated choices" choice:".json .go" choice:".yaml"`
+	Extensions []string `short:"e" long:"extensions" desc:"A flag with validated choices" choice:".json .go .yaml"`
 	Defaults   string   `short:"d" long:"default" desc:"A flag with a default value, if not specified" optional-value:"my-value"`
 }
 

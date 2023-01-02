@@ -39,7 +39,7 @@ func positionals(cmd *cobra.Command, stag tag.MultiTag, val reflect.Value, opts 
 		// Apply the words on the all/some of the positional fields,
 		// returning any words that have not been parsed in fields,
 		// and an error if one of the positionals has failed.
-		retargs, err := positionals.Parse(args)
+		retargs, err := positionals.Parse(args, cmd.ArgsLenAtDash())
 
 		// Once we have consumed the words we wanted, we update the
 		// command's return (non-consummed) arguments, to be passed

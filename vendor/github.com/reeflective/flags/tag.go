@@ -39,6 +39,9 @@ func parseFlagTag(field reflect.StructField, options opts) (*Flag, *tag.MultiTag
 		flag.Name = options.Prefix + flag.Name
 	}
 
+	hidden, _ := flagTags.Get("hidden")
+	flag.Hidden = hidden != ""
+
 	return flag, flagTags, nil
 }
 
@@ -58,6 +61,11 @@ func getFlagTags(field reflect.StructField, options opts) (*tag.MultiTag, bool, 
 
 	// Else we skip this field only if there's not tag on it
 	if none {
+		return &flagTags, true, nil
+	}
+
+	// Or if there is a "no-flag" tag
+	if noFlag, _ := flagTags.Get("no-flag"); noFlag != "" {
 		return &flagTags, true, nil
 	}
 

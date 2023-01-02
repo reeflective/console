@@ -9,46 +9,47 @@ import (
 	comp "github.com/rsteube/carapace"
 )
 
-// Completer represents a type that is able to return some
-// completions based on the current carapace Context.
+// Completer represents a type that is able to return some completions based on the current carapace Context.
+// Please see https://rsteube.github.io/carapace/carapace.html for using the carapace library completers,
+// or https://github.com/reeflective/flags/wiki/Completions for an overview of completion features/use.
 type Completer interface {
 	Complete(ctx comp.Context) comp.Action
 }
 
-// CompDirective identifies one of reflags' builtin completer functions.
-type CompDirective int
+// compDirective identifies one of reflags' builtin completer functions.
+type compDirective int
 
 const (
 	// Public directives =========================================================.
 
-	// CompError indicates an error occurred and completions should handled accordingly.
-	CompError CompDirective = 1 << iota
+	// compError indicates an error occurred and completions should handled accordingly.
+	compError compDirective = 1 << iota
 
-	// CompNoSpace indicates that the shell should not add a space after
+	// compNoSpace indicates that the shell should not add a space after
 	// the completion even if there is a single completion provided.
-	CompNoSpace
+	compNoSpace
 
-	// CompNoFiles forbids file completion when no other comps are available.
-	CompNoFiles
+	// compNoFiles forbids file completion when no other comps are available.
+	compNoFiles
 
-	// CompFilterExt only complete files that are part of the given extensions.
-	CompFilterExt
+	// compFilterExt only complete files that are part of the given extensions.
+	compFilterExt
 
-	// CompFilterDirs only complete files within a given set of directories.
-	CompFilterDirs
+	// compFilterDirs only complete files within a given set of directories.
+	compFilterDirs
 
-	// CompFiles completes all files found in the current filesystem context.
-	CompFiles
+	// compFiles completes all files found in the current filesystem context.
+	compFiles
 
-	// CompDirs completes all directories in the current filesystem context.
-	CompDirs
+	// compDirs completes all directories in the current filesystem context.
+	compDirs
 
 	// Internal directives (must be below) =======================================.
 
-	// ShellCompDirectiveDefault indicates to let the shell perform its default
+	// shellCompDirectiveDefault indicates to let the shell perform its default
 	// behavior after completions have been provided.
 	// This one must be last to avoid messing up the iota count.
-	ShellCompDirectiveDefault CompDirective = 0
+	shellCompDirectiveDefault compDirective = 0
 )
 
 var errCommandNotFound = errors.New("command not found")
@@ -63,23 +64,23 @@ func getCompletionAction(name, value, desc string) comp.Action {
 
 	var ctx comp.Context
 
-	switch name {
-	case "NoSpace":
+	switch strings.ToLower(name) {
+	case "nospace":
 		return action.NoSpace()
-	case "NoFiles":
-	case "FilterExt":
+	case "nofiles":
+	case "filterext":
 		filterExts := strings.Split(value, ",")
-		action = comp.ActionFiles(filterExts...).Invoke(ctx).ToA()
-	case "FilterDirs":
-		action = comp.ActionDirectories() // TODO change this
-	case "Files":
+		action = comp.ActionFiles(filterExts...).Tag("filtered files").Invoke(ctx).ToA()
+	case "filterdirs":
+		action = comp.ActionDirectories().Tag("filtered directories") // TODO change this
+	case "files":
 		files := strings.Split(value, ",")
-		action = comp.ActionFiles(files...)
-	case "Dirs":
-		action = comp.ActionDirectories()
+		action = comp.ActionFiles(files...).Tag("files")
+	case "dirs":
+		action = comp.ActionDirectories().Tag("directories")
 
 	// Should normally not be used often
-	case "Default":
+	case "default":
 		return action
 	}
 
@@ -178,6 +179,25 @@ func taggedCompletions(tag tag.MultiTag) (comp.CompletionCallback, bool) {
 	// To be called when completion is needed, merging everything.
 	callback := func(ctx comp.Context) comp.Action {
 		return comp.Batch(actions...).ToA()
+	}
+
+	return callback, true
+}
+
+func hintCompletions(tag tag.MultiTag) (comp.CompletionCallback, bool) {
+	description, _ := tag.Get("description")
+	desc, _ := tag.Get("desc")
+
+	if description == "" {
+		description = desc
+	}
+
+	if description == "" {
+		return nil, false
+	}
+
+	callback := func(comp.Context) comp.Action {
+		return comp.Action{}.Usage(desc)
 	}
 
 	return callback, true

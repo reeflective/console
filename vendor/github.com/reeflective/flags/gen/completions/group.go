@@ -13,9 +13,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// ErrShortNameTooLong indicates that a short flag name was specified,
+// errShortNameTooLong indicates that a short flag name was specified,
 // longer than one character.
-var ErrShortNameTooLong = errors.New("short names can only be 1 character long")
+var errShortNameTooLong = errors.New("short names can only be 1 character long")
 
 // flagSetComps is an alias for storing per-flag completions.
 type flagSetComps map[string]comp.Action
@@ -185,84 +185,3 @@ func flagCompsScanner(actions *flagSetComps) flags.FlagFunc {
 
 	return handler
 }
-
-// scanOption finds if a field is marked as an option, and if yes, scans it and stores the object.
-// func scanOption(mtag tag.MultiTag, field reflect.StructField, val reflect.Value) error {
-// longname, _ := mtag.Get("long")                                      DONE
-// shortname, _ := mtag.Get("short")                                    DONE
-// iniName, _ := mtag.Get("ini-name")
-//
-// // Need at least either a short or long name
-// if longname == "" && shortname == "" && iniName == "" {
-//         return nil
-// }
-//
-// short, err := getShortName(shortname)
-// if err != nil {
-//         return err
-// }
-//
-// description, _ := mtag.Get("description")                            DONE
-// def := mtag.GetMany("default")
-//
-// optionalValue := mtag.GetMany("optional-value")
-// valueName, _ := mtag.Get("value-name")
-// defaultMask, _ := mtag.Get("default-mask")
-//
-// optionalTag, _ := mtag.Get("optional")
-// optional := !isStringFalsy(optionalTag)
-// requiredTag, _ := mtag.Get("required")                               DONE
-// required := !isStringFalsy(requiredTag)
-// choices := mtag.GetMany("choice")                                    DONE
-// hiddenTag, _ := mtag.Get("hidden")
-// hidden := !isStringFalsy(hiddenTag)
-//
-// envDefaultKey, _ := mtag.Get("env")
-// envDefaultDelim, _ := mtag.Get("env-delim")
-// argsDelim, _ := mtag.Get("args-delim")
-//
-// option := &Flag{
-//         Description:      description,
-//         ShortName:        short,
-//         LongName:         longname,
-//         Default:          def,
-//         EnvDefaultKey:    envDefaultKey,
-//         EnvDefaultDelim:  envDefaultDelim,
-//         OptionalArgument: optional,
-//         OptionalValue:    optionalValue,
-//         Required:         required,
-//         ValueName:        valueName,
-//         DefaultMask:      defaultMask,
-//         Choices:          choices,
-//         Hidden:           hidden,
-//
-//         // group: g,
-//
-//         field: field,
-//         value: val,
-//         tag:   mtag,
-// }
-//
-// if option.isBool() && option.Default != nil {
-//         return newErrorf(ErrInvalidTag,
-//                 "boolean flag `%s' may not have default values, they always default to `false' and can only be turned on",
-//                 option.shortAndLongName())
-// }
-//
-// if len(argsDelim) > 1 {
-//         return newErrorf(ErrInvalidTag,
-//                 "Argument delimiter for flag `%s' cannot be longer than 1 (rune)",
-//                 option.shortAndLongName())
-// }
-//
-// argumentDelim, size := utf8.DecodeRuneInString(argsDelim)
-// if size == 0 {
-//         argumentDelim, _ = utf8.DecodeRuneInString(defaultArgumentDelimiter)
-// }
-//
-// option.ArgsDelim = argumentDelim
-
-// g.flags = append(g.flags, option)
-
-// 	return nil
-// }

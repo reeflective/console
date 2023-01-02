@@ -19,7 +19,7 @@ var ErrRequired = errors.New("required argument")
 // giving a few functions to manipulate the list of words we want to parse.
 // As well, the current positional argument is a parameter, which is the only
 // positional slot we can access within the function.
-type WordConsumer func(args *Args, current *Arg) error
+type WordConsumer func(args *Args, current *Arg, dash int) error
 
 // WithWordConsumer allows to set a custom function to loop over
 // the command words for a given positional slot. See WordConsumer.
@@ -65,6 +65,7 @@ type Args struct {
 	parsed      int      // A counter used only by a single positional field
 	needed      int      // A global value set when we know the total number of arguments
 	offsetRange int      // Used to adjust the number of words still needed in relation to an argument min/max
+	dash        int
 
 	// Users can pass a custom handler to loop over the words
 	// This consumer is called for each positional slot, either
@@ -77,8 +78,9 @@ type Args struct {
 // positional struct field (following quantity constraints/requirements), and
 // will return the list of words that have not been parsed into a field, along
 // with an error if one/more positionals has failed to satisfy their requirements.
-func (args *Args) Parse(words []string) (retargs []string, err error) {
+func (args *Args) Parse(words []string, dash int) (retargs []string, err error) {
 	args.setWords(words) // Ensures initializing the counters
+	args.dash = dash
 
 	// Always set the return arguments when exiting.
 	// This is used by command callers needing them
@@ -88,12 +90,11 @@ func (args *Args) Parse(words []string) (retargs []string, err error) {
 	// We consume all fields until one either errors out,
 	// or all are fullfiled up to their minimum requirements.
 	for _, arg := range args.slots {
-		// We reset our per-slot counters
 		args.setNext(arg)
 
 		// The positional slot consumes words as it needs, and only
 		// returns an error when it cannot fulfill its requirements.
-		err := args.consumeWords(args, arg)
+		err := args.consumeWords(args, arg, dash)
 
 		// Either the positional argument has not had enough words
 		if errors.Is(err, ErrRequired) {
@@ -144,7 +145,7 @@ func (args *Args) ParseConcurrent(words []string) {
 			}
 
 			// Else, run the consumer function, to loop over words.
-			if err := argsC.consumer(argsC, arg); err != nil {
+			if err := argsC.consumer(argsC, arg, 0); err != nil {
 				// TODO change this
 				return
 			}
@@ -179,7 +180,7 @@ func (args *Args) copyArgs() *Args {
 // consumePositionals parses one or more words from the current list of positionals into
 // their struct fields, and returns once its own requirements are satisfied and/or the
 // next positional arguments require words to be passed along.
-func (args *Args) consumeWords(self *Args, arg *Arg) error {
+func (args *Args) consumeWords(self *Args, arg *Arg, dash int) error {
 	// As long as we've got a word, and nothing told us to quit.
 	for !self.Empty() {
 		// If we have reached the maximum number of args we accept.
@@ -193,6 +194,13 @@ func (args *Args) consumeWords(self *Args, arg *Arg) error {
 		if self.parsed >= arg.Minimum && self.allRemainingRequired() {
 			return nil
 		}
+
+		// Skip all remaining args (potentially with an error)
+		// if we reached the positional double dash.
+		if dash != -1 && self.done == dash {
+			break
+		}
+
 		// Else if we have not reached our maximum allowed number
 		// of arguments, we are cleared to consume one.
 		next := args.Pop()
@@ -373,6 +381,10 @@ func (args *Args) Empty() bool {
 }
 
 func (args *Args) allRemainingRequired() bool {
+	if args.dash != -1 {
+		return len(args.words[:args.dash]) <= args.needed
+	}
+
 	return len(args.words) <= args.needed
 }
 
@@ -395,6 +407,10 @@ func (args *Args) Pop() string {
 	// the global counter is increased
 	args.done++
 
+	if args.dash != -1 {
+		args.dash--
+	}
+
 	// We only update the number of words
 	// we still need when this positional
 	// slot is below its minimum requirement
@@ -404,4 +420,12 @@ func (args *Args) Pop() string {
 	}
 
 	return arg
+}
+
+func (args *Args) peek() string {
+	if args.Empty() {
+		return ""
+	}
+
+	return args.words[0]
 }

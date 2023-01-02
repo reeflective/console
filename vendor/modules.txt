@@ -163,12 +163,13 @@ github.com/modern-go/reflect2
 # github.com/power-devops/perfstat v0.0.0-20221212215047-62379fc7944b
 ## explicit; go 1.14
 github.com/power-devops/perfstat
-# github.com/reeflective/flags v0.0.0-20221227223942-7974e9681270
-## explicit; go 1.18
+# github.com/reeflective/flags v0.9.1-0.20230102052232-2085c9120702
+## explicit; go 1.19
 github.com/reeflective/flags
 github.com/reeflective/flags/example/args
 github.com/reeflective/flags/example/commands
 github.com/reeflective/flags/example/opts
+github.com/reeflective/flags/example/validated
 github.com/reeflective/flags/gen/completions
 github.com/reeflective/flags/gen/flags
 github.com/reeflective/flags/internal/convert

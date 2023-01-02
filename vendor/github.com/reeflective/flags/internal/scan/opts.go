@@ -52,16 +52,6 @@ func (o Opts) Apply(optFuncs ...OptFunc) Opts {
 
 func CopyOpts(val Opts) OptFunc { return func(opt *Opts) { *opt = val } }
 
-func hasOption(options []string, option string) bool {
-	for _, opt := range options {
-		if opt == option {
-			return true
-		}
-	}
-
-	return false
-}
-
 func DefOpts() Opts {
 	return Opts{
 		DescTag:     DefaultDescTag,
