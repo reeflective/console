@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/kballard/go-shellquote"
+	"github.com/spf13/cobra"
 )
 
 // Run - Start the console application (readline loop). Blocking.
@@ -23,6 +24,7 @@ func (c *Console) Run() (err error) {
 		c.reloadConfig()          // Rebind the prompt helpers, and similar stuff.
 		c.runPreLoopHooks()       // Run user-provided pre-loop hooks
 		menu := c.menus.current() // We work with the active menu.
+		c.ensureNoRootRunner()    // Avoid printing any help when the command line is empty
 
 		// Block and read user input. Provides completion, syntax, hints, etc.
 		// Various types of errors might arise from here. We handle them in a
@@ -48,6 +50,19 @@ func (c *Console) Run() (err error) {
 
 		// Run all hooks and the command itself
 		c.execute(args)
+	}
+}
+
+// Generally, an empty command entered should just print
+// a new prompt, unlike for classic CLI usage when the
+// program will print its usage string.
+// We simply remove any RunE from the root command, so that nothing is
+// printed/executed by default. Pre/Post runs are still used if any.
+func (c *Console) ensureNoRootRunner() {
+	if c.menus.current().Command != nil {
+		c.menus.current().RunE = func(cmd *cobra.Command, args []string) error {
+			return nil
+		}
 	}
 }
 

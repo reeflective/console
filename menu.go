@@ -102,10 +102,9 @@ func (m *Menu) AddHistorySourceFile(name string, filepath string) {
 func (m *Menu) DeleteHistorySource(name string) {
 	if name == m.Name() {
 		if name != "" {
-			name = "(" + name + ")"
+			name = " (" + name + ")"
 		}
-
-		name = fmt.Sprintf("local history %s", name)
+		name = fmt.Sprintf("local history%s", name)
 	}
 
 	delete(m.histories, name)
