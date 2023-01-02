@@ -64,7 +64,7 @@ the various features below almost for free.
 - Provided by readline and [carapace](https://github.com/rsteube/carapace): automatic usage & validation command/flags/args hints.
 - Syntax highlighting for commands (might be extended in the future).
 
-### Other features 
+### Others
 - Support for an arbitrary number of history sources, per menu.
 - Support for [oh-my-posh](https://github.com/JanDeDobbeleer/oh-my-posh) prompts, per menu and with custom configuration files for each.
 - Also with oh-my-posh, ability to write and bind application-specific prompt segments.
@@ -72,11 +72,11 @@ the various features below almost for free.
 <!-- ![readme-main-gif](https://github.com/maxlandon/gonsole/blob/assets/readme-main.gif) -->
 
 
-## Documentation Contents
+## Documentation
 
 You can install and use the [example application console](https://github.com/reeflective/console/tree/main/example). This example application 
-will give you a taste of the behavior and supported features. Additionally, the following 
-documentation is available in the [wiki](https://github.com/reeflective/console/wiki):
+will give you a taste of the behavior and supported features. The following documentation 
+is also available in the [wiki](https://github.com/reeflective/console/wiki):
 
 * [Getting started](https://github.com/reeflective/console/wiki/Getting-Started) 
 * [Shell readline](https://github.com/reeflective/console/wiki/Readline-Shell)

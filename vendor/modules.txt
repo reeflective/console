@@ -177,7 +177,7 @@ github.com/reeflective/flags/internal/scan
 github.com/reeflective/flags/internal/tag
 github.com/reeflective/flags/internal/validation
 github.com/reeflective/flags/validator
-# github.com/reeflective/readline v0.1.0-beta.0.20221230210852-5b8387e74dbc
+# github.com/reeflective/readline v0.1.0-beta.0.20230102161657-ead0b77f84fe
 ## explicit; go 1.19
 github.com/reeflective/readline
 # github.com/reiver/go-caret v0.0.0-20190726191135-0ad7aa63f55f
@@ -276,7 +276,6 @@ golang.org/x/crypto/blowfish
 golang.org/x/crypto/pbkdf2
 golang.org/x/crypto/scrypt
 golang.org/x/crypto/sha3
-golang.org/x/crypto/ssh/terminal
 # golang.org/x/image v0.2.0
 ## explicit; go 1.12
 golang.org/x/image/draw

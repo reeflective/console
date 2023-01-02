@@ -50,6 +50,8 @@ type config struct {
 	}
 	Keymaps map[keymapMode]keymap
 
+	// PromptTransient enables the use of transient prompt.
+	PromptTransient bool `yaml:"promptTransient"`
 	// The shell displays fish-like autosuggestions (the first
 	// matching history line is displayed dimmed).
 	HistoryAutosuggest bool `yaml:"historyAutosuggest"`
@@ -93,7 +95,17 @@ func (c *config) load(path string) (err error) {
 	}
 
 	// And then unmarshal the node onto the struct.
-	return c.node.Decode(c)
+	if err = c.node.Decode(c); err != nil {
+		return
+	}
+
+	// Rebind all widgets
+	c.rl.bindWidgets()
+	c.rl.loadInterruptHandlers()
+	c.rl.updateKeymaps()
+	c.rl.updateCursor()
+
+	return nil
 }
 
 // LoadFromBytes loads a configuration from a bytes array.
@@ -252,8 +264,10 @@ func (rl *Instance) loadDefaultConfig() {
 		}{
 			Cursor: CursorBlinkingBlock,
 		},
-
 		Keymaps: make(map[keymapMode]keymap),
+
+		// Prompt
+		PromptTransient: false,
 
 		// History
 		HistoryAutoWrite:   true,
@@ -337,10 +351,4 @@ func (rl *Instance) reloadConfig(event fsnotify.Event) {
 		changeHint := fmt.Sprintf(seqFgGreen+"Config reloaded: %s", event.Name)
 		rl.hint = append([]rune{}, []rune(changeHint)...)
 	}
-
-	// Reload keymaps and widgets
-	rl.bindWidgets()
-	rl.loadInterruptHandlers()
-	rl.updateKeymaps()
-	rl.updateCursor()
 }
