@@ -15,13 +15,9 @@ func main() {
 	// All defaults are set, and nothing is needed to make it work
 	app := console.New()
 
-	// Assuming that the user has a system-wide readline.yml configuration
-	// (containing keybinds, completion behavior, etc), load it. If the file
-	// does not exist, the readline shell will use default but sane settings.
-	//
-	// This also shows how library consumers can access the
-	// underlying readline shell for lower-level configuration.
-	app.Shell().Config().LoadSystem()
+	// Apply some configuration stuff to the underlying readline shell:
+	// input modes, indicators, completion and prompt behavior, etc...
+	configureReadline(app)
 
 	// Create another menu, different from the main one.
 	// It will have its own command tree, prompt engine, history sources, etc.

@@ -3,7 +3,7 @@
 This directory contains an example console application containing:
 - Two different command menus
 - Each with their own prompt engine
-- The first menu contains the complete command set from the [reeflective/flags/example](https://github.com/reeflective/flags/example) CLI.
+- The first menu contains the complete command set from the [reeflective/flags/example](https://github.com/reeflective/flags/tree/main/example) CLI.
 - (The other one is empty)
 - Special interrupt handlers to switch back and forth between menus.
 

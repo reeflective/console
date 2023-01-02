@@ -155,6 +155,14 @@ func (c *Console) CurrentMenu() *Menu {
 	return c.menus.current()
 }
 
+// Menu returns one of the console menus by name, or nil if no menu is found.
+func (c *Console) Menu(name string) *Menu {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	return c.menus[name]
+}
+
 // SwitchMenu - Given a name, the console switches its command menu:
 // The next time the console rebinds all of its commands, it will only bind those
 // that belong to this new menu. If the menu is invalid, i.e that no commands

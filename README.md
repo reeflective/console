@@ -79,10 +79,10 @@ will give you a taste of the behavior and supported features. Additionally, the 
 documentation is available in the [wiki](https://github.com/reeflective/console/wiki):
 
 * [Getting started](https://github.com/reeflective/console/Getting-Started) 
+* [Shell readline](https://github.com/reeflective/console/wiki/Readline-Shell)
 * [Menus](https://github.com/reeflective/console/wiki/Menus)
 * [Prompts](https://github.com/reeflective/console/wiki/Prompts)
 * [Binding commands](https://github.com/reeflective/console/Binding-Commands)
-* [Accessing shell readline](https://github.com/reeflective/console/wiki/Readline-Shell)
 * [History Sources](https://github.com/reeflective/console/wiki/History-Sources)
 * [Default commands](https://github.com/maxlandon/gonsole/wiki/Default-Commands)
 * [Logging](https://github.com/reeflective/console/wiki/Logging)
