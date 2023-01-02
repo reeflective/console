@@ -78,11 +78,12 @@ You can install and use the [example application console](https://github.com/ree
 will give you a taste of the behavior and supported features. Additionally, the following 
 documentation is available in the [wiki](https://github.com/reeflective/console/wiki):
 
-* [Getting started](https://github.com/reeflective/console/Getting-Started) 
+* [Getting started](https://github.com/reeflective/console/wiki/Getting-Started) 
 * [Shell readline](https://github.com/reeflective/console/wiki/Readline-Shell)
 * [Menus](https://github.com/reeflective/console/wiki/Menus)
 * [Prompts](https://github.com/reeflective/console/wiki/Prompts)
-* [Binding commands](https://github.com/reeflective/console/Binding-Commands)
+* [Binding commands](https://github.com/reeflective/console/wiki/Binding-Commands)
+* [Interrupt handlers](https://github.com/reeflective/console/wiki/Interrupt-Handlers)
 * [History Sources](https://github.com/reeflective/console/wiki/History-Sources)
 * [Default commands](https://github.com/maxlandon/gonsole/wiki/Default-Commands)
 * [Logging](https://github.com/reeflective/console/wiki/Logging)
@@ -90,4 +91,10 @@ documentation is available in the [wiki](https://github.com/reeflective/console/
 
 ## Status
 
+The library is in a pre-release candidate status:
+- Although quite simple and small, it has not been tested heavily.
+- There are probably some features/improvements to be made.
+
+Please open a PR or an issue if you wish to bring enhancements to it. 
+Other contributions, as well as bug fixes and reviews are also welcome.
 
