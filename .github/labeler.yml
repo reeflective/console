@@ -9,6 +9,8 @@ prompts:
 - prompt.go
 readline:
 - syntax-highlighter.go
+- line.go
+- interrupt.go
 completions:
 - tab-completer.go
 

@@ -11,8 +11,10 @@ import (
 )
 
 func (c *Console) complete(line []rune, pos int) readline.Completions {
-	// Split the line as shell words.
-	args, prefix := splitArgs(line)
+	// Split the line as shell words, only using
+	// what the right buffer (up to the cursor)
+	rbuffer := line[:pos]
+	args, prefix := splitArgs(rbuffer)
 
 	// Like in classic system shells, we need to add an empty
 	// argument if the last character is a space: the args

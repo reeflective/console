@@ -13,3 +13,8 @@ help
 help
 basic -c
 basic
+basic -f example
+htop
+htop
+exit
+y
