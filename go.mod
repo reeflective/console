@@ -6,7 +6,7 @@ require (
 	github.com/jandedobbeleer/oh-my-posh v12.34.2+incompatible
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/reeflective/flags v0.9.1-0.20230102052232-2085c9120702
-	github.com/reeflective/readline v0.1.0-beta.0.20230102161657-ead0b77f84fe
+	github.com/reeflective/readline v0.1.0-beta.0.20230103220947-4db99a4a0b50
 	github.com/rsteube/carapace v0.29.1
 	github.com/spf13/cobra v1.6.1
 )

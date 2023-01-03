@@ -132,8 +132,8 @@ github.com/reeflective/carapace v0.25.2-0.20221230210103-53d7461905a7 h1:V8LIhFr
 github.com/reeflective/carapace v0.25.2-0.20221230210103-53d7461905a7/go.mod h1:/ALYHicIpak6TjQnKl7HupclqJydy2LQb6CkawYBxDo=
 github.com/reeflective/flags v0.9.1-0.20230102052232-2085c9120702 h1:QxmgXzdqaLZ46/PyJvGBAYBY6SUxqFuHEZ4nITVJ20o=
 github.com/reeflective/flags v0.9.1-0.20230102052232-2085c9120702/go.mod h1:qaXsf+1KENM29sgDYlQIsNfDEy+qF0+k3KeWeoESuGw=
-github.com/reeflective/readline v0.1.0-beta.0.20230102161657-ead0b77f84fe h1:elIcnHSfg5aBC8WFHWOpbMveUcA/q9Gye2gKz74trHw=
-github.com/reeflective/readline v0.1.0-beta.0.20230102161657-ead0b77f84fe/go.mod h1:zSJq1ZyoiM0vGRBaF0uan1jbnoF+6M2hgZnQDtV3MX4=
+github.com/reeflective/readline v0.1.0-beta.0.20230103220947-4db99a4a0b50 h1:kkRkfMW2L6tNpaQ8paKq3Vrji3Nuh011Q9G1+4zutJ4=
+github.com/reeflective/readline v0.1.0-beta.0.20230103220947-4db99a4a0b50/go.mod h1:zSJq1ZyoiM0vGRBaF0uan1jbnoF+6M2hgZnQDtV3MX4=
 github.com/reiver/go-caret v0.0.0-20190726191135-0ad7aa63f55f h1:2+kGf8AEkUeBZ260zKGT8wAU9z7ga5Um0+iOk52E6+s=
 github.com/reiver/go-caret v0.0.0-20190726191135-0ad7aa63f55f/go.mod h1:lWTqB0nLZJiT5rkle/Pl/N2Cq5D6M29o4dTnulNmobI=
 github.com/reiver/go-utf8s v2.0.1+incompatible h1:SvgIaGDUg7cVhQfjJZ1UkKlvz0N4POWn0mub8FxlbYI=

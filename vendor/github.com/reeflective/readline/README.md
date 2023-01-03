@@ -4,7 +4,7 @@
     <img alt="" src="" width="600">
   </a>
 
-  <br> <h1>  Readline </h1>
+  <br> <h1> Readline </h1>
   <p>  Shell library with modern and simple UI features </p>
 </div>
 
@@ -47,12 +47,13 @@ interface features commonly found in modern shells, all in little more than 10K 
 Its kemap-based model and completion engine is heavily inspired from the Z-Shell architecture.
 It is used, between others, to power the [console](https://github.com/reeflective/console) library.
 
+
 ## Features
 
 ### Editing
 - Near-native Emacs and Vim modes.
 - Configurable bind keymaps, with live reload and sane defaults.
-- Extended list of line edition/movement/control widgets (Emacs and Vim).
+- [Extended list](https://github.com/reeflective/readline/wiki/Keymaps-&-Widgets) of edition/movement/control widgets (Emacs and Vim).
 - Extended surround select/change/add fonctionality, with highlighting.
 - Keywords switching (operators, booleans, hex/binary/digit) with iterations.
 - Support for Vim Visual/Operator pending mode & cursor styles indications.
@@ -64,7 +65,7 @@ It is used, between others, to power the [console](https://github.com/reeflectiv
 - Support for an arbitrary number of history sources.
 
 ### Interface
-- Support for most of `oh-my-posh` prompts (PS1/PS2/RPROMPT/transient/tooltip).
+- Support for most of [oh-my-posh](https://github.com/JanDeDobbeleer/oh-my-posh) prompts (PS1/PS2/RPROMPT/transient/tooltip).
 - Extended completion system, keymap-based and configurable, easy to populate & use.
 - Multiple completion display styles, with color support.
 - Completion & History incremental search system & highlighting (fuzzy-search).
@@ -73,9 +74,24 @@ It is used, between others, to power the [console](https://github.com/reeflectiv
 - Usage/hint message display.
 - Support for syntax highlighting
 
-## Showcases
 
-An example application using readline can be found [here]().
+## Documentation
+
+Readline is used by the [console library](https://github.com/reeflective/console) and its [example binary](https://github.com/reeflective/console/tree/main/example). To get a grasp of the 
+functionality provided by readline and its default configuration, install and start the binary.
+
+* [Introduction](https://github.com/reeflective/readline/wiki/Introduction-&-Features)
+* [Configuration file](https://github.com/reeflective/readline/wiki/Configuration-File)
+* [Keymaps & Widgets](https://github.com/reeflective/readline/wiki/Keymaps-&-Widgets)
+* [Prompts](https://github.com/reeflective/readline/wiki/Prompts)
+* [History Sources](https://github.com/reeflective/readline/wiki/History-Sources)
+* [Vim mode](https://github.com/reeflective/readline/wiki/Vim-Mode)
+* [Custom callbacks](https://github.com/reeflective/readline/wiki/Custom-Callbacks)
+* [Completions & Hints](https://github.com/reeflective/readline/wiki/Completions-&-Hints)
+* [Other features](https://github.com/reeflective/readline/wiki/Other-Features)
+
+
+## Showcases
 
 - Emacs edition
 - Vim edition
@@ -91,8 +107,13 @@ An example application using readline can be found [here]().
 - Prompts
 - Logging
 
+
+## Status
+
+
 ## Credits
 
-- While most of the code has been rewritten from scratch, the original library used is [lmorg/readline](https://github.com/lmorg/readline).
-  I would have never ventured myself doing this if he had not ventured writing a Vim mode core in the first place. 
+- While most of the code has been rewritten from scratch, the original library used 
+  is [lmorg/readline](https://github.com/lmorg/readline). I would have never ventured myself doing this if he had not 
+  ventured writing a Vim mode core in the first place. 
 - Some of the Vim code is inspired or translated from [zsh-vi-mode](https://github.com/jeffreytse/zsh-vi-mode).
