@@ -51,10 +51,10 @@ the various features below almost for free.
 ## Features
 
 ### Menus & Commands 
-- Declare & use multiple menus with their own command tree, prompt engines and special handlers.
-- Bind cobra commands to provide the core functionality (see documentation for binding usage).
-- Virtually all cobra settings can be modified, set and used freely, like in normal CLI workflows.
-- Ability to bind handlers to special interrupt errors (eg. CtrlC/CtrlD), per menu.
+- Bind cobra commands to provide the core functionality.
+- Multiple menus with their own command tree, prompt engines and special handlers.
+- All cobra settings can be modified, set and used freely, like in normal CLI workflows.
+- Bind handlers to special interrupt errors (eg. CtrlC/CtrlD), per menu.
 
 ### Shell interface
 - Shell interface is powered by a [readline](https://github.com/reeflective/readline) instance.
@@ -67,7 +67,7 @@ the various features below almost for free.
 ### Others
 - Support for an arbitrary number of history sources, per menu.
 - Support for [oh-my-posh](https://github.com/JanDeDobbeleer/oh-my-posh) prompts, per menu and with custom configuration files for each.
-- Also with oh-my-posh, ability to write and bind application-specific prompt segments.
+- Also with oh-my-posh, write and bind application/menu-specific prompt segments.
 
 <!-- ![readme-main-gif](https://github.com/maxlandon/gonsole/blob/assets/readme-main.gif) -->
 
