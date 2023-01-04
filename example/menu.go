@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/jandedobbeleer/oh-my-posh/src/engine"
 	"github.com/reeflective/console"
 )
 
@@ -19,8 +20,9 @@ func createMenus(c *console.Console) {
 	// Add custom segments to the prompt for this menu only,
 	// and load the configuration making use of them.
 	prompt := clientMenu.Prompt()
-	prompt.AddSegment("module", module)
 	prompt.LoadConfig("prompt.omp.json")
+
+	engine.Segments[engine.SegmentType("module")] = func() engine.SegmentWriter { return module }
 }
 
 // errorCtrlSwitchMenu is a custom interrupt handler which will

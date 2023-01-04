@@ -20,11 +20,16 @@ func (c *Console) Run() (err error) {
 	// current menu, they are not bound to the shell yet.
 	c.loadActiveHistories()
 
+	// Call the command generators for all menus.
+	c.initCommands()
+
 	for {
-		c.reloadConfig()          // Rebind the prompt helpers, and similar stuff.
-		c.runPreLoopHooks()       // Run user-provided pre-loop hooks
+		c.reloadConfig()         // Rebind the prompt helpers, and similar stuff.
+		c.runPreLoopHooks()      // Run user-provided pre-loop hooks
+		c.ensureNoRootRunner()   // Avoid printing any help when the command line is empty
+		c.hideFilteredCommands() // Hide commands that are not available
+
 		menu := c.menus.current() // We work with the active menu.
-		c.ensureNoRootRunner()    // Avoid printing any help when the command line is empty
 
 		// Block and read user input. Provides completion, syntax, hints, etc.
 		// Various types of errors might arise from here. We handle them in a
@@ -74,6 +79,12 @@ func (c *Console) loadActiveHistories() {
 	}
 }
 
+func (c *Console) initCommands() {
+	for _, menu := range c.menus {
+		menu.resetCommands()
+	}
+}
+
 func (c *Console) runPreLoopHooks() {
 	for _, hook := range c.PreReadlineHooks {
 		hook()
@@ -107,6 +118,16 @@ func (c *Console) runPostRunHooks() {
 // have been processed: we synchronize a few elements of the console,
 // then pass these arguments to the command parser for execution and error handling.
 func (c *Console) execute(args []string) {
+	menu := c.menus.current()
+
+	// Find the target command: if this command is filtered, don't run it,
+	// nor any pre-run hooks. We don't care about any error here: we just
+	// want to know if the command is hidden.
+	target, _, _ := menu.Find(args)
+	if c.isFiltered(target) {
+		return
+	}
+
 	c.runPreRunHooks()
 
 	// Asynchronous messages do not mess with the prompt from now on,
@@ -123,12 +144,15 @@ func (c *Console) execute(args []string) {
 	}()
 
 	// Assign those arguments to our parser
-	c.menus.current().SetArgs(args)
+	menu.SetArgs(args)
 
 	// Execute the command line, with the current menu' parser.
 	// Process the errors raised by the parser.
 	// A few of them are not really errors, and trigger some stuff.
-	c.menus.current().Execute()
+	menu.Execute()
 
 	c.runPostRunHooks()
+
+	// Finally, reset the command tree to a blank state
+	menu.resetCommands()
 }

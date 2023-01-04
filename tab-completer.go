@@ -5,12 +5,13 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/reeflective/flags/gen/completions"
 	"github.com/reeflective/readline"
 	"github.com/rsteube/carapace"
 )
 
 func (c *Console) complete(line []rune, pos int) readline.Completions {
+	menu := c.menus.current()
+
 	// Split the line as shell words, only using
 	// what the right buffer (up to the cursor)
 	rbuffer := line[:pos]
@@ -27,7 +28,7 @@ func (c *Console) complete(line []rune, pos int) readline.Completions {
 	args = append([]string{"examples", "_carapace"}, args...)
 
 	// Call the completer with our current command context.
-	values, meta := carapace.Complete(c.menus.current().Command, args, completions.WithReset())
+	values, meta := carapace.Complete(menu.Command, args, menu.resetCommands)
 
 	// Tranfer all completion results to our readline shell completions.
 	raw := make([]readline.Completion, len(values))

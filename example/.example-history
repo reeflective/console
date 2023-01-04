@@ -18,3 +18,13 @@ htop
 htop
 exit
 y
+y
+y
+y
+multiple-ambiguous --help
+overlap-min-max --help
+
+overlap-min-max --help
+basic -f
+basic -cp=/home
+basic

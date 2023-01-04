@@ -22,7 +22,7 @@
                 },
                 {
                     "style": "plain",
-                    "template": " using (<#df2e1c>{{ .Segment }}</>) ",
+                    "template": " {{ .Type }}(<#df2e1c>{{ .Path }}</>) ",
                     "type": "module"
                 }
             ],
