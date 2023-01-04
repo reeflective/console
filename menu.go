@@ -21,9 +21,15 @@ type Menu struct {
 	// Maps interrupt signals (CtrlC/IOF, etc) to specific error handlers.
 	interruptHandlers map[error]func(c *Console)
 
-	// A menu being very similar to a shell context, it embeds a single cobra
-	// root command, which is considered in its traditional role here: a global parser.
+	// The root cobra command/parser is the one returned by the handler provided
+	// through the `menu.SetCommands()` function. This command is thus renewed after
+	// each command invocation/execution.
+	// You can still use it as you want, for instance to introspect the current command
+	// state of your menu.
 	*cobra.Command
+
+	// Command spawner
+	cmds Commands
 
 	// The completer allows to further register completions, including those taking
 	// care of parsing/expanding environment variables.
@@ -114,6 +120,18 @@ func (m *Menu) DeleteHistorySource(name string) {
 			m.historyNames = append(m.historyNames[:i], m.historyNames[i+1:]...)
 
 			break
+		}
+	}
+}
+
+func (m *Menu) resetCommands() {
+	if m.cmds != nil {
+		m.Command = m.cmds()
+	}
+
+	if m.Command == nil {
+		m.Command = &cobra.Command{
+			Annotations: make(map[string]string),
 		}
 	}
 }

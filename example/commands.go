@@ -6,11 +6,12 @@ import (
 	"github.com/reeflective/flags/gen/completions"
 	genflags "github.com/reeflective/flags/gen/flags"
 	"github.com/reeflective/flags/validator"
-	"github.com/rsteube/carapace"
 	"github.com/spf13/cobra"
 )
 
-func getCommands() (*cobra.Command, *carapace.Carapace) {
+// flagsCommands is the `Commands()` function example when
+// you make use of the `reeflective/flags` generation library.
+func flagsCommands() *cobra.Command {
 	// Our root command structure encapsulates
 	// the entire command tree for our application.
 	rootData := &commands.Root{}
@@ -47,7 +48,7 @@ func getCommands() (*cobra.Command, *carapace.Carapace) {
 	// scan handler: it will generate completers if it finds tags
 	// specifying what to complete, or completer implementations
 	// by the positional arguments / command flags' types themselves.
-	comps, _ := completions.Generate(rootCmd, rootData, nil)
+	completions.Generate(rootCmd, rootData, nil)
 
-	return rootCmd, comps
+	return rootCmd
 }

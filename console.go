@@ -51,7 +51,6 @@ type Console struct {
 
 	// Other ------------------------------------------------------------------------
 
-	// NOTE: Use via annotations on commands
 	// A list of tags by which commands may have been registered, and which
 	// can be set to true in order to hide all of the tagged commands.
 	filters []string
