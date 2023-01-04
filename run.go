@@ -21,10 +21,12 @@ func (c *Console) Run() (err error) {
 	c.loadActiveHistories()
 
 	for {
-		c.reloadConfig()          // Rebind the prompt helpers, and similar stuff.
-		c.runPreLoopHooks()       // Run user-provided pre-loop hooks
+		c.reloadConfig()         // Rebind the prompt helpers, and similar stuff.
+		c.runPreLoopHooks()      // Run user-provided pre-loop hooks
+		c.ensureNoRootRunner()   // Avoid printing any help when the command line is empty
+		c.hideFilteredCommands() // Hide commands that are not available
+
 		menu := c.menus.current() // We work with the active menu.
-		c.ensureNoRootRunner()    // Avoid printing any help when the command line is empty
 
 		// Block and read user input. Provides completion, syntax, hints, etc.
 		// Various types of errors might arise from here. We handle them in a
@@ -107,6 +109,14 @@ func (c *Console) runPostRunHooks() {
 // have been processed: we synchronize a few elements of the console,
 // then pass these arguments to the command parser for execution and error handling.
 func (c *Console) execute(args []string) {
+	// Find the target command: if this command is filtered, don't run it,
+	// nor any pre-run hooks. We don't care about any error here: we just
+	// want to know if the command is hidden.
+	target, _, _ := c.menus.current().Find(args)
+	if c.isFiltered(target) {
+		return
+	}
+
 	c.runPreRunHooks()
 
 	// Asynchronous messages do not mess with the prompt from now on,
