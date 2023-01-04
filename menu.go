@@ -31,10 +31,6 @@ type Menu struct {
 	// Command spawner
 	cmds Commands
 
-	// The completer allows to further register completions, including those taking
-	// care of parsing/expanding environment variables.
-	*carapace.Carapace
-
 	// expansionComps - A list of completion generators that are triggered when
 	// the given string is detected (anywhere, even in other completions) in the input line.
 	expansionComps map[rune]carapace.CompletionCallback
