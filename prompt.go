@@ -4,10 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/jandedobbeleer/oh-my-posh/engine"
-	"github.com/jandedobbeleer/oh-my-posh/platform"
-	"github.com/jandedobbeleer/oh-my-posh/properties"
-	"github.com/jandedobbeleer/oh-my-posh/shell"
+	"github.com/jandedobbeleer/oh-my-posh/src/engine"
+	"github.com/jandedobbeleer/oh-my-posh/src/platform"
+	"github.com/jandedobbeleer/oh-my-posh/src/shell"
 	"github.com/reeflective/readline"
 )
 
@@ -55,32 +54,6 @@ func (p *Prompt) bind(shell *readline.Instance) {
 	shell.Prompt.Tooltip(p.PrintTooltip)
 }
 
-// Segment represents a type able to render itself as a prompt segment string.
-// Any number of segments can be registered to the prompt engine, and those
-// segments can then be used by declaration in the prompt configuration file.
-type Segment interface {
-	Enabled() bool
-	Template() string
-}
-
-// AddSegment enables to register a prompt segment to the prompt engine.
-// This segment can then be configured and used in the prompt configuration file.
-func (p *Prompt) AddSegment(name string, prompt Segment) {
-	if prompt == nil {
-		return
-	}
-
-	segment := &segment{
-		Segment: prompt,
-	}
-
-	segmentFunc := func() engine.SegmentWriter {
-		return segment
-	}
-
-	engine.Segments[engine.SegmentType(name)] = segmentFunc
-}
-
 // LogTransient prints a string message (a log, or more broadly, an
 // asynchronous event) without bothering the user, and by "pushing"
 // the prompt below the message.
@@ -106,20 +79,6 @@ func (c *Console) Log(msg string, args ...interface{}) {
 	} else {
 		c.shell.Log(msg, args...)
 	}
-}
-
-// segment encapsulates a user-defined prompt segment and redeclares
-// the methods required to be considered a valid prompt by oh-my-posh.
-type segment struct {
-	props properties.Properties
-	env   platform.Environment
-	Segment
-}
-
-// Init implements the engine.SegmentWriter interface.
-func (s *segment) Init(props properties.Properties, env platform.Environment) {
-	s.props = props
-	s.env = env
 }
 
 // makes a prompt engine with default/builtin configuration.

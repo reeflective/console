@@ -3,6 +3,7 @@
 commands:
 - run.go
 - console.go
+- commands.go
 menus:
 - menu.go
 prompts:
