@@ -6,6 +6,7 @@
 package lscolors
 
 import (
+	"os"
 	"path"
 	"strings"
 	"sync"
@@ -36,11 +37,11 @@ func init() {
 	lastColorist = parseLsColor(defaultLsColorString)
 }
 
-func GetColorist(lsColorString string) Colorist {
+func GetColorist() Colorist {
 	lastColoristMutex.Lock()
 	defer lastColoristMutex.Unlock()
 
-	s := getLsColors(lsColorString)
+	s := getLsColors()
 	if lastLsColors != s {
 		lastLsColors = s
 		lastColorist = parseLsColor(s)
@@ -48,7 +49,8 @@ func GetColorist(lsColorString string) Colorist {
 	return lastColorist
 }
 
-func getLsColors(lsColorString string) string {
+func getLsColors() string {
+	lsColorString := os.Getenv("LS_COLORS")
 	if len(lsColorString) == 0 {
 		return defaultLsColorString
 	}
