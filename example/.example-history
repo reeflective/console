@@ -28,3 +28,8 @@ overlap-min-max --help
 basic -f
 basic -cp=/home
 basic
+which carapace
+ls
+cd ..
+ls
+exit

@@ -9,14 +9,13 @@ import (
 	"github.com/rsteube/carapace/internal/cache"
 	"github.com/rsteube/carapace/internal/common"
 	pkgcache "github.com/rsteube/carapace/pkg/cache"
-	"github.com/rsteube/carapace/pkg/style"
 )
 
 // Action indicates how to complete a flag or positional argument.
 type Action struct {
-	meta      common.Meta
-	rawValues common.RawValues
+	rawValues []common.RawValue
 	callback  CompletionCallback
+	meta      common.Meta
 }
 
 // ActionMap maps Actions to an identifier.
@@ -105,9 +104,9 @@ func (a Action) UsageF(f func() string) Action {
 //
 //	ActionValues("yes").Style(style.Green)
 //	ActionValues("no").Style(style.Red)
-func (a Action) Style(s string) Action {
-	return a.StyleF(func(_ string, _ style.Context) string {
-		return s
+func (a Action) Style(style string) Action {
+	return a.StyleF(func(s string) string {
+		return style
 	})
 }
 
@@ -115,10 +114,10 @@ func (a Action) Style(s string) Action {
 //
 //	ActionValues("value").StyleR(&style.Carapace.Value)
 //	ActionValues("description").StyleR(&style.Carapace.Value)
-func (a Action) StyleR(s *string) Action {
+func (a Action) StyleR(style *string) Action {
 	return ActionCallback(func(c Context) Action {
-		if s != nil {
-			return a.Style(*s)
+		if style != nil {
+			return a.Style(*style)
 		}
 		return a
 	})
@@ -128,11 +127,11 @@ func (a Action) StyleR(s *string) Action {
 //
 //	ActionValues("dir/", "test.txt").StyleF(style.ForPathExt)
 //	ActionValues("true", "false").StyleF(style.ForKeyword)
-func (a Action) StyleF(f func(s string, sc style.Context) string) Action {
+func (a Action) StyleF(f func(s string) string) Action {
 	return ActionCallback(func(c Context) Action {
 		invoked := a.Invoke(c)
 		for index, v := range invoked.rawValues {
-			invoked.rawValues[index].Style = f(v.Value, c)
+			invoked.rawValues[index].Style = f(v.Value)
 		}
 		return invoked.ToA()
 	})
@@ -208,23 +207,5 @@ func (a Action) List(divider string) Action {
 func (a Action) UniqueList(divider string) Action {
 	return ActionMultiParts(divider, func(c Context) Action {
 		return a.Invoke(c).Filter(c.Parts).ToA().NoSpace()
-	})
-}
-
-// Prefix adds a prefix to values (only the ones inserted, not the display values)
-//
-//	carapace.ActionValues("melon", "drop", "fall").Prefix("water")
-func (a Action) Prefix(prefix string) Action {
-	return ActionCallback(func(c Context) Action {
-		return a.Invoke(c).Prefix(prefix).ToA()
-	})
-}
-
-// Suffix adds a suffx to values (only the ones inserted, not the display values)
-//
-//	carapace.ActionValues("apple", "melon", "orange").Suffix("juice")
-func (a Action) Suffix(suffix string) Action {
-	return ActionCallback(func(c Context) Action {
-		return a.Invoke(c).Suffix(suffix).ToA()
 	})
 }
