@@ -54,7 +54,7 @@ the various features below almost for free.
 - Bind cobra commands to provide the core functionality.
 - Multiple menus with their own command tree, prompt engines and special handlers.
 - All cobra settings can be modified, set and used freely, like in normal CLI workflows.
-- Bind handlers to special interrupt errors (eg. CtrlC/CtrlD), per menu.
+- Bind handlers to special interrupt errors (eg. `CtrlC`/`CtrlD`), per menu.
 
 ### Shell interface
 - Shell interface is powered by a [readline](https://github.com/reeflective/readline) instance.
