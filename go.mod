@@ -75,4 +75,4 @@ require (
 
 replace github.com/jandedobbeleer/oh-my-posh/src v12.34.2+incompatible => github.com/reeflective/oh-my-posh/src v0.0.0-20230104162021-14781d870201
 
-replace github.com/rsteube/carapace v0.29.1 => github.com/reeflective/carapace v0.25.2-0.20221230210103-53d7461905a7
+replace github.com/rsteube/carapace v0.29.1 => github.com/reeflective/carapace v0.25.2-0.20230105061949-8e704bc7aafd

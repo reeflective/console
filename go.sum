@@ -127,8 +127,8 @@ github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZN
 github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c/go.mod h1:OmDBASR4679mdNQnz2pUhc2G8CO2JrUAVFDRBDP/hJE=
 github.com/power-devops/perfstat v0.0.0-20221212215047-62379fc7944b h1:0LFwY6Q3gMACTjAbMZBjXAqTOzOwFaj2Ld6cjeQ7Rig=
 github.com/power-devops/perfstat v0.0.0-20221212215047-62379fc7944b/go.mod h1:OmDBASR4679mdNQnz2pUhc2G8CO2JrUAVFDRBDP/hJE=
-github.com/reeflective/carapace v0.25.2-0.20221230210103-53d7461905a7 h1:V8LIhFrpPjCrJrBD+oV6vceqv+A8spshT6YnBQs/GqE=
-github.com/reeflective/carapace v0.25.2-0.20221230210103-53d7461905a7/go.mod h1:/ALYHicIpak6TjQnKl7HupclqJydy2LQb6CkawYBxDo=
+github.com/reeflective/carapace v0.25.2-0.20230105061949-8e704bc7aafd h1:EpXK+6mBIu2fxrUbgJrW6XZl1cJeIdesXbnoO3QvgTI=
+github.com/reeflective/carapace v0.25.2-0.20230105061949-8e704bc7aafd/go.mod h1:/ALYHicIpak6TjQnKl7HupclqJydy2LQb6CkawYBxDo=
 github.com/reeflective/flags v0.9.1-0.20230102052232-2085c9120702 h1:QxmgXzdqaLZ46/PyJvGBAYBY6SUxqFuHEZ4nITVJ20o=
 github.com/reeflective/flags v0.9.1-0.20230102052232-2085c9120702/go.mod h1:qaXsf+1KENM29sgDYlQIsNfDEy+qF0+k3KeWeoESuGw=
 github.com/reeflective/oh-my-posh/src v0.0.0-20230104162021-14781d870201 h1:8OmePD62NVCZGgkrtMwTRyOoYsu3gZimoslF5uz5Zy8=
