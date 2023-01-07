@@ -27,7 +27,7 @@ func (p *Prompt) LoadConfig(path string) error {
 	}
 
 	flags := &platform.Flags{
-		Shell:  shell.PLAIN,
+		Shell:  shell.GENERIC,
 		Config: path,
 	}
 
@@ -84,7 +84,7 @@ func (c *Console) Log(msg string, args ...interface{}) {
 // makes a prompt engine with default/builtin configuration.
 func newDefaultEngine() *engine.Engine {
 	flags := &platform.Flags{
-		Shell: shell.PLAIN,
+		Shell: shell.GENERIC,
 	}
 
 	return engine.New(flags)

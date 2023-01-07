@@ -30,7 +30,7 @@ func main() {
 	// All menus currently each have a distinct, in-memory history source.
 	// Replace the main (current) menu's history with one writing to our
 	// application history file. The default history is named after its menu.
-	// menu.DeleteHistorySource(menu.Name())
+	// menu.DeleteHistorySource("")
 	menu.AddHistorySourceFile("local history", ".example-history")
 
 	// We bind a special handler for this menu, which will exit the

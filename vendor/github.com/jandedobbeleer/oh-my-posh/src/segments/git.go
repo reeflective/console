@@ -72,6 +72,8 @@ const (
 	TagIcon properties.Property = "tag_icon"
 	// MergeIcon shows before the merge context
 	MergeIcon properties.Property = "merge_icon"
+	// UpstreamIcons allows to add custom upstream icons
+	UpstreamIcons properties.Property = "upstream_icons"
 	// GithubIcon shows√ when upstream is github
 	GithubIcon properties.Property = "github_icon"
 	// BitbucketIcon shows  when upstream is bitbucket
@@ -337,17 +339,29 @@ func (g *Git) getUpstreamIcon() string {
 	}
 	g.RawUpstreamURL = g.getRemoteURL()
 	g.UpstreamURL = cleanSSHURL(g.RawUpstreamURL)
-	if strings.Contains(g.UpstreamURL, "github") {
-		return g.props.GetString(GithubIcon, "\uF408 ")
+
+	// allow overrides first
+	custom := g.props.GetKeyValueMap(UpstreamIcons, map[string]string{})
+	for key, value := range custom {
+		if strings.Contains(g.UpstreamURL, key) {
+			return value
+		}
 	}
-	if strings.Contains(g.UpstreamURL, "gitlab") {
-		return g.props.GetString(GitlabIcon, "\uF296 ")
+
+	defaults := map[string]struct {
+		Icon    properties.Property
+		Default string
+	}{
+		"github":           {GithubIcon, "\uF408 "},
+		"gitlab":           {GitlabIcon, "\uF296 "},
+		"bitbucket":        {BitbucketIcon, "\uF171 "},
+		"dev.azure.com":    {AzureDevOpsIcon, "\uFD03 "},
+		"visualstudio.com": {AzureDevOpsIcon, "\uFD03 "},
 	}
-	if strings.Contains(g.UpstreamURL, "bitbucket") {
-		return g.props.GetString(BitbucketIcon, "\uF171 ")
-	}
-	if strings.Contains(g.UpstreamURL, "dev.azure.com") || strings.Contains(g.UpstreamURL, "visualstudio.com") {
-		return g.props.GetString(AzureDevOpsIcon, "\uFD03 ")
+	for key, value := range defaults {
+		if strings.Contains(g.UpstreamURL, key) {
+			return g.props.GetString(value.Icon, value.Default)
+		}
 	}
 	return g.props.GetString(GitIcon, "\uE5FB ")
 }

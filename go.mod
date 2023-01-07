@@ -3,7 +3,7 @@ module github.com/reeflective/console
 go 1.19
 
 require (
-	github.com/jandedobbeleer/oh-my-posh/src v12.34.2+incompatible
+	github.com/jandedobbeleer/oh-my-posh/src v0.0.0-20230106125910-5eb6e99ea32d
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/reeflective/flags v0.9.1-0.20230102052232-2085c9120702
 	github.com/reeflective/readline v0.1.0-beta.0.20230103220947-4db99a4a0b50
@@ -72,7 +72,5 @@ require (
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
-
-replace github.com/jandedobbeleer/oh-my-posh/src v12.34.2+incompatible => github.com/reeflective/oh-my-posh/src v0.0.0-20230104162021-14781d870201
 
 replace github.com/rsteube/carapace v0.29.1 => github.com/reeflective/carapace v0.25.2-0.20221230210103-53d7461905a7

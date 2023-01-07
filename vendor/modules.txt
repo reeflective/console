@@ -111,10 +111,9 @@ github.com/imdario/mergo
 # github.com/inconshreveable/mousetrap v1.1.0
 ## explicit; go 1.18
 github.com/inconshreveable/mousetrap
-# github.com/jandedobbeleer/oh-my-posh/src v12.34.2+incompatible => github.com/reeflective/oh-my-posh/src v0.0.0-20230104162021-14781d870201
+# github.com/jandedobbeleer/oh-my-posh/src v0.0.0-20230106125910-5eb6e99ea32d
 ## explicit; go 1.19
-github.com/jandedobbeleer/oh-my-posh/src/color
-github.com/jandedobbeleer/oh-my-posh/src/console
+github.com/jandedobbeleer/oh-my-posh/src/ansi
 github.com/jandedobbeleer/oh-my-posh/src/constants
 github.com/jandedobbeleer/oh-my-posh/src/engine
 github.com/jandedobbeleer/oh-my-posh/src/http

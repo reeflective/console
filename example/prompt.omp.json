@@ -6,7 +6,7 @@
             "newline": true,
             "segments": [
                 {
-                    "foreground": "lightYellow",
+                    "foreground": "lightBlue",
                     "style": "plain",
                     "template": " {{ .UserName }}@{{ .HostName }} ",
                     "type": "session"
