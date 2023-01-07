@@ -1,29 +1,17 @@
 basic -f interrupt.go
 basic -cp=/home/user/backup/readline --email another@email.com
-
 testing that
 z readline
-
-
-
 help
 multiple-ambiguous --help
 help
-
 help
 basic -c
 basic
 basic -f example
-htop
-htop
 exit
-y
-y
-y
-y
 multiple-ambiguous --help
 overlap-min-max --help
-
 overlap-min-max --help
 basic -f
 basic -cp=/home
@@ -33,3 +21,94 @@ ls
 cd ..
 ls
 exit
+cd ..
+replacing words replacing ewords
+replacing words replacingmo
+another replacing words working fine like that
+vim replace mode should now replacing thwork correctly
+switching keywords: "true && false" or operators: 2*2 or digits: 0b01111 0x1 100 (with iterations)
+this command
+is stored in both histories
+and this one two
+basic -cp=/home/user/backup/readline --email another@email.com
+multiple-ambiguous 10.203.23.45 127.0.0.1  10.10.10.10  23:23:234:34ef:343f:47ca
+multiple-ambiguous  10.203.23.45  127.0.0.1  10.10.10.10
+
+
+
+
+
+
+
+
+
+
+
+git
+and this command
+now the prompt works as transient
+name of the transient is configured in oh-my-posh config
+
+
+
+
+
+command
+not transient
+y
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+y
+y
+aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+
+
+
+
+
+y
+
+
+y
+ba
+y
+y
+ba
+auto complete is on, prompt transient off, and history autosuggest on
+cmd
+now we have transient
+basic -a testing -cp=/home/auser/
+basic -f /usr/local,commands.go,../console.wiki,/usr/local.orig -cp
+
+
+
+
+
+
+
+
+list-first  10.203.23.45  127.0.0.1  blue-team.com
+
