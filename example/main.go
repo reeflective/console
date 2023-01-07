@@ -39,7 +39,8 @@ func main() {
 	menu.AddInterrupt(io.EOF, exitCtrlD)
 	menu.AddInterrupt(console.ErrCtrlC, switchMenu)
 
-	// Use the command yielder function and pass it to our menu of interest.
+	// Make a command yielder for our main menu.
+	flagsCommands := makeflagsCommands(app)
 	menu.SetCommands(flagsCommands)
 
 	// Everything is ready for a tour.

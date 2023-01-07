@@ -49,6 +49,11 @@ func (c *Console) Run() (err error) {
 			continue
 		}
 
+		// If the command-line is empty, just go for a new read loop.
+		if len(args) == 0 {
+			continue
+		}
+
 		// Run user-provided pre-run line hooks,
 		// which may modify the input line
 		args = c.runLineHooks(args)

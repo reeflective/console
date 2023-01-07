@@ -112,3 +112,10 @@ basic -f /usr/local,commands.go,../console.wiki,/usr/local.orig -cp
 
 list-first  10.203.23.45  127.0.0.1  blue-team.com
 
+y
+
+
+
+client
+client
+client
