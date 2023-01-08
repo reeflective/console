@@ -84,7 +84,6 @@ is also available in the [wiki](https://github.com/reeflective/console/wiki):
 * [Binding commands](https://github.com/reeflective/console/wiki/Binding-Commands)
 * [Interrupt handlers](https://github.com/reeflective/console/wiki/Interrupt-Handlers)
 * [History Sources](https://github.com/reeflective/console/wiki/History-Sources)
-* [Default commands](https://github.com/maxlandon/gonsole/wiki/Default-Commands)
 * [Logging](https://github.com/reeflective/console/wiki/Logging)
 
 
