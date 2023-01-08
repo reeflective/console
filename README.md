@@ -6,6 +6,7 @@
   <br> <h1> Console </h1>
 
   <p>  Closed-loop application library for Cobra commands  </p>
+  <p>  (Menus, oh-my-posh prompts, bells and whistles, easy to use)  </p>
 </div>
 
 
