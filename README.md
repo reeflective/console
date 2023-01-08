@@ -6,6 +6,7 @@
   <br> <h1> Console </h1>
 
   <p>  Closed-loop application library for Cobra commands  </p>
+  <p>  (Menus, oh-my-posh prompts, bells and whistles, easy to use)  </p>
 </div>
 
 
@@ -69,7 +70,9 @@ the various features below almost for free.
 - Support for [oh-my-posh](https://github.com/JanDeDobbeleer/oh-my-posh) prompts, per menu and with custom configuration files for each.
 - Also with oh-my-posh, write and bind application/menu-specific prompt segments.
 
-<!-- ![readme-main-gif](https://github.com/maxlandon/gonsole/blob/assets/readme-main.gif) -->
+
+## Showcase
+![console](https://github.com/reeflective/console/tree/assets/console.gif)
 
 
 ## Documentation
