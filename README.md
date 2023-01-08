@@ -71,10 +71,6 @@ the various features below almost for free.
 - Also with oh-my-posh, write and bind application/menu-specific prompt segments.
 
 
-## Showcase
-![console](https://github.com/reeflective/console/tree/assets/console.gif)
-
-
 ## Documentation
 
 You can install and use the [example application console](https://github.com/reeflective/console/tree/main/example). This example application 
@@ -90,6 +86,10 @@ is also available in the [wiki](https://github.com/reeflective/console/wiki):
 * [History Sources](https://github.com/reeflective/console/wiki/History-Sources)
 * [Default commands](https://github.com/maxlandon/gonsole/wiki/Default-Commands)
 * [Logging](https://github.com/reeflective/console/wiki/Logging)
+
+
+## Showcase
+![console](https://github.com/reeflective/console/blob/assets/console.gif)
 
 
 ## Status
