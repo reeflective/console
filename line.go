@@ -21,6 +21,27 @@ var (
 	unterminatedEscapeError      = errors.New("unterminated backslash-escape")
 )
 
+// getMultiline determines if the line just accepted is complete (in which case
+// we should execute it), or incomplete (in which case we must read in multiline).
+func (c *Console) getMultiline(line []rune) (accept bool) {
+	// We just split the line, sh-style.
+	// Errors are either: unterminated quotes, or unterminated escapes.
+	_, _, err := split(string(line), false)
+	if err == nil {
+		return true
+	}
+
+	// Currently, unterminated quotes are obvious to treat: keep reading.
+	switch err {
+	case unterminatedDoubleQuoteError, unterminatedSingleQuoteError:
+		return false
+	case unterminatedEscapeError:
+		// TODO: How to treat those ? Generally, a single slash means "not done".
+	}
+
+	return true
+}
+
 // split has been copied from go-shellquote and slightly modified so as to also
 // return the remainder when the parsing failed because of an unterminated quote.
 func split(input string, hl bool) (words []string, remainder string, err error) {

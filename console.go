@@ -76,7 +76,8 @@ func New() *Console {
 		console.shell.AddHistorySource(name, defaultMenu.histories[name])
 	}
 
-	// Command completion, syntax highlighting, etc.
+	// Command completion, syntax highlighting, multiline callbacks, etc.
+	console.shell.GetMultiLine = console.getMultiline
 	console.shell.Completer = console.complete
 	console.shell.SyntaxHighlighter = console.highlightSyntax
 
