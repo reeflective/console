@@ -119,3 +119,14 @@ y
 client
 client
 client
+basic -cp=/home
+basic
+for d in $(go list . | grep -v vendor); do \r\n\t go test -race -coverprofile=profile.out \r\n done
+
+for d in $(go list . | grep -v vendor); do \r\n\t go test -race -coverprofile=profile.out \r\n done
+for d in $(go list . | grep -v vendor); do \
+    \t go test -race -coverprofile=profile.out \
+done
+for d in $(go list . | grep -v vendor); do
+    go test -race -coverprofile=profile.out
+done

@@ -97,6 +97,9 @@ raw:
 				goto escape
 			} else if strings.ContainsRune(splitChars, c) {
 				buf.WriteString(input[0 : len(input)-len(cur)-l])
+				if hl && c != ' ' {
+					buf.WriteRune(c)
+				}
 				return buf.String(), cur, nil
 			}
 		}
