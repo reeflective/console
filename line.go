@@ -21,9 +21,9 @@ var (
 	unterminatedEscapeError      = errors.New("unterminated backslash-escape")
 )
 
-// getMultiline determines if the line just accepted is complete (in which case
+// acceptMultiline determines if the line just accepted is complete (in which case
 // we should execute it), or incomplete (in which case we must read in multiline).
-func (c *Console) getMultiline(line []rune) (accept bool) {
+func (c *Console) acceptMultiline(line []rune) (accept bool) {
 	// We just split the line, sh-style.
 	// Errors are either: unterminated quotes, or unterminated escapes.
 	_, _, err := split(string(line), false)
@@ -118,7 +118,7 @@ raw:
 				goto escape
 			} else if strings.ContainsRune(splitChars, c) {
 				buf.WriteString(input[0 : len(input)-len(cur)-l])
-				if hl && c != ' ' {
+				if hl {
 					buf.WriteRune(c)
 				}
 				return buf.String(), cur, nil

@@ -77,7 +77,7 @@ func New() *Console {
 	}
 
 	// Command completion, syntax highlighting, multiline callbacks, etc.
-	console.shell.GetMultiLine = console.getMultiline
+	console.shell.AcceptMultiline = console.acceptMultiline
 	console.shell.Completer = console.complete
 	console.shell.SyntaxHighlighter = console.highlightSyntax
 
