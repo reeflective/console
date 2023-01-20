@@ -14,7 +14,10 @@ func (rl *Instance) standardWidgets() lineWidgets {
 		"accept-and-hold":         rl.acceptAndHold,
 		"beginning-of-line":       rl.beginningOfLine,
 		"end-of-line":             rl.endOfLine,
+		"up-line":                 rl.upLine,
+		"down-line":               rl.downLine,
 		"kill-line":               rl.killLine,
+		"backward-kill-line":      rl.backwardKillLine,
 		"kill-whole-line":         rl.killWholeLine,
 		"kill-buffer":             rl.killBuffer,
 		"backward-kill-word":      rl.backwardKillWord,
@@ -23,6 +26,7 @@ func (rl *Instance) standardWidgets() lineWidgets {
 		"backward-delete-char":    rl.backwardDeleteChar,
 		"delete-char-or-list":     rl.deleteCharOrList,
 		"delete-char":             rl.deleteChar,
+		"delete-word":             rl.deleteWord,
 		"forward-char":            rl.forwardChar,
 		"backward-char":           rl.backwardChar,
 		"forward-word":            rl.forwardWord,
@@ -46,6 +50,7 @@ func (rl *Instance) standardWidgets() lineWidgets {
 		"kill-region":             rl.killRegion,
 		"redo":                    rl.redo,
 		"switch-keyword":          rl.switchKeyword,
+		"edit-command-line":       rl.editCommandLine,
 	}
 
 	return widgets
@@ -79,6 +84,23 @@ func (rl *Instance) selfInsert() {
 		buf = append([]rune{'^'}, rune(caret))
 	}
 
+	// If the key is a bracket or quote, and that the next character
+	// in the line is not its matcher, insert the pair altogether.
+	// backOne := false
+	// if len(buf) == 1 {
+	// 	toInsert := buf[0]
+	// 	isSurround := isBracket(toInsert) || toInsert == '\'' || toInsert == '"'
+	// 	_, echar := rl.matchSurround(toInsert)
+	// 	matcher := false
+	// 	if len(rl.line) > rl.pos {
+	// 		matcher = rl.matches(toInsert, rl.line[rl.pos])
+	// 	}
+	// 	if isSurround && !matcher {
+	// 		buf = append(buf, echar)
+	// 		backOne = true
+	// 	}
+	// }
+
 	switch {
 	// The line is empty
 	case len(rl.line) == 0:
@@ -95,11 +117,13 @@ func (rl *Instance) selfInsert() {
 	}
 
 	rl.pos += len(buf)
+	// if backOne {
+	// 	rl.pos--
+	// }
 }
 
 func (rl *Instance) acceptLine() {
-	rl.carriageReturn()
-	rl.accepted = true
+	rl.lineCarriageReturn()
 }
 
 func (rl *Instance) acceptAndHold() {
@@ -114,26 +138,121 @@ func (rl *Instance) clearScreen() {
 	print(seqClearScreen)
 	print(seqCursorTopLeft)
 
-	// Print the prompt, all or part of it.
-	print(rl.Prompt.getPrimary())
-	print(seqClearScreenBelow)
+	rl.Prompt.init(rl)
 
-	rl.resetHintText()
-	rl.getHintText()
-	rl.renderHelpers()
+	// Since the line and helpers are going to be redisplayed
+	// the cursor is going to be moved up before anything, so
+	// we compensate here so that the prompt that has just
+	// been printed is not cleared out.
+	moveCursorDown(rl.posY)
 }
 
 func (rl *Instance) beginningOfLine() {
 	rl.skipUndoAppend()
-	rl.pos = 0
+	for ; rl.pos >= 0; rl.pos-- {
+		for rl.pos > len(rl.line)-1 {
+			rl.pos--
+		}
+		if rl.line[rl.pos] == '\n' {
+			rl.pos++
+			break
+		}
+	}
 }
 
 func (rl *Instance) endOfLine() {
-	if len(rl.line) > 0 {
-		rl.pos = len(rl.line)
-	}
-
 	rl.skipUndoAppend()
+
+	for ; rl.pos < len(rl.line); rl.pos++ {
+		if rl.line[rl.pos] == '\n' {
+			break
+		}
+	}
+}
+
+func (rl *Instance) upLine() {
+	var cpos int // The vertical position of the cursor on the current line.
+	var bpos int // The beginning of the current line.
+
+	// Get the index of each newline in the buffer.
+	line := append(rl.lineCompleted(), '\n')
+	nl := regexp.MustCompile("\n")
+	newlinesIdx := nl.FindAllStringIndex(string(line), -1)
+
+	for line := len(newlinesIdx) - 1; line >= 0; line-- {
+		epos := newlinesIdx[line][0]
+		if line > rl.hpos {
+			continue
+		}
+
+		// Get the beginning of the previous line.
+		if line > 0 {
+			bpos = newlinesIdx[line-1][0] + 1
+		} else {
+			bpos = 0
+		}
+
+		// If we are on the current line,
+		// go at the beginning of the previous one.
+		if line == rl.hpos {
+			cpos = rl.pos - bpos
+			continue
+		}
+
+		// If the end position of the previous line
+		// is the same as the beginning position,
+		// then the line is empty: stay on its newline.
+		if bpos == epos {
+			bpos++
+		}
+
+		// And either go at the end of the line
+		// or to the previous cursor X coordinate.
+		if epos-bpos > cpos {
+			rl.pos = bpos + cpos
+		} else {
+			rl.pos = epos
+		}
+
+		break
+	}
+}
+
+func (rl *Instance) downLine() {
+	var cpos int // The vertical position of the cursor on the current line.
+	var bpos int // The beginning of the next line.
+
+	// Get the index of each newline in the buffer.
+	line := append(rl.lineCompleted(), '\n')
+	nl := regexp.MustCompile("\n")
+	newlinesIdx := nl.FindAllStringIndex(string(line), -1)
+
+	for line := 0; line < len(newlinesIdx); line++ {
+		epos := newlinesIdx[line][0] + 1
+		if line < rl.hpos {
+			bpos = epos
+			continue
+		}
+
+		// If we are on the current line,
+		// go at the end of it
+		if line == rl.hpos {
+			cpos = rl.pos - bpos
+			bpos = epos
+			rl.pos = bpos
+			continue
+		}
+
+		// And either go at the end of the line
+		// or to the previous cursor X coordinate.
+		if epos-bpos > cpos {
+			rl.pos = bpos + cpos
+		} else {
+			rl.pos = epos - 1
+		}
+
+		break
+	}
 }
 
 func (rl *Instance) killLine() {
@@ -141,6 +260,15 @@ func (rl *Instance) killLine() {
 
 	rl.saveBufToRegister(rl.line[rl.pos:])
 	rl.line = rl.line[:rl.pos]
+	rl.resetHelpers()
+	rl.addIteration("")
+}
+
+func (rl *Instance) backwardKillLine() {
+	rl.undoHistoryAppend()
+
+	rl.saveBufToRegister(rl.line[:rl.pos])
+	rl.line = rl.line[rl.pos:]
 	rl.resetHelpers()
 	rl.addIteration("")
 }
@@ -153,7 +281,7 @@ func (rl *Instance) killWholeLine() {
 	}
 
 	rl.saveBufToRegister(rl.line)
-	rl.clearLine()
+	rl.lineClear()
 }
 
 func (rl *Instance) killBuffer() {
@@ -163,7 +291,7 @@ func (rl *Instance) killBuffer() {
 		return
 	}
 	rl.saveBufToRegister(rl.line)
-	rl.clearLine()
+	rl.lineClear()
 }
 
 func (rl *Instance) backwardKillWord() {
@@ -183,7 +311,7 @@ func (rl *Instance) killWord() {
 
 func (rl *Instance) yank() {
 	buffer := rl.pasteFromRegister()
-	rl.insert(buffer)
+	rl.lineInsert(buffer)
 }
 
 func (rl *Instance) backwardDeleteChar() {
@@ -206,13 +334,13 @@ func (rl *Instance) backwardDeleteChar() {
 		}
 
 		// Delete the character
-		rl.deleteX()
+		rl.deleteRune(true)
 
 		// When the next character was identified
 		// as a surround, delete as well.
 		if isSurround && matcher {
 			rl.pos++
-			rl.deleteX()
+			rl.deleteRune(true)
 		}
 	}
 
@@ -231,14 +359,22 @@ func (rl *Instance) deleteChar() {
 
 	// Delete the chars in the line anyway
 	for i := 1; i <= vii; i++ {
-		rl.deletex()
+		rl.deleteRune(false)
 	}
+}
+
+func (rl *Instance) deleteWord() {
+	rl.undoHistoryAppend()
+
+	rl.markSelection(rl.pos)
+	rl.moveCursorByAdjust(rl.viJumpE(tokeniseLine))
+	rl.deleteSelection()
 }
 
 func (rl *Instance) deleteCharOrList() {
 	switch {
 	case rl.pos < len(rl.line):
-		rl.deletex()
+		rl.deleteRune(false)
 	default:
 		rl.expandOrComplete()
 	}
@@ -345,14 +481,14 @@ func (rl *Instance) setMarkCommand() {
 		rl.resetSelection()
 		rl.visualLine = false
 	default:
-		rl.mark = rl.pos
+		rl.markSelection(rl.pos)
 	}
 }
 
 func (rl *Instance) quoteRegion() {
 	rl.undoHistoryAppend()
 
-	_, cpos := rl.insertSelection("'")
+	_, cpos := rl.insertSelection("'", "'")
 	rl.pos = cpos + 1
 }
 
@@ -485,7 +621,7 @@ func (rl *Instance) copyPrevWord() {
 	rl.markSelection(rl.pos)
 	rl.moveCursorByAdjust(rl.viJumpB(tokeniseLine))
 
-	wlen, _ := rl.insertSelection("")
+	wlen, _ := rl.insertSelection("", "")
 	rl.pos = posInit + wlen
 }
 
@@ -546,7 +682,7 @@ func (rl *Instance) switchKeyword() {
 	rl.undoHistoryAppend()
 
 	cpos := rl.pos
-	increase := rl.keys == fmt.Sprint(charCtrlA)
+	increase := rl.keys[0] == charCtrlA
 
 	if match, _ := regexp.MatchString(`[+-][0-9]`, rl.lineSlice(2)); match {
 		// If cursor is on the `+` or `-`, we need to check if it is a
@@ -587,7 +723,7 @@ func (rl *Instance) switchKeyword() {
 
 		// We are only interested in the end position after all runs
 		epos = bpos + oepos
-		bpos = +obpos
+		bpos += obpos
 		if cpos < bpos || cpos >= epos {
 			continue
 		}
@@ -608,18 +744,20 @@ func (rl *Instance) switchKeyword() {
 func (rl *Instance) exchangePointAndMark() {
 	rl.skipUndoAppend()
 	vii := rl.getIterations()
-	if rl.mark == -1 {
+
+	visual := rl.visualSelection()
+	if visual == nil {
 		return
 	}
 
 	switch {
 	case vii < 0:
-		rl.pos, rl.mark = rl.mark, rl.pos
+		rl.pos, visual.bpos = visual.bpos, rl.pos
 	case vii > 0:
-		rl.pos, rl.mark = rl.mark, rl.pos
-		rl.activeRegion = true
+		rl.pos, visual.bpos = visual.bpos, rl.pos
+		visual.active = true
 	case vii == 0:
-		rl.activeRegion = true
+		visual.active = true
 	}
 }
 
@@ -641,5 +779,28 @@ func (rl *Instance) transposeChars() {
 		blast := rl.line[rl.pos-1]
 		rl.line[rl.pos-1] = last
 		rl.line[rl.pos] = blast
+	}
+}
+
+func (rl *Instance) editCommandLine() {
+	rl.clearHelpers()
+
+	buffer := rl.line
+
+	edited, err := rl.StartEditorWithBuffer(buffer, "")
+	if err != nil || (len(edited) == 0 && len(buffer) != 0) {
+		rl.skipUndoAppend()
+		errStr := strings.ReplaceAll(err.Error(), "\n", "")
+		changeHint := fmt.Sprintf(seqFgRed+"Editor error: %s", errStr)
+		rl.hint = append([]rune{}, []rune(changeHint)...)
+		return
+	}
+
+	// Update our line
+	rl.line = edited
+
+	// We're done with visual mode when we were in.
+	if (rl.main == vicmd || rl.main == viins) && rl.local == visual {
+		rl.exitVisualMode()
 	}
 }

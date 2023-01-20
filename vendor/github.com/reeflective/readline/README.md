@@ -21,7 +21,7 @@
       alt="Go module version" />
   </a>
 
-  <a href="https://godoc.org/reeflective/go/readline">
+  <a href="https://pkg.go.dev/github.com/reeflective/readline">
     <img src="https://img.shields.io/badge/godoc-reference-blue.svg"
       alt="GoDoc reference" />
   </a>
@@ -93,23 +93,76 @@ functionality provided by readline and its default configuration, install and st
 
 ## Showcases
 
-- Emacs edition
-- Vim edition
-- Vim selection & movements
-- Vim surround
-- Keyword swithing
-- Vim registers & completion
-- Undo/redo line history
-- History movements & completion
-- Completion classic
-- Completion isearch
-- Suffix autoremoval
-- Prompts
-- Logging
+<details>
+  <summary>- Emacs edition</summary>
+ <dd><em>(This extract is quite a pity, because its author is not using Emacs and does not know many of its shortcuts)</em></dd>
+<img src="https://github.com/reeflective/readline/blob/assets/emacs.gif"/>
+</details>
+<details>
+  <summary>- Vim edition</summary>
+<img src="https://github.com/reeflective/readline/blob/assets/vim.gif"/>
+</details>
+<details>
+  <summary>- Undo/redo line history </summary>
+<img src="https://github.com/reeflective/readline/blob/assets/undo.gif"/>
+</details>
+<details>
+  <summary>- Keyword switching </summary>
+<img src="https://github.com/reeflective/readline/blob/assets/switch-keywords.gif"/>
+</details>
+<details>
+  <summary>- Vim selection & movements (basic) </summary>
+<img src="https://github.com/reeflective/readline/blob/assets/vim-selection.gif"/>
+</details>
+<details>
+  <summary>- Vim surround (selection and change) </summary>
+ <dd><em>Basic surround selection changes/adds</em></dd>
+<img src="https://github.com/reeflective/readline/blob/assets/vim-surround.gif"/>
+ <dd><em>Surround and change in shellwords, matching brackets, etc.</em></dd>
+<img src="https://github.com/reeflective/readline/blob/assets/vim-surround-2.gif"/>
+</details>
+<details>
+  <summary>- Vim registers (with completion) </summary>
+<img src="https://github.com/reeflective/readline/blob/assets/vim-registers.gif"/>
+</details>
+<details>
+  <summary>- History movements/completion/use/search </summary>
+ <dd><em></em></dd>
+History movement, completion and some other other widgets
+<img src="https://github.com/reeflective/readline/blob/assets/history.gif"/>
+ <dd><em>History cycling and search</em></dd>
+<img src="https://github.com/reeflective/readline/blob/assets/history-search.gif"/>
+</details>
+<details>
+  <summary>- Completion </summary>
+ <dd><em>Classic mode & incremental search mode</em></dd>
+<img src="https://github.com/reeflective/readline/blob/assets/completion.gif"/>
+ <dd><em>Smart terminal estate management</em></dd>
+<img src="https://github.com/reeflective/readline/blob/assets/completion-size.gif"/>
+</details>
+<details>
+  <summary>- Suffix autoremoval </summary>
+<img src="https://github.com/reeflective/readline/blob/assets/suffix-autoremoval.gif"/>
+</details>
+<details>
+  <summary>- Prompts </summary>
+<img src="https://github.com/reeflective/readline/blob/assets/prompts.gif"/>
+</details>
+<details>
+  <summary>- Logging </summary>
+<img src="https://github.com/reeflective/readline/blob/assets/logging.gif"/>
+</details>
+<details>
+  <summary>- Configuration hot-reload </summary>
+<img src="https://github.com/reeflective/readline/blob/assets/configuration-reload.gif"/>
+</details>
 
 
 ## Status
 
+This library is in a pre-release status, although pretending to be quite bug-free as compared to its feature set.
+Please open a PR or an issue if you wish to bring enhancements to it. 
+Other contributions, as well as bug fixes and reviews are also welcome.
 
 ## Credits
 

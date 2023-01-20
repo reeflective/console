@@ -2,6 +2,13 @@ package readline
 
 import (
 	"os"
+	"strings"
+)
+
+var sanitizer = strings.NewReplacer(
+	"\n", ``,
+	"\r", ``,
+	"\t", ``,
 )
 
 // We pass a special subset of the current input line, so that
@@ -12,16 +19,7 @@ func (rl *Instance) getCompletionLine() (line []rune, pos int) {
 		pos = 0
 	}
 
-	switch {
-	case rl.pos == len(rl.line):
-		line = rl.line
-	case rl.pos < len(rl.line):
-		line = rl.line[:pos]
-	default:
-		line = rl.line
-	}
-
-	return
+	return rl.line, pos
 }
 
 // When the completions are either longer than:
@@ -30,16 +28,13 @@ func (rl *Instance) getCompletionLine() (line []rune, pos int) {
 // we use this function to prompt for confirmation before printing comps.
 func (rl *Instance) promptCompletionConfirm(sentence string) {
 	rl.hint = []rune(sentence)
-
-	rl.compConfirmWait = true
 	rl.undoSkipAppend = true
-
 	rl.renderHelpers()
 }
 
 func (rl *Instance) currentGroup() (group *comps) {
 	for _, g := range rl.tcGroups {
-		if g.isCurrent && len(g.values) > 0 {
+		if g.isCurrent {
 			return g
 		}
 	}
@@ -119,12 +114,13 @@ func (rl *Instance) noCompletions() bool {
 func (rl *Instance) getCompletionMaxRows() (maxRows int) {
 	maxRows = rl.config.MaxTabCompleterRows
 
-	rl.EnableGetCursorPos = true
-
 	_, cposY := rl.getCursorPos()
-	_, termHeight, err := GetSize(int(os.Stdin.Fd()))
-	if err != nil || cposY == -1 {
-		return
+	_, termHeight, _ := GetSize(int(os.Stdin.Fd()))
+	if cposY == -1 {
+		if termHeight != -1 {
+			return termHeight / 2
+		}
+		return maxRows
 	}
 
 	spaceBelow := (termHeight - cposY) - 1

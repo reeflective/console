@@ -1,121 +1,47 @@
-basic -f interrupt.go
-basic -cp=/home/user/backup/readline --email another@email.com
-testing that
-z readline
-help
-multiple-ambiguous --help
-help
-help
-basic -c
-basic
-basic -f example
-exit
-multiple-ambiguous --help
-overlap-min-max --help
-overlap-min-max --help
-basic -f
-basic -cp=/home
-basic
-which carapace
-ls
-cd ..
-ls
-exit
-cd ..
-replacing words replacing ewords
-replacing words replacingmo
-another replacing words working fine like that
-vim replace mode should now replacing thwork correctly
-switching keywords: "true && false" or operators: 2*2 or digits: 0b01111 0x1 100 (with iterations)
-this command
-is stored in both histories
-and this one two
-basic -cp=/home/user/backup/readline --email another@email.com
-multiple-ambiguous 10.203.23.45 127.0.0.1  10.10.10.10  23:23:234:34ef:343f:47ca
-multiple-ambiguous  10.203.23.45  127.0.0.1  10.10.10.10
-
-
-
-
-
-
-
-
-
-
-
-git
-and this command
-now the prompt works as transient
-name of the transient is configured in oh-my-posh config
-
-
-
-
-
-command
-not transient
-y
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-y
-y
-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
-
-
-
-
-
-y
-
-
-y
-ba
-y
-y
-ba
-auto complete is on, prompt transient off, and history autosuggest on
-cmd
-now we have transient
-basic -a testing -cp=/home/auser/
-basic -f /usr/local,commands.go,../console.wiki,/usr/local.orig -cp
-
-
-
-
-
-
-
-
-list-first  10.203.23.45  127.0.0.1  blue-team.com
-
-y
-
-
-
-client
-client
-client
+{"datetime":"2023-01-11T03:55:31.19768021+01:00","block":"multiple-ambiguous \"10.203.23.45\nanother test\""}
+{"datetime":"2023-01-11T04:19:34.996246836+01:00","block":"list-first 10.203.23.45 \"127.0.0.1 \nanother test\""}
+{"datetime":"2023-01-11T05:22:18.391148425+01:00","block":"multiple-ambiguous \"10.203.23.45 \nanother line\""}
+{"datetime":"2023-01-11T17:36:12.608735363+01:00","block":"multiple-ambiguous \"192.168.1.1 \ntesting that it works\nfine like this\" and shit like that"}
+{"datetime":"2023-01-11T23:48:06.79239968+01:00","block":"git command \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa another word here aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\nanother testing here aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\""}
+{"datetime":"2023-01-12T00:09:40.826273519+01:00","block":"git \"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa another word here aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\nanother testing here aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa \nanother try to check more than 3 lines\" here"}
+{"datetime":"2023-01-13T17:42:05.251704029+01:00","block":"git testing \"this string\nwith another string here that is longer\nand another one short\""}
+{"datetime":"2023-01-14T03:22:30.224150635+01:00","block":"git testing \"this string\nanother test with another string here that is longer another one\nand another one short\""}
+{"datetime":"2023-01-15T03:06:12.516821066+01:00","block":"git \"another\n\ntesting\n\nthis\""}
+{"datetime":"2023-01-15T07:30:08.742273898+01:00","block":"multiple-ambiguous \"10.203.23.45\nanother test\""}
+{"datetime":"2023-01-15T07:31:00.929042673+01:00","block":"multiple-ambiguous \"10.203.23.45\nanother test\""}
+{"datetime":"2023-01-15T09:46:52.147658459+01:00","block":"git testing \"this stringand another one short\" aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
+{"datetime":"2023-01-15T09:56:00.281185044+01:00","block":"git this sssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss"}
+{"datetime":"2023-01-15T10:00:55.285177188+01:00","block":"git testing thataaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
+{"datetime":"2023-01-15T10:04:31.337350601+01:00","block":"git anaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
+{"datetime":"2023-01-15T11:27:55.062589134+01:00","block":"git \"another\nis another sentence\nnot yet finished\""}
+{"datetime":"2023-01-16T05:59:19.888868992+01:00","block":"git \"test\nanother testing which\nworks quite fine here\""}
+{"datetime":"2023-01-16T05:59:52.488582649+01:00","block":"another \"testing string\nthat ends here and works\""}
+{"datetime":"2023-01-16T06:43:59.230557529+01:00","block":"git \"another\nis another sentence\nnot yet finished\""}
+{"datetime":"2023-01-17T03:04:40.384123964+01:00","block":"basic -f \"../another\nwhile that seems to work fine until now\nand that\""}
+{"datetime":"2023-01-17T06:00:47.489362454+01:00","block":"basic -f \"commands.go \nanother testing that now works fine !\nanother string\""}
+{"datetime":"2023-01-17T06:01:36.637208829+01:00","block":"basic -f \"commands.go \nanother one which works\nfine !\""}
+{"datetime":"2023-01-17T06:03:36.41657067+01:00","block":"basic -f \"commands.go \nanother testing\" string that works 'quite\nfine as well !'"}
+{"datetime":"2023-01-17T07:57:41.375564062+01:00","block":"basic -f \"commands.go \nanother strings\" -cp=/usr"}
+{"datetime":"2023-01-17T07:58:23.882655383+01:00","block":"basic -f \"commands.go \nanother strings\" -cp=/usr"}
+{"datetime":"2023-01-18T03:45:08.09073158+01:00","block":"git \"another\nanother one that \nis another sentence\nthis works\nnot yet finished\""}
+{"datetime":"2023-01-18T03:45:32.971677896+01:00","block":"rest-slice-max --help"}
+{"datetime":"2023-01-18T03:45:49.131519441+01:00","block":"client"}
+{"datetime":"2023-01-18T07:43:30.869057266+01:00","block":"git \"another\nthis works\nanother one that \nis another sentence\nnot yet finished\""}
+{"datetime":"2023-01-18T21:59:52.313129486+01:00","block":"basic -f \"commands.go \nanother strings\" -cp=/usr"}
+{"datetime":"2023-01-19T00:17:46.151917638+01:00","block":"basic -f \"commands.go,\nexample,prompt.go,menu.go\n,main.go\""}
+{"datetime":"2023-01-19T01:43:09.72644676+01:00","block":"bj"}
+{"datetime":"2023-01-19T05:02:07.527362234+01:00","block":"client"}
+{"datetime":"2023-01-19T06:50:53.833642342+01:00","block":"git remote aaaaaaaaaaaaaaaaaaaaaaaaaa"}
+{"datetime":"2023-01-19T12:23:31.404166521+01:00","block":"git"}
+{"datetime":"2023-01-19T12:23:41.290693944+01:00","block":"this"}
+{"datetime":"2023-01-19T12:34:25.117204675+01:00","block":"basic"}
+{"datetime":"2023-01-19T12:44:25.285698942+01:00","block":"basic -f \"commands.go\nanother\n\n\""}
+{"datetime":"2023-01-19T12:48:12.807773+01:00","block":"basic -f \"commands.go\n,interrupt.go \""}
+{"datetime":"2023-01-19T12:49:10.734811114+01:00","block":"basic -f \"commands.go \nanother\""}
+{"datetime":"2023-01-19T12:58:02.614569021+01:00","block":"basic -f \"commands.go,\ninterrupt.go\""}
+{"datetime":"2023-01-19T12:59:34.571425741+01:00","block":"basic -f \"commands.go,\n\ninterrupt.go\""}
+{"datetime":"2023-01-19T13:02:43.798614218+01:00","block":"basic -f \"commands.go,\ninterrupt.go\""}
+{"datetime":"2023-01-19T13:42:12.956859176+01:00","block":"basic -f \"commands.go \nanother one\nwhich\""}
+{"datetime":"2023-01-20T11:55:09.264838127+01:00","block":"basic -f \"commands.go \ncommands\nanother testing\n\ncommand\""}
+{"datetime":"2023-01-20T11:56:10.468538573+01:00","block":"git \"another\ntesting that\""}
+{"datetime":"2023-01-20T11:58:35.284480928+01:00","block":"basic -f \"commands.go \nanother testing\" --alternate \"another\nquote\" -c"}

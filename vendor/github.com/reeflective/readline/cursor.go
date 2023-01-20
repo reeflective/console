@@ -68,6 +68,34 @@ func (rl *Instance) updateCursor() {
 	}
 }
 
+// checkCursorBounds is called each time we refresh the display, and thus
+// pretty much each time an operation has been done. It ensures that the
+// the real cursor position is within the line bounds.
+func (rl *Instance) checkCursorBounds() {
+	if rl.pos < 0 {
+		rl.pos = 0
+	}
+
+	line := rl.lineCompleted()
+
+	switch rl.main {
+	case emacs, viins:
+		if rl.pos > len(line) {
+			rl.pos = len(line)
+		}
+	case vicmd:
+		if rl.pos > len(line)-1 {
+			rl.pos = len(line) - 1
+		} else if rl.line[rl.pos] == '\n' && !rl.isEmptyLine() {
+			rl.pos--
+		}
+	}
+
+	if rl.pos < 0 {
+		rl.pos = 0
+	}
+}
+
 // findAndMoveCursor finds a specified character in the line, either forward
 // or backward, a specified number of times, and moves the cursor to it.
 func (rl *Instance) findAndMoveCursor(key string, count int, forward, skip bool) {
@@ -156,6 +184,51 @@ func leftMost() []byte {
 	return b
 }
 
+// substrPos gets the index pos of a char in the input line, starting
+// from cursor, either backward or forward. Returns -1 if not found.
+func (rl *Instance) substrPos(r rune, forward bool) (pos int) {
+	pos = -1
+	initPos := rl.pos
+
+	rl.findAndMoveCursor(string(r), 1, forward, false)
+
+	if rl.pos != initPos {
+		pos = rl.pos
+		rl.pos = initPos
+	}
+
+	return
+}
+
+func (rl *Instance) cursorAtBeginningOfLine() bool {
+	line := append(rl.lineCompleted(), '\n')
+	nl := regexp.MustCompile("\n")
+	newlinesIdx := nl.FindAllStringIndex(string(line), -1)
+
+	for line := 0; line < len(newlinesIdx); line++ {
+		epos := newlinesIdx[line][0]
+		if epos == rl.pos-1 {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (rl *Instance) isEmptyLine() bool {
+	if rl.pos <= 0 {
+		return false
+	}
+
+	if rl.line[rl.pos] == '\n' {
+		if rl.line[rl.pos-1] == '\n' {
+			return true
+		}
+	}
+
+	return false
+}
+
 var rxRcvCursorPos = regexp.MustCompile(`^\x1b\[([0-9]+);([0-9]+)R$`)
 
 func (rl *Instance) getCursorPos() (x int, y int) {
@@ -164,23 +237,24 @@ func (rl *Instance) getCursorPos() (x int, y int) {
 	}
 
 	disable := func() (int, int) {
-		os.Stderr.WriteString("\r\ngetCursorPos() not supported by terminal emulator, disabling....\r\n")
+		// os.Stderr.WriteString("\r\ngetCursorPos() not supported by terminal emulator, disabling....\r\n")
+		rl.hint = []rune(seqFgRed + "getCursorPos() not supported by terminal emulator, disabling...")
 		rl.EnableGetCursorPos = false
 		return -1, -1
 	}
 
 	print(seqGetCursorPos)
 	b := make([]byte, 64)
-	i, err := os.Stdin.Read(b)
+	read, err := os.Stdin.Read(b)
 	if err != nil {
 		return disable()
 	}
 
-	if !rxRcvCursorPos.Match(b[:i]) {
+	if !rxRcvCursorPos.Match(b[:read]) {
 		return disable()
 	}
 
-	match := rxRcvCursorPos.FindAllStringSubmatch(string(b[:i]), 1)
+	match := rxRcvCursorPos.FindAllStringSubmatch(string(b[:read]), 1)
 	y, err = strconv.Atoi(match[0][1])
 	if err != nil {
 		return disable()
@@ -192,6 +266,43 @@ func (rl *Instance) getCursorPos() (x int, y int) {
 	}
 
 	return x, y
+}
+
+// Replacement --------------------------------------------------------
+//
+// These functions are used to replace the cursor directly to well-known
+// places of the current "line interface".
+
+func (rl *Instance) moveToLineStart() {
+	moveCursorBackwards(GetTermWidth())
+	moveCursorUp(rl.posY)
+	moveCursorForwards(rl.Prompt.inputAt(rl))
+}
+
+func (rl *Instance) moveToLineEnd() {
+	moveCursorDown(rl.fullY - rl.posY)
+	moveCursorBackwards(GetTermWidth())
+	moveCursorForwards(rl.endLineX())
+}
+
+func (rl *Instance) moveFromLineEndToCursor() {
+	moveCursorBackwards(GetTermWidth())
+	moveCursorUp(rl.fullY)
+	moveCursorDown(rl.posY)
+	moveCursorForwards(rl.posX)
+}
+
+func (rl *Instance) moveToHintStart() {
+	moveCursorDown(rl.fullY - rl.posY)
+	moveCursorBackwards(GetTermWidth())
+}
+
+func (rl *Instance) moveFromHelpersEndToHintStart() {
+	moveCursorBackwards(GetTermWidth())
+	moveCursorUp(rl.tcUsedY)
+	if len(rl.hint) > 0 {
+		moveCursorUp(rl.hintY)
+	}
 }
 
 // DISPLAY ------------------------------------------------------------

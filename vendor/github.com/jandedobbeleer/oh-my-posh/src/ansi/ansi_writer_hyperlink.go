@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/jandedobbeleer/oh-my-posh/src/regex"
-	"github.com/jandedobbeleer/oh-my-posh/src/shell"
 	"github.com/mattn/go-runewidth"
 )
 
@@ -21,7 +20,7 @@ func (w *Writer) write(i int, s rune) {
 		return
 	}
 
-	if s == '[' && w.hyperlinkState == OTHER {
+	if s == '«' && w.hyperlinkState == OTHER {
 		w.hyperlinkState = TEXT
 		w.hyperlinkBuilder.WriteRune(s)
 		return
@@ -36,12 +35,12 @@ func (w *Writer) write(i int, s rune) {
 	w.hyperlinkBuilder.WriteRune(s)
 
 	switch s {
-	case ']':
+	case '»':
 		// potential end of text part of hyperlink
-		w.squareIndex = i
+		w.bracketIndex = i
 	case '(':
 		// split into link part
-		if w.squareIndex == i-1 {
+		if w.bracketIndex == i-1 {
 			w.hyperlinkState = LINK
 		}
 		if w.hyperlinkState == LINK {
@@ -64,66 +63,22 @@ func (w *Writer) write(i int, s rune) {
 
 func (w *Writer) replaceHyperlink(text string) string {
 	// hyperlink matching
-	results := regex.FindNamedRegexMatch("(?P<ALL>(?:\\[(?P<TEXT>.+)\\])(?:\\((?P<URL>.*)\\)))", text)
+	results := regex.FindNamedRegexMatch("(?P<ALL>(?:«(?P<TEXT>.+)»)(?:\\((?P<URL>.*)\\)))", text)
 	if len(results) != 3 {
 		return text
 	}
 
+	linkText := results["TEXT"]
+
 	// we only care about the length of the text part
-	w.length += runewidth.StringWidth(results["TEXT"])
+	w.length += runewidth.StringWidth(linkText)
 
 	if w.Plain {
-		return results["TEXT"]
+		return linkText
 	}
 
-	linkText := w.escapeLinkTextForFishShell(results["TEXT"])
 	// build hyperlink ansi
 	hyperlink := fmt.Sprintf(w.hyperlink, results["URL"], linkText)
 	// replace original text by the new ones
 	return strings.Replace(text, results["ALL"], hyperlink, 1)
-}
-
-func (w *Writer) escapeLinkTextForFishShell(text string) string {
-	if w.shell != shell.FISH {
-		return text
-	}
-	escapeChars := map[string]string{
-		`c`: `\c`,
-		`a`: `\a`,
-		`b`: `\b`,
-		`e`: `\e`,
-		`f`: `\f`,
-		`n`: `\n`,
-		`r`: `\r`,
-		`t`: `\t`,
-		`v`: `\v`,
-		`$`: `\$`,
-		`*`: `\*`,
-		`?`: `\?`,
-		`~`: `\~`,
-		`%`: `\%`,
-		`#`: `\#`,
-		`(`: `\(`,
-		`)`: `\)`,
-		`{`: `\{`,
-		`}`: `\}`,
-		`[`: `\[`,
-		`]`: `\]`,
-		`<`: `\<`,
-		`>`: `\>`,
-		`^`: `\^`,
-		`&`: `\&`,
-		`;`: `\;`,
-		`"`: `\"`,
-		`'`: `\'`,
-		`x`: `\x`,
-		`X`: `\X`,
-		`0`: `\0`,
-		`u`: `\u`,
-		`U`: `\U`,
-	}
-	if val, ok := escapeChars[text[0:1]]; ok {
-		return val + text[1:]
-	}
-	return text
 }

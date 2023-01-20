@@ -35,7 +35,7 @@ func (c *Console) highlightSyntax(input []rune) (line string) {
 	highlighted = append(highlighted, remain...)
 
 	// Join all words.
-	line = strings.Join(highlighted, " ")
+	line = strings.Join(highlighted, "")
 
 	// Final adjustments.
 	// 1) When the line begins with spaces, the concatenation added an undesidered one.
@@ -49,7 +49,7 @@ func (c *Console) highlightCommand(done, args []string, cmd *cobra.Command) ([]s
 	rest := make([]string, 0)
 
 	for i, arg := range args {
-		if arg == cmd.Name() {
+		if strings.TrimSpace(arg) == cmd.Name() {
 			highlighted = append(highlighted, seqFgGreen+arg+seqFgReset)
 			rest = args[i+1:]
 

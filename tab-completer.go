@@ -17,6 +17,9 @@ func (c *Console) complete(line []rune, pos int) readline.Completions {
 	rbuffer := line[:pos]
 	args, prefix := splitArgs(rbuffer)
 
+	// Apply some sanitizing to the last argument.
+	args = sanitizeArgs(args)
+
 	// Like in classic system shells, we need to add an empty
 	// argument if the last character is a space: the args
 	// returned from the previous call don't account for it.
@@ -60,6 +63,21 @@ func (c *Console) complete(line []rune, pos int) readline.Completions {
 	}
 
 	return comps
+}
+
+func sanitizeArgs(args []string) (sanitized []string) {
+	if len(args) == 0 {
+		return
+	}
+
+	sanitized = args[:len(args)-1]
+	last := args[len(args)-1]
+
+	// The last word should not comprise newlines.
+	last = strings.ReplaceAll(last, "\n", "")
+	sanitized = append(sanitized, last)
+
+	return sanitized
 }
 
 func splitArgs(line []rune) (args []string, prefix string) {

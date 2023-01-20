@@ -6,7 +6,7 @@
             "newline": true,
             "segments": [
                 {
-                    "foreground": "lightBlue",
+                    "foreground": "lightRed",
                     "style": "plain",
                     "template": " {{ .UserName }}@{{ .HostName }} ",
                     "type": "session"
@@ -30,6 +30,7 @@
         },
         {
             "alignment": "right",
+            "newline": true,
             "segments": [
                 {
                     "foreground": "#ff94df",
@@ -42,7 +43,7 @@
                     "type": "git"
                 }
             ],
-            "type": "prompt"
+            "type": "rprompt"
         },
         {
             "alignment": "left",

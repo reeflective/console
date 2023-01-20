@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jandedobbeleer/oh-my-posh/src/ansi"
 	"github.com/jandedobbeleer/oh-my-posh/src/platform"
 	"github.com/jandedobbeleer/oh-my-posh/src/properties"
 	"github.com/jandedobbeleer/oh-my-posh/src/segments"
@@ -39,13 +40,13 @@ type Segment struct {
 	MaxWidth            int            `json:"max_width,omitempty"`
 	MinWidth            int            `json:"min_width,omitempty"`
 
-	env             platform.Environment
-	writer          SegmentWriter
-	Enabled         bool `json:"-"`
-	text            string
-	backgroundCache string
-	foregroundCache string
-	styleCache      SegmentStyle
+	Enabled bool `json:"-"`
+
+	colors     *ansi.Colors
+	env        platform.Environment
+	writer     SegmentWriter
+	text       string
+	styleCache SegmentStyle
 }
 
 // SegmentTiming holds the timing context for a segment
@@ -126,6 +127,8 @@ const (
 	DENO SegmentType = "deno"
 	// DOTNET writes which dotnet version is currently active
 	DOTNET SegmentType = "dotnet"
+	// ELIXIR writes the elixir version
+	ELIXIR SegmentType = "elixir"
 	// EXECUTIONTIME writes the execution time of the last run command
 	EXECUTIONTIME SegmentType = "executiontime"
 	// EXIT writes the last exit code
@@ -158,6 +161,8 @@ const (
 	KUBECTL SegmentType = "kubectl"
 	// LUA writes the active lua version
 	LUA SegmentType = "lua"
+	// MERCURIAL writes the Mercurial source control information
+	MERCURIAL SegmentType = "mercurial"
 	// NBGV writes the nbgv version information
 	NBGV SegmentType = "nbgv"
 	// NIGHTSCOUT is an open source diabetes system
@@ -214,6 +219,8 @@ const (
 	TIME SegmentType = "time"
 	// UI5 Tooling segment
 	UI5TOOLING SegmentType = "ui5tooling"
+	// VALA writes the active vala version
+	VALA SegmentType = "vala"
 	// WAKATIME writes tracked time spend in dev editors
 	WAKATIME SegmentType = "wakatime"
 	// WINREG queries the Windows registry.
@@ -246,6 +253,7 @@ var Segments = map[SegmentType]func() SegmentWriter{
 	DENO:          func() SegmentWriter { return &segments.Deno{} },
 	DOTNET:        func() SegmentWriter { return &segments.Dotnet{} },
 	EXECUTIONTIME: func() SegmentWriter { return &segments.Executiontime{} },
+	ELIXIR:        func() SegmentWriter { return &segments.Elixir{} },
 	EXIT:          func() SegmentWriter { return &segments.Exit{} },
 	FLUTTER:       func() SegmentWriter { return &segments.Flutter{} },
 	FOSSIL:        func() SegmentWriter { return &segments.Fossil{} },
@@ -261,6 +269,7 @@ var Segments = map[SegmentType]func() SegmentWriter{
 	KOTLIN:        func() SegmentWriter { return &segments.Kotlin{} },
 	KUBECTL:       func() SegmentWriter { return &segments.Kubectl{} },
 	LUA:           func() SegmentWriter { return &segments.Lua{} },
+	MERCURIAL:     func() SegmentWriter { return &segments.Mercurial{} },
 	NBGV:          func() SegmentWriter { return &segments.Nbgv{} },
 	NIGHTSCOUT:    func() SegmentWriter { return &segments.Nightscout{} },
 	NODE:          func() SegmentWriter { return &segments.Node{} },
@@ -289,6 +298,7 @@ var Segments = map[SegmentType]func() SegmentWriter{
 	TEXT:          func() SegmentWriter { return &segments.Text{} },
 	TIME:          func() SegmentWriter { return &segments.Time{} },
 	UI5TOOLING:    func() SegmentWriter { return &segments.UI5Tooling{} },
+	VALA:          func() SegmentWriter { return &segments.Vala{} },
 	WAKATIME:      func() SegmentWriter { return &segments.Wakatime{} },
 	WINREG:        func() SegmentWriter { return &segments.WindowsRegistry{} },
 	WITHINGS:      func() SegmentWriter { return &segments.Withings{} },
@@ -354,17 +364,23 @@ func (segment *Segment) shouldInvokeWithTip(tip string) bool {
 }
 
 func (segment *Segment) foreground() string {
-	if len(segment.foregroundCache) == 0 {
-		segment.foregroundCache = segment.ForegroundTemplates.FirstMatch(segment.writer, segment.env, segment.Foreground)
+	if segment.colors == nil {
+		segment.colors = &ansi.Colors{}
 	}
-	return segment.foregroundCache
+	if len(segment.colors.Foreground) == 0 {
+		segment.colors.Foreground = segment.ForegroundTemplates.FirstMatch(segment.writer, segment.env, segment.Foreground)
+	}
+	return segment.colors.Foreground
 }
 
 func (segment *Segment) background() string {
-	if len(segment.backgroundCache) == 0 {
-		segment.backgroundCache = segment.BackgroundTemplates.FirstMatch(segment.writer, segment.env, segment.Background)
+	if segment.colors == nil {
+		segment.colors = &ansi.Colors{}
 	}
-	return segment.backgroundCache
+	if len(segment.colors.Background) == 0 {
+		segment.colors.Background = segment.BackgroundTemplates.FirstMatch(segment.writer, segment.env, segment.Background)
+	}
+	return segment.colors.Background
 }
 
 func (segment *Segment) mapSegmentWithWriter(env platform.Environment) error {
