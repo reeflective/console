@@ -1,10 +1,7 @@
 package readline
 
 import (
-	"bufio"
-	"errors"
 	"fmt"
-	"os"
 	"strconv"
 	"strings"
 )
@@ -163,6 +160,26 @@ func (rl *Instance) initHistoryLine() {
 	rl.inferLine = false
 }
 
+// writeHistoryLine writes the current buffer to all history sources.
+func (rl *Instance) writeHistoryLine() {
+	if !rl.config.HistoryAutoWrite || rl.inferLine {
+		return
+	}
+
+	var err error
+
+	for _, history := range rl.histories {
+		if history == nil {
+			continue
+		}
+
+		rl.histPos, err = history.Write(string(rl.line))
+		if err != nil {
+			print(err.Error() + "\r\n")
+		}
+	}
+}
+
 func (rl *Instance) nextHistorySource() {
 	rl.historySourcePos++
 
@@ -201,6 +218,12 @@ func (rl *Instance) walkHistory(pos int) {
 		return
 	}
 
+	// When we are on the last/first item, don't do anything, as it would change
+	// things like cursor positions.
+	if (pos < 0 && rl.histPos == 0) || (pos > 0 && rl.histPos == history.Len()) {
+		return
+	}
+
 	// When we are exiting the current line buffer to move around
 	// the history, we make buffer the current line
 	if rl.histPos == 0 && (rl.histPos+pos) == 1 {
@@ -235,9 +258,61 @@ func (rl *Instance) walkHistory(pos int) {
 			return
 		}
 
-		rl.clearLine()
+		rl.lineClear()
 		rl.line = []rune(next)
 		rl.pos = len(rl.line)
+	}
+}
+
+// historySearchLine inserts the first line in the main history
+// that matches the current input line as a prefix.
+func (rl *Instance) historySearchLine(forward bool) {
+	if len(rl.histories) == 0 {
+		return
+	}
+
+	history := rl.currentHistory()
+	if history == nil {
+		return
+	}
+
+	// Set up iteration clauses
+	var histPos int
+	var done func(i int) bool
+	var move func(inc int) int
+
+	if forward {
+		histPos = -1
+		done = func(i int) bool { return i < history.Len() }
+		move = func(pos int) int { return pos + 1 }
+	} else {
+		histPos = history.Len()
+		done = func(i int) bool { return i > 0 }
+		move = func(pos int) int { return pos - 1 }
+	}
+
+	for done(histPos) {
+		histPos = move(histPos)
+
+		histline, err := history.GetLine(histPos)
+		if err != nil {
+			return
+		}
+
+		// If too short
+		if len(histline) < len(rl.line) {
+			continue
+		}
+
+		// Or if not fully matching
+		if !strings.HasPrefix(string(rl.line), string(histline)) {
+			continue
+		}
+
+		// Else we have our new history index position.
+		rl.histPos = histPos
+		rl.lineBuf = string(rl.line)
+		rl.line = []rune(rl.lineBuf)
 	}
 }
 
@@ -276,7 +351,7 @@ func (rl *Instance) completeHistory(forward bool) Completions {
 	}
 
 	// And generate the completions.
-NEXT_LINE:
+nextLine:
 	for done(histPos) {
 		histPos = move(histPos)
 
@@ -289,18 +364,18 @@ NEXT_LINE:
 			continue
 		}
 
-		line = strings.ReplaceAll(line, "\n", ` `)
+		display := strings.ReplaceAll(line, "\n", ``)
 
 		for _, comp := range compLines {
 			if comp.Display == line {
-				continue NEXT_LINE
+				continue nextLine
 			}
 		}
 
 		// Proper pad for indexes
 		indexStr := strconv.Itoa(histPos)
 		pad := strings.Repeat(" ", len(strconv.Itoa(history.Len()))-len(indexStr))
-		display := fmt.Sprintf("%s%s %s%s", seqDim, indexStr+pad, seqDimReset, line)
+		display = fmt.Sprintf("%s%s %s%s", seqDim, indexStr+pad, seqDimReset, display)
 
 		value := Completion{
 			Display: display,
@@ -308,7 +383,6 @@ NEXT_LINE:
 		}
 
 		compLines = append(compLines, value)
-
 	}
 
 	comps := CompleteRaw(compLines)
@@ -316,65 +390,4 @@ NEXT_LINE:
 	comps.PREFIX = string(rl.line)
 
 	return comps
-}
-
-// fileHistory provides a history source based on a file.
-type fileHistory struct {
-	filename string
-	list     []string
-}
-
-func openHist(filename string) (list []string, err error) {
-	file, err := os.Open(filename)
-	if err != nil {
-		return list, err
-	}
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		list = append(list, scanner.Text())
-	}
-
-	file.Close()
-	return list, nil
-}
-
-// Write item to history file. eg ~/.murex_history.
-func (h *fileHistory) Write(s string) (int, error) {
-	block := strings.TrimSpace(s)
-
-	if len(h.list) == 0 || h.list[len(h.list)-1] != block {
-		h.list = append(h.list, block)
-	}
-
-	f, err := os.OpenFile(h.filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o600)
-	if err != nil {
-		return 0, err
-	}
-
-	_, err = f.WriteString(block + "\n")
-	f.Close()
-
-	return h.Len(), err
-}
-
-// GetLine returns a specific line from the history file.
-func (h *fileHistory) GetLine(i int) (string, error) {
-	if i < 0 {
-		return "", errors.New("cannot use a negative index when requesting historic commands")
-	}
-	if i < len(h.list) {
-		return h.list[i], nil
-	}
-	return "", errors.New("index requested greater than number of items in history")
-}
-
-// Len returns the number of items in the history file.
-func (h *fileHistory) Len() int {
-	return len(h.list)
-}
-
-// Dump returns the entire history file.
-func (h *fileHistory) Dump() interface{} {
-	return h.list
 }

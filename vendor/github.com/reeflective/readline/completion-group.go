@@ -29,7 +29,6 @@ type comps struct {
 	tcPosY        int
 	tcMaxX        int
 	tcMaxY        int
-	tcOffset      int
 }
 
 //
@@ -43,7 +42,6 @@ func (rl *Instance) newGroup(c Completions, tag string, vals rawValues, aliased 
 		listSeparator: "--",
 		tcPosX:        -1,
 		tcPosY:        -1,
-		tcOffset:      0,
 		aliased:       aliased,
 		columnsWidth:  []int{0},
 	}
@@ -56,6 +54,15 @@ func (rl *Instance) newGroup(c Completions, tag string, vals rawValues, aliased 
 	_, grp.list = c.listLong[tag]
 	if _, all := c.listLong["*"]; all && len(c.listLong) == 1 {
 		grp.list = true
+	}
+
+	listSep, found := c.listSep[tag]
+	if !found {
+		if allSep, found := c.listSep["*"]; found {
+			grp.listSeparator = allSep
+		}
+	} else {
+		grp.listSeparator = listSep
 	}
 
 	// Override sorting or sort if needed
@@ -82,18 +89,12 @@ func (rl *Instance) newGroup(c Completions, tag string, vals rawValues, aliased 
 }
 
 func (g *comps) checkDisplays(vals rawValues) rawValues {
-	for index, val := range vals {
-		if val.Display == "" {
-			vals[index].Display = val.Value
-		}
+	if g.aliased {
+		return vals
+	}
 
-		// If we have aliases, the padding will be computed later.
-		// Don't concatenate the description to the value as display.
-		if g.aliased {
-			continue
-		}
-
-		// Otherwise update the size of the longest candidate
+	// Otherwise update the size of the longest candidate
+	for _, val := range vals {
 		valLen := utf8.RuneCountInString(val.Display)
 		if valLen > g.columnsWidth[0] {
 			g.columnsWidth[0] = valLen
@@ -103,8 +104,50 @@ func (g *comps) checkDisplays(vals rawValues) rawValues {
 	return vals
 }
 
+func (g *comps) computeCells(vals rawValues) {
+	// Aliases will compute themselves individually, later.
+	if g.aliased {
+		return
+	}
+
+	g.tcMaxLength = g.columnsWidth[0]
+
+	// Each value first computes the total amount of space
+	// it is going to take in a row (including the description)
+	for _, val := range vals {
+		candidate := g.displayTrimmed(ansi.Strip(val.Display))
+		pad := g.tcMaxLength - len(candidate)
+		desc := g.descriptionTrimmed(val.Description)
+		display := fmt.Sprintf("%s%s%s", candidate, strings.Repeat(" ", pad)+" ", desc)
+		valLen := utf8.RuneCountInString(display)
+		if valLen > g.maxCellLength {
+			g.maxCellLength = valLen
+		}
+	}
+
+	g.tcMaxX = GetTermWidth() / (g.maxCellLength)
+	if g.tcMaxX < 1 {
+		g.tcMaxX = 1 // avoid a divide by zero error
+	}
+
+	if g.tcMaxX > len(vals) {
+		g.tcMaxX = len(vals)
+	}
+
+	numColumns := GetTermWidth() / (g.maxCellLength)
+	if numColumns == 0 {
+		numColumns = 1
+	}
+
+	// We also have the width for each column
+	g.columnsWidth = make([]int, numColumns)
+	for i := 0; i < g.tcMaxX; i++ {
+		g.columnsWidth[i] = g.maxCellLength
+	}
+}
+
 func (g *comps) makeMatrix(vals rawValues) {
-NEXT_VALUE:
+nextValue:
 	for _, val := range vals {
 		valLen := utf8.RuneCountInString(val.Display)
 
@@ -116,7 +159,7 @@ NEXT_VALUE:
 					g.values[i] = append(row, val)
 					g.columnsWidth = getColumnPad(g.columnsWidth, valLen, len(g.values[i]))
 
-					continue NEXT_VALUE
+					continue nextValue
 				}
 			}
 		}
@@ -124,7 +167,7 @@ NEXT_VALUE:
 		// Else, either add it to the current row if there is still room
 		// on it for this candidate, or add a new one. We only do that when
 		// we know we don't have aliases, or when we don't have to display list.
-		if !g.aliased && g.canFitInRow(val) && !g.list {
+		if !g.aliased && g.canFitInRow() && !g.list {
 			g.values[len(g.values)-1] = append(g.values[len(g.values)-1], val)
 		} else {
 			// Else create a new row, and update the row pad.
@@ -146,58 +189,7 @@ NEXT_VALUE:
 	}
 }
 
-func (g *comps) computeCells(vals rawValues) {
-	// Aliases will compute themselves individually, later.
-	if g.aliased {
-		return
-	}
-
-	g.tcMaxLength = g.columnsWidth[0]
-
-	// Each value first computes the total amount of space
-	// it is going to take in a row (including the description)
-	for _, val := range vals {
-		candidate := g.displayTrimmed(val.Display)
-		pad := g.tcMaxLength - len(candidate)
-		desc := g.descriptionTrimmed(val.Description)
-		display := fmt.Sprintf("%s%s%s", candidate, strings.Repeat(" ", pad)+" ", desc)
-		valLen := utf8.RuneCountInString(display)
-		if valLen > g.maxCellLength {
-			g.maxCellLength = valLen
-		}
-	}
-
-	g.tcMaxX = GetTermWidth() / (g.maxCellLength + 2)
-	if g.tcMaxX < 1 {
-		g.tcMaxX = 1 // avoid a divide by zero error
-	}
-
-	if g.tcMaxX > len(vals) {
-		g.tcMaxX = len(vals)
-	}
-
-	// We also have the width for each column
-	g.columnsWidth = make([]int, GetTermWidth()/(g.maxCellLength+2))
-	for i := 0; i < g.tcMaxX; i++ {
-		g.columnsWidth[i] = g.maxCellLength
-	}
-}
-
-// checkMaxLength - Based on the number of groups given to the shell, check/set MaxLength defaults.
-func (g *comps) checkMaxLength(rl *Instance) {
-	// This means the user forgot to set it
-	if g.maxLength == 0 {
-		if len(rl.tcGroups) < 5 {
-			g.maxLength = 20
-		}
-
-		if len(rl.tcGroups) >= 5 {
-			g.maxLength = 20
-		}
-	}
-}
-
-func (g *comps) canFitInRow(val Completion) bool {
+func (g *comps) canFitInRow() bool {
 	if len(g.values) == 0 {
 		return false
 	}
@@ -234,10 +226,11 @@ func (g *comps) updateIsearch(rl *Instance) {
 	g.values = make([][]Completion, 0)
 	g.tcPosX = -1
 	g.tcPosY = -1
-	g.tcOffset = 0
 	g.columnsWidth = []int{0}
 
-	// Assign the filtered values
+	// Assign the filtered values: we don't need to check
+	// for a separate set of non-described values, as the
+	// completions have already been triaged when generated.
 	vals, _, aliased := groupValues(suggs)
 	g.aliased = aliased
 
@@ -258,13 +251,11 @@ func (g *comps) updateIsearch(rl *Instance) {
 func (g *comps) firstCell() {
 	g.tcPosX = 0
 	g.tcPosY = 0
-	g.tcOffset = 0
 }
 
 func (g *comps) lastCell() {
 	g.tcPosY = len(g.values) - 1
 	g.tcPosX = len(g.columnsWidth) - 1
-	g.tcOffset = 0
 
 	if g.aliased {
 		g.findFirstCandidate(0, -1)
@@ -281,6 +272,10 @@ func (g *comps) selected() (comp Completion) {
 }
 
 func (g *comps) writeComps(rl *Instance) (comp string) {
+	if len(g.values) == 0 {
+		return
+	}
+
 	if g.tag != "" {
 		comp += fmt.Sprintf("%s%s%s %s\n", seqBold, seqFgYellow, g.tag, seqReset)
 		rl.tcUsedY++
@@ -316,7 +311,7 @@ func (g *comps) writeComps(rl *Instance) (comp string) {
 func (g *comps) moveSelector(rl *Instance, x, y int) (done, next bool) {
 	// When the group has not yet been used, adjust
 	if g.tcPosX == -1 && g.tcPosY == -1 {
-		if x > 0 {
+		if x != 0 {
 			g.tcPosY++
 		} else {
 			g.tcPosX++
@@ -455,7 +450,7 @@ func (g *comps) highlightCandidate(rl *Instance, val Completion, cell, pad strin
 	switch {
 	// If the comp is currently selected, overwrite any highlighting already applied.
 	case selected:
-		candidate = seqCtermFg255 + seqFgBlackBright + ansi.Strip(val.Display)
+		candidate = seqCtermBg255 + seqFgBlackBright + g.displayTrimmed(ansi.Strip(val.Display))
 		if g.aliased {
 			candidate += cell + seqReset
 		}
@@ -485,7 +480,7 @@ func (g *comps) highlightDescription(rl *Instance, val Completion, y, x int) (de
 	switch {
 	// If the comp is currently selected, overwrite any highlighting already applied.
 	case y == g.tcPosY && x == g.tcPosX && g.isCurrent && !g.aliased:
-		desc = seqCtermFg255 + seqFgBlackBright + g.descriptionTrimmed(val.Description)
+		desc = seqCtermBg255 + seqFgBlackBright + g.descriptionTrimmed(val.Description)
 	}
 
 	desc = seqDim + g.listSeparator + " " + desc + seqReset
@@ -499,6 +494,9 @@ func (g *comps) padCandidate(row []Completion, val Completion, x int) (cell, pad
 
 	if !g.aliased {
 		padLen = g.tcMaxLength - valLen
+		if padLen < 0 {
+			padLen = 0
+		}
 		return "", strings.Repeat(" ", padLen)
 	}
 
@@ -527,13 +525,15 @@ func (g *comps) padDescription(val Completion, valPad int) (pad int) {
 
 func (g *comps) displayTrimmed(val string) string {
 	termWidth := GetTermWidth()
-	if g.tcMaxLength > termWidth-9 {
-		g.tcMaxLength = termWidth - 9
+	if g.tcMaxLength > termWidth-1 {
+		g.tcMaxLength = termWidth - 1
 	}
 
 	if len(val) > g.tcMaxLength {
 		val = val[:g.tcMaxLength-3] + "..."
 	}
+
+	val = sanitizer.Replace(val)
 
 	return val
 }
@@ -552,6 +552,8 @@ func (g *comps) descriptionTrimmed(desc string) string {
 	if len(desc) > g.maxDescWidth {
 		desc = desc[:g.maxDescWidth-3] + "..."
 	}
+
+	desc = sanitizer.Replace(desc)
 
 	return desc
 }

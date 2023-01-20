@@ -19,13 +19,13 @@ func (rl *Instance) insertCandidate() {
 	// Special case for the only special escape, which
 	// if not handled, will make us insert the first
 	// character of our actual rl.tcPrefix in the candidate.
-	if strings.HasPrefix(string(rl.tcPrefix), "%") {
+	if strings.HasPrefix(rl.tcPrefix, "%") {
 		prefix++
 	}
 
 	// Ensure no indexing error happens with prefix
 	if len(completion) >= prefix {
-		rl.insert([]rune(completion[prefix:]))
+		rl.lineInsert([]rune(completion[prefix:]))
 		rl.compSuffix = cur.noSpace
 		rl.compSuffix.pos = rl.pos - 1
 	}
@@ -50,15 +50,13 @@ func (rl *Instance) removeSuffixInserted() {
 	// by a slash, only remove this slash if the inserted key is
 	// one of the suffix matchers, otherwise keep it.
 	if suffix == "/" && rl.keys != " " {
-		for _, s := range rl.compSuffix.string {
-			if s == '/' && keyIsNotMatcher(rl.keys, rl.compSuffix.string) {
-				return
-			}
+		if keyIsNotMatcher(rl.keys, rl.compSuffix.string) {
+			return
 		}
 	}
 
 	if rl.compSuffix.Matches(suffix) {
-		rl.deletex()
+		rl.deleteRune(false)
 
 		// Only remove the matcher if the key we inserted
 		// is not the same as the one we removed. This is
@@ -179,7 +177,7 @@ func (rl *Instance) resetVirtualComp(drop bool) {
 	// Special case for the only special escape, which
 	// if not handled, will make us insert the first
 	// character of our actual rl.tcPrefix in the candidate.
-	if strings.HasPrefix(string(rl.tcPrefix), "%") {
+	if strings.HasPrefix(rl.tcPrefix, "%") {
 		prefix++
 	}
 
@@ -228,10 +226,8 @@ func (rl *Instance) removeSuffixCandidate(cur *comps, prefix int) (comp string) 
 	// by a slash, only remove this slash if the inserted key is
 	// one of the suffix matchers and not a space, otherwise keep it.
 	if strings.HasSuffix(comp, "/") && rl.keys != " " {
-		for _, s := range cur.noSpace.string {
-			if s == '/' && keyIsNotMatcher(rl.keys, cur.noSpace.string) {
-				return
-			}
+		if keyIsNotMatcher(rl.keys, cur.noSpace.string) {
+			return
 		}
 	}
 

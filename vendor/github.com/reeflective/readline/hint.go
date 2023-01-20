@@ -122,11 +122,12 @@ func (rl *Instance) writeHintText() {
 	wrapped, _ := wrapText(string(rl.hint), GetTermWidth())
 
 	offset += actual
-	rl.hintY = offset
+	rl.hintY = offset - 1
 
 	hintText := string(wrapped)
 
 	if len(hintText) > 0 {
+		print("\n")
 		print("\r" + string(hintText) + seqReset)
 	}
 }
@@ -135,4 +136,30 @@ func (rl *Instance) resetHintText() {
 	rl.hintY = 0
 	rl.hint = []rune{}
 	rl.histHint = []rune{}
+}
+
+// wrapText - Wraps a text given a specified width, and returns the formatted
+// string as well the number of lines it will occupy.
+func wrapText(text string, lineWidth int) (wrapped string, lines int) {
+	words := strings.Fields(text)
+	if len(words) == 0 {
+		return
+	}
+	wrapped = words[0]
+	spaceLeft := lineWidth - len(wrapped)
+	// There must be at least a line
+	if text != "" {
+		lines++
+	}
+	for _, word := range words[1:] {
+		if len(ansi.Strip(word))+1 > spaceLeft {
+			lines++
+			wrapped += "\n" + word
+			spaceLeft = lineWidth - len(word)
+		} else {
+			wrapped += " " + word
+			spaceLeft -= 1 + len(word)
+		}
+	}
+	return
 }

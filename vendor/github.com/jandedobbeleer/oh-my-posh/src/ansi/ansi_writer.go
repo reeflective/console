@@ -34,9 +34,9 @@ type style struct {
 	End         string
 }
 
-type cachedColor struct {
-	Background string
-	Foreground string
+type Colors struct {
+	Background string `json:"background"`
+	Foreground string `json:"foreground"`
 }
 
 const (
@@ -57,6 +57,7 @@ const (
 	colorise       = "\x1b[%sm"
 	transparent    = "\x1b[0m\x1b[%s;49m\x1b[7m"
 	transparentEnd = "\x1b[27m"
+	backgroundEnd  = "\x1b[49m"
 
 	AnsiRegex = "[\u001B\u009B][[\\]()#;?]*(?:(?:(?:[a-zA-Z\\d]*(?:;[a-zA-Z\\d]*)*)?\u0007)|(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PRZcf-ntqry=><~]))"
 
@@ -75,9 +76,9 @@ const (
 // Writer writes colorized ANSI strings
 type Writer struct {
 	TerminalBackground string
-	Colors             *cachedColor
-	ParentColors       []*cachedColor
-	AnsiColors         Colors
+	Colors             *Colors
+	ParentColors       []*Colors
+	AnsiColors         ColorString
 	Plain              bool
 
 	builder strings.Builder
@@ -110,10 +111,10 @@ type Writer struct {
 	osc51                 string
 
 	// hyperlink
-	hasHyperlink            bool
-	hyperlinkBuilder        strings.Builder
-	squareIndex, roundCount int
-	hyperlinkState          string
+	hasHyperlink             bool
+	hyperlinkBuilder         strings.Builder
+	bracketIndex, roundCount int
+	hyperlinkState           string
 }
 
 func (w *Writer) Init(shellName string) {
@@ -134,8 +135,8 @@ func (w *Writer) Init(shellName string) {
 		w.escapeRight = "\\]"
 		w.hyperlink = "\\[\x1b]8;;%s\x1b\\\\\\]%s\\[\x1b]8;;\x1b\\\\\\]"
 		w.hyperlinkRegex = `(?P<STR>\\\[\x1b\]8;;(.+)\x1b\\\\\\\](?P<TEXT>.+)\\\[\x1b\]8;;\x1b\\\\\\\])`
-		w.osc99 = "\\[\x1b]9;9;\"%s\"\x1b\\\\\\]"
-		w.osc7 = "\\[\x1b]7;\"file://%s/%s\"\x1b\\\\\\]"
+		w.osc99 = "\\[\x1b]9;9;%s\x1b\\\\\\]"
+		w.osc7 = "\\[\x1b]7;file://%s/%s\x1b\\\\\\]"
 		w.osc51 = "\\[\x1b]51;A;%s@%s:%s\x1b\\\\\\]"
 	case "zsh":
 		w.format = "%%{%s%%}"
@@ -151,8 +152,8 @@ func (w *Writer) Init(shellName string) {
 		w.escapeRight = "%}"
 		w.hyperlink = "%%{\x1b]8;;%s\x1b\\%%}%s%%{\x1b]8;;\x1b\\%%}"
 		w.hyperlinkRegex = `(?P<STR>%{\x1b]8;;(.+)\x1b\\%}(?P<TEXT>.+)%{\x1b]8;;\x1b\\%})`
-		w.osc99 = "%%{\x1b]9;9;\"%s\"\x1b\\%%}"
-		w.osc7 = "%%{\x1b]7;file:\"//%s/%s\"\x1b\\%%}"
+		w.osc99 = "%%{\x1b]9;9;%s\x1b\\%%}"
+		w.osc7 = "%%{\x1b]7;file://%s/%s\x1b\\%%}"
 		w.osc51 = "%%{\x1b]51;A%s@%s:%s\x1b\\%%}"
 	default:
 		w.linechange = "\x1b[%d%s"
@@ -168,14 +169,14 @@ func (w *Writer) Init(shellName string) {
 		// https://github.com/JanDeDobbeleer/oh-my-posh/pull/3288#issuecomment-1369137068
 		w.hyperlink = "\x1b]8;;%s\x1b\\%s\x1b]8;;\x1b\\"
 		w.hyperlinkRegex = "(?P<STR>\x1b]8;;(.+)\x1b\\\\\\\\?(?P<TEXT>.+)\x1b]8;;\x1b\\\\)"
-		w.osc99 = "\x1b]9;9;\"%s\"\x1b\\"
-		w.osc7 = "\x1b]7;\"file://%s/%s\"\x1b\\"
+		w.osc99 = "\x1b]9;9;%s\x1b\\"
+		w.osc7 = "\x1b]7;file://%s/%s\x1b\\"
 		w.osc51 = "\x1b]51;A%s@%s:%s\x1b\\"
 	}
 }
 
 func (w *Writer) SetColors(background, foreground string) {
-	w.Colors = &cachedColor{
+	w.Colors = &Colors{
 		Background: background,
 		Foreground: foreground,
 	}
@@ -183,9 +184,9 @@ func (w *Writer) SetColors(background, foreground string) {
 
 func (w *Writer) SetParentColors(background, foreground string) {
 	if w.ParentColors == nil {
-		w.ParentColors = make([]*cachedColor, 0)
+		w.ParentColors = make([]*Colors, 0)
 	}
-	w.ParentColors = append([]*cachedColor{{
+	w.ParentColors = append([]*Colors{{
 		Background: background,
 		Foreground: foreground,
 	}}, w.ParentColors...)
@@ -279,7 +280,7 @@ func (w *Writer) Write(background, foreground, text string) {
 	w.background, w.foreground = w.asAnsiColors(background, foreground)
 	// default to white foreground
 	if w.foreground.IsEmpty() {
-		w.foreground = w.AnsiColors.AnsiColorFromString("white", false)
+		w.foreground = w.AnsiColors.ToColor("white", false)
 	}
 	// validate if we start with a color override
 	match := regex.FindNamedRegexMatch(anchorRegex, text)
@@ -302,7 +303,7 @@ func (w *Writer) Write(background, foreground, text string) {
 	w.runes = []rune(text)
 
 	// only run hyperlink logic when we have to
-	w.hasHyperlink = strings.Count(text, "[")+strings.Count(text, "]")+strings.Count(text, "(")+strings.Count(text, ")") >= 4
+	w.hasHyperlink = strings.Count(text, "«")+strings.Count(text, "»")+strings.Count(text, "(")+strings.Count(text, ")") >= 4
 
 	for i := 0; i < len(w.runes); i++ {
 		s := w.runes[i]
@@ -361,7 +362,7 @@ func (w *Writer) writeEscapedAnsiString(text string) {
 }
 
 func (w *Writer) getAnsiFromColorString(colorString string, isBackground bool) Color {
-	return w.AnsiColors.AnsiColorFromString(colorString, isBackground)
+	return w.AnsiColors.ToColor(colorString, isBackground)
 }
 
 func (w *Writer) writeSegmentColors() {
@@ -408,6 +409,12 @@ func (w *Writer) writeColorOverrides(match map[string]string, background string,
 	if match[ANCHOR] == colorStyle.AnchorEnd {
 		// make sure to reset the colors if needed
 		position += len([]rune(colorStyle.AnchorEnd)) - 1
+
+		// do not reset when colors are identical
+		if w.currentBackground == w.background && w.currentForeground == w.foreground {
+			return
+		}
+
 		// do not restore colors at the end of the string, we print it anyways
 		if position == len(w.runes)-1 {
 			return
@@ -481,13 +488,13 @@ func (w *Writer) writeColorOverrides(match map[string]string, background string,
 	if w.currentBackground != w.background {
 		// end the colors in case we have a transparent background
 		if w.currentBackground.IsTransparent() {
-			w.writeEscapedAnsiString(colorStyle.End)
+			w.writeEscapedAnsiString(backgroundEnd)
 		} else {
 			w.writeEscapedAnsiString(fmt.Sprintf(colorise, w.currentBackground))
 		}
 	}
 
-	if w.currentForeground != w.foreground || w.currentBackground.IsTransparent() {
+	if w.currentForeground != w.foreground {
 		w.writeEscapedAnsiString(fmt.Sprintf(colorise, w.currentForeground))
 	}
 

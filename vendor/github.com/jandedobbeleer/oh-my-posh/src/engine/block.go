@@ -130,6 +130,10 @@ func (b *Block) RenderSegments() (string, int) {
 		if !segment.Enabled && segment.style() != Accordion {
 			continue
 		}
+		if colors, newCycle := cycle.Loop(); colors != nil {
+			cycle = &newCycle
+			segment.colors = colors
+		}
 		b.setActiveSegment(segment)
 		b.renderActiveSegment()
 	}

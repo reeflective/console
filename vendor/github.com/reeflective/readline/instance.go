@@ -44,17 +44,20 @@ type Instance struct {
 	registersComplete bool       // When the completer is for registers, used to reset
 	isViopp           bool       // Keeps track of vi operator pending mode BEFORE trying to match the current key.
 	pendingActions    []action   // Widgets that have registered themselves as waiting for another action to be ran.
+	viinsEnterPos     int        // The index at which insert mode was entered
 
 	// Input Line ---------------------------------------------------------------------------------
 
-	// GetMultiLine is a callback to your host program. Since multiline support
-	// is handled by the application rather than readline itself, this callback
-	// is required when calling $EDITOR. However if this function is not set
-	// then readline will just use the current line.
-	GetMultiLine func([]rune) []rune
+	// AcceptMultiline enables the caller to decide if the shell should keep reading for user input
+	// on a new line (therefore, with the secondary prompt), or if it should return the current
+	// line at the end of the `rl.Readline()` call.
+	// This function should return "true" if the line is deemed complete (thus asking the shell
+	// to return from its Readline() loop), or "false" if the shell should keep reading input.
+	AcceptMultiline func(line []rune) (accept bool)
 
 	// EnableGetCursorPos will allow the shell to send a special sequence
 	// to the the terminal to get the current cursor X and Y coordinates.
+	// This is true by default, to enable smart completion estate use.
 	EnableGetCursorPos bool
 
 	// SyntaxHighlight is a helper function to provide syntax highlighting.
@@ -65,28 +68,23 @@ type Instance struct {
 	// Once enabled, set to 0 (zero) to disable the mask again.
 	PasswordMask rune
 
-	// readline operating parameters
-	keys      string // Contains all keys (input by user) not yet consumed by the shell widgets.
-	line      []rune // This is the input line, with entered text: full line = mlnPrompt + line
-	accepted  bool   // Set by 'accept-line' widget, to notify return the line to the caller
-	err       error  // Errors returned by interrupt signal handlers
-	inferLine bool   // When a "accept-line-and-down-history" widget wants to immediately retrieve/use a line.
-	pos       int    // Cursor position in the entire line.
-	posX      int    // Cursor position X
-	posY      int    // Cursor position Y (if multiple lines span)
-	fullX     int    // X coordinate of the full input line, including the prompt if needed.
-	fullY     int    // Y offset to the end of input line.
+	// Buffer/line/selections
+	keys          string // Contains all keys (input by user) not yet consumed by the shell widgets.
+	line          []rune // This is the input line, with entered text: full line = mlnPrompt + line
+	accepted      bool   // Set by 'accept-line' widget, to notify return the line to the caller
+	err           error  // Errors returned by interrupt signal handlers
+	inferLine     bool   // When a "accept-line-and-down-history" widget wants to immediately retrieve/use a line.
+	skipStdinRead bool
+	visualLine    bool         // Is the visual mode VISUAL_LINE
+	marks         []*selection // Visual/surround selections areas, often highlighted.
 
-	// Buffer received from host programs
-	multilineBuffer []byte
-	multilineSplit  []string
-	skipStdinRead   bool
-
-	// selection management
-	visualLine   bool     // Is the visual mode VISUAL_LINE
-	mark         int      // Visual selection mark. -1 when unactive
-	activeRegion bool     // Is a current range region active ?
-	regions      []region // Regions are some parts of the input line with special highlighting.
+	// Cursor
+	pos   int // Cursor position in the entire line.
+	hpos  int // The line on which the cursor is (differs from posY, which accounts for wraps)
+	posX  int // Cursor position X
+	posY  int // Cursor position Y (if multiple lines span)
+	fullX int // X coordinate of the full input line, including the prompt if needed.
+	fullY int // Y offset to the end of input line.
 
 	//
 	// Completion ---------------------------------------------------------------------------------
@@ -112,16 +110,15 @@ type Instance struct {
 	completer func()
 
 	// tab completion operating parameters
-	tcGroups        []*comps       // All of our suggestions tree is in here
-	tcPrefix        string         // The current tab completion prefix  against which to build candidates
-	compConfirmWait bool           // When too many completions, we ask the user to confirm with another Tab keypress.
-	tcUsedY         int            // Comprehensive offset of the currently built completions
-	comp            []rune         // The currently selected item, not yet a real part of the input line.
-	compSuffix      suffixMatcher  // The suffix matcher is kept for removal after actually inserting the candidate.
-	compLine        []rune         // Same as rl.line, but with the currentComp inserted.
-	tfLine          []rune         // The current search pattern entered
-	tfPos           int            // Cursor position in the isearch buffer
-	isearch         *regexp.Regexp // Holds the current search regex match
+	tcGroups   []*comps       // All of our suggestions tree is in here
+	tcPrefix   string         // The current tab completion prefix  against which to build candidates
+	tcUsedY    int            // Comprehensive offset of the currently built completions
+	comp       []rune         // The currently selected item, not yet a real part of the input line.
+	compSuffix suffixMatcher  // The suffix matcher is kept for removal after actually inserting the candidate.
+	compLine   []rune         // Same as rl.line, but with the currentComp inserted.
+	tfLine     []rune         // The current search pattern entered
+	tfPos      int            // Cursor position in the isearch buffer
+	isearch    *regexp.Regexp // Holds the current search regex match
 
 	//
 	// History -----------------------------------------------------------------------------------
@@ -171,7 +168,6 @@ func NewInstance() *Instance {
 	rl.Prompt = &prompt{
 		primary: "$ ",
 	}
-	rl.Prompt.compute(rl)
 
 	// Keymaps and configuration
 	rl.loadDefaultConfig()
@@ -179,7 +175,7 @@ func NewInstance() *Instance {
 	rl.loadInterruptHandlers()
 
 	// Line
-	rl.initLine()
+	rl.lineInit()
 	rl.initRegisters()
 
 	// History
@@ -189,6 +185,7 @@ func NewInstance() *Instance {
 
 	// Others
 	rl.TempDirectory = os.TempDir()
+	rl.EnableGetCursorPos = true
 
 	return rl
 }
