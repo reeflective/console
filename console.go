@@ -12,7 +12,7 @@ type Console struct {
 
 	// shell - The underlying shell provides the core readline functionality,
 	// including but not limited to: inputs, completions, hints, history.
-	shell *readline.Instance
+	shell *readline.Shell
 
 	// Different menus with different command trees, prompt engines, etc.
 	menus menus
@@ -61,7 +61,7 @@ type Console struct {
 // things, print asynchronous messages, or modify various operating parameters on the fly.
 func New() *Console {
 	console := &Console{
-		shell: readline.NewInstance(),
+		shell: readline.NewShell(),
 		menus: make(menus),
 		mutex: &sync.RWMutex{},
 	}
@@ -73,7 +73,7 @@ func New() *Console {
 
 	// Set the history for this menu
 	for _, name := range defaultMenu.historyNames {
-		console.shell.AddHistorySource(name, defaultMenu.histories[name])
+		console.shell.AddHistory(name, defaultMenu.histories[name])
 	}
 
 	// Command completion, syntax highlighting, multiline callbacks, etc.
@@ -86,7 +86,7 @@ func New() *Console {
 
 // Shell returns the console readline shell instance, so that the user can
 // further configure it or use some of its API for lower-level stuff.
-func (c *Console) Shell() *readline.Instance {
+func (c *Console) Shell() *readline.Shell {
 	return c.shell
 }
 
@@ -104,7 +104,8 @@ func (c *Console) reloadConfig() {
 // The filename parameter can be used to pass a specific filename.ext pattern, which might be useful
 // if the editor has builtin filetype plugin functionality.
 func (c *Console) SystemEditor(buffer []byte, filename string) ([]byte, error) {
-	runeUpdated, err := c.shell.StartEditorWithBuffer([]rune(string(buffer)), filename)
-
-	return []byte(string(runeUpdated)), err
+	// runeUpdated, err := c.shell.StartEditorWithBuffer([]rune(string(buffer)), filename)
+	//
+	// return []byte(string(runeUpdated)), err
+	return []byte{}, nil
 }

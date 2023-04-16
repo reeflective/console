@@ -77,10 +77,10 @@ func (c *Console) ensureNoRootRunner() {
 }
 
 func (c *Console) loadActiveHistories() {
-	c.shell.DeleteHistorySource()
+	c.shell.DeleteHistory()
 
 	for _, name := range c.menus.current().historyNames {
-		c.shell.AddHistorySource(name, c.menus.current().histories[name])
+		c.shell.AddHistory(name, c.menus.current().histories[name])
 	}
 }
 
