@@ -1,11 +1,10 @@
 package carapace
 
 import (
-	"fmt"
-	"regexp"
 	"strings"
 
 	"github.com/rsteube/carapace/internal/common"
+	"github.com/rsteube/carapace/internal/export"
 	_shell "github.com/rsteube/carapace/internal/shell"
 )
 
@@ -14,12 +13,16 @@ type InvokedAction struct {
 	Action
 }
 
+func (a InvokedAction) export() export.Export {
+	return export.Export{Meta: a.meta, Values: a.rawValues}
+}
+
 // Filter filters given values (this should be done before any call to Prefix/Suffix as those alter the values being filtered)
 //
 //	a := carapace.ActionValues("A", "B", "C").Invoke(c)
 //	b := a.Filter([]string{"B"}) // ["A", "C"]
 func (a InvokedAction) Filter(values []string) InvokedAction {
-	a.rawValues = common.RawValues(a.rawValues).Filter(values...)
+	a.rawValues = a.rawValues.Filter(values...)
 	return a
 }
 
@@ -29,23 +32,12 @@ func (a InvokedAction) Filter(values []string) InvokedAction {
 //	b := carapace.ActionValues("B", "C").Invoke(c)
 //	c := a.Merge(b) // ["A", "B", "C"]
 func (a InvokedAction) Merge(others ...InvokedAction) InvokedAction {
-	uniqueRawValues := make(map[string]common.RawValue)
-	var meta common.Meta
 	for _, other := range append([]InvokedAction{a}, others...) {
-		for _, c := range other.rawValues {
-			uniqueRawValues[c.Value] = c
-		}
-		meta.Merge(other.meta)
+		a.rawValues = append(a.rawValues, other.rawValues...)
+		a.meta.Merge(other.meta)
 	}
-
-	rawValues := make([]common.RawValue, 0, len(uniqueRawValues))
-	for _, c := range uniqueRawValues {
-		rawValues = append(rawValues, c)
-	}
-
-	invoked := InvokedAction{Action{rawValues: rawValues}}
-	invoked.meta.Merge(meta)
-	return invoked
+	a.rawValues = a.rawValues.Unique()
+	return a
 }
 
 // Prefix adds a prefix to values (only the ones inserted, not the display values)
@@ -73,40 +65,34 @@ func (a InvokedAction) ToA() Action {
 	return a.Action
 }
 
+func tokenize(s string, dividers ...string) []string {
+	if len(dividers) == 0 {
+		return []string{s}
+	}
+
+	result := make([]string, 0)
+	for _, word := range strings.SplitAfter(s, dividers[0]) {
+		tokens := tokenize(strings.TrimSuffix(word, dividers[0]), dividers[1:]...)
+		if len(tokens) > 0 && strings.HasSuffix(word, dividers[0]) {
+			tokens[len(tokens)-1] = tokens[len(tokens)-1] + dividers[0]
+		}
+		result = append(result, tokens...)
+	}
+	return result
+}
+
 // ToMultiPartsA create an ActionMultiParts from values with given dividers
 //
 //	a := carapace.ActionValues("A/B/C", "A/C", "B/C", "C").Invoke(c)
 //	b := a.ToMultiPartsA("/") // completes segments separately (first one is ["A/", "B/", "C"])
 func (a InvokedAction) ToMultiPartsA(dividers ...string) Action {
 	return ActionCallback(func(c Context) Action {
-		_split := func() func(s string) []string {
-			quotedDividiers := make([]string, 0)
-			for _, d := range dividers {
-				quotedDividiers = append(quotedDividiers, regexp.QuoteMeta(d))
-			}
-			f := fmt.Sprintf("([^%v]*(%v)?)", strings.Join(quotedDividiers, "|"), strings.Join(quotedDividiers, "|")) // TODO quickfix - this is wrong (fails for dividers longer than one character) an might need a reverse lookahead for character sequence
-			r := regexp.MustCompile(f)
-			return func(s string) []string {
-				if matches := r.FindAllString(s, -1); matches != nil {
-					return matches
-				}
-				return []string{}
-			}
-		}()
-
-		splittedCV := _split(c.CallbackValue)
-		for _, d := range dividers {
-			if strings.HasSuffix(c.CallbackValue, d) {
-				splittedCV = append(splittedCV, "")
-				break
-			}
-
-		}
+		splittedCV := tokenize(c.Value, dividers...)
 
 		uniqueVals := make(map[string]common.RawValue)
 		for _, val := range a.rawValues {
-			if strings.HasPrefix(val.Value, c.CallbackValue) {
-				if splitted := _split(val.Value); len(splitted) >= len(splittedCV) {
+			if strings.HasPrefix(val.Value, c.Value) {
+				if splitted := tokenize(val.Value, dividers...); len(splitted) >= len(splittedCV) {
 					v := strings.Join(splitted[:len(splittedCV)], "")
 					d := splitted[len(splittedCV)-1]
 
@@ -147,15 +133,15 @@ func (a InvokedAction) ToMultiPartsA(dividers ...string) Action {
 	})
 }
 
-func (a InvokedAction) value(shell string, callbackValue string) string {
-	return _shell.Value(shell, callbackValue, a.meta, a.rawValues)
+func (a InvokedAction) value(shell string, value string) string {
+	return _shell.Value(shell, value, a.meta, a.rawValues)
 }
 
 func init() {
-	common.FromInvokedAction = func(i interface{}) common.RawValues {
+	common.FromInvokedAction = func(i interface{}) (common.Meta, common.RawValues) {
 		if a, ok := i.(InvokedAction); ok {
-			return a.rawValues
+			return a.meta, a.rawValues
 		}
-		return nil
+		return common.Meta{}, nil
 	}
 }

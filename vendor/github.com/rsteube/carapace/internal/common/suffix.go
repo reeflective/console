@@ -27,18 +27,22 @@ func (sm *SuffixMatcher) Add(suffixes ...rune) {
 }
 
 func (sm *SuffixMatcher) Merge(other SuffixMatcher) {
-	for _, r := range []rune(other.string) {
+	for _, r := range other.string {
 		sm.Add(r)
 	}
 }
 
 func (sm SuffixMatcher) Matches(s string) bool {
-	for _, r := range []rune(sm.string) {
+	for _, r := range sm.string {
 		if r == '*' || strings.HasSuffix(s, string(r)) {
 			return true
 		}
 	}
 	return false
+}
+
+func (sm SuffixMatcher) String() string {
+	return sm.string
 }
 
 func (sm SuffixMatcher) MarshalJSON() ([]byte, error) {
