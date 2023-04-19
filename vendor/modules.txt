@@ -15,9 +15,6 @@ github.com/Masterminds/semver/v3
 # github.com/Masterminds/sprig/v3 v3.2.3
 ## explicit; go 1.13
 github.com/Masterminds/sprig/v3
-# github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d
-## explicit
-github.com/acarl005/stripansi
 # github.com/agext/levenshtein v1.2.3
 ## explicit
 github.com/agext/levenshtein
@@ -32,9 +29,6 @@ github.com/esimov/stackblur-go
 github.com/fogleman/gg
 # github.com/frankban/quicktest v1.14.4
 ## explicit; go 1.13
-# github.com/fsnotify/fsnotify v1.6.0
-## explicit; go 1.16
-github.com/fsnotify/fsnotify
 # github.com/go-ole/go-ole v1.2.6
 ## explicit; go 1.12
 github.com/go-ole/go-ole
@@ -185,12 +179,21 @@ github.com/reeflective/flags/internal/scan
 github.com/reeflective/flags/internal/tag
 github.com/reeflective/flags/internal/validation
 github.com/reeflective/flags/validator
-# github.com/reeflective/readline v0.1.0-beta.0.20230120110938-ae90c14954f3
+# github.com/reeflective/readline v0.1.0-beta.0.20230419174847-16f4f8a74f0e
 ## explicit; go 1.19
 github.com/reeflective/readline
-# github.com/reiver/go-caret v0.0.0-20190726191135-0ad7aa63f55f
-## explicit
-github.com/reiver/go-caret
+github.com/reeflective/readline/inputrc
+github.com/reeflective/readline/internal/color
+github.com/reeflective/readline/internal/completion
+github.com/reeflective/readline/internal/core
+github.com/reeflective/readline/internal/display
+github.com/reeflective/readline/internal/editor
+github.com/reeflective/readline/internal/history
+github.com/reeflective/readline/internal/keymap
+github.com/reeflective/readline/internal/macro
+github.com/reeflective/readline/internal/strutil
+github.com/reeflective/readline/internal/term
+github.com/reeflective/readline/internal/ui
 # github.com/rivo/uniseg v0.4.3
 ## explicit; go 1.18
 github.com/rivo/uniseg

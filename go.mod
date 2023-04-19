@@ -6,7 +6,7 @@ require (
 	github.com/jandedobbeleer/oh-my-posh/src v0.0.0-20230120053452-1a1aecbd36f0
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/reeflective/flags v0.9.1-0.20230102052232-2085c9120702
-	github.com/reeflective/readline v0.1.0-beta.0.20230120110938-ae90c14954f3
+	github.com/reeflective/readline v0.1.0-beta.0.20230419174847-16f4f8a74f0e
 	github.com/rsteube/carapace v0.29.1
 	github.com/spf13/cobra v1.7.0
 )
@@ -17,13 +17,11 @@ require (
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver/v3 v3.2.0 // indirect
 	github.com/Masterminds/sprig/v3 v3.2.3 // indirect
-	github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d // indirect
 	github.com/agext/levenshtein v1.2.3 // indirect
 	github.com/apparentlymart/go-textseg/v13 v13.0.0 // indirect
 	github.com/esimov/stackblur-go v1.1.0 // indirect
 	github.com/fogleman/gg v1.3.0 // indirect
 	github.com/frankban/quicktest v1.14.4 // indirect
-	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/go-playground/locales v0.14.0 // indirect
 	github.com/go-playground/universal-translator v0.18.0 // indirect
@@ -52,7 +50,6 @@ require (
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/power-devops/perfstat v0.0.0-20221212215047-62379fc7944b // indirect
-	github.com/reiver/go-caret v0.0.0-20190726191135-0ad7aa63f55f // indirect
 	github.com/rivo/uniseg v0.4.3 // indirect
 	github.com/rsteube/carapace-bin v0.19.0 // indirect
 	github.com/shirou/gopsutil/v3 v3.22.12 // indirect
