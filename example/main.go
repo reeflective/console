@@ -37,7 +37,7 @@ func main() {
 	// application (with confirm), when the shell readline receives
 	// a Ctrl-D keystroke. You can map any error to any handler.
 	menu.AddInterrupt(io.EOF, exitCtrlD)
-	menu.AddInterrupt(console.ErrCtrlC, switchMenu)
+	// menu.AddInterrupt(, switchMenu)
 
 	// Make a command yielder for our main menu.
 	flagsCommands := makeflagsCommands(app)
