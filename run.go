@@ -63,9 +63,8 @@ func (c *Console) Run() (err error) {
 	}
 }
 
-// Generally, an empty command entered should just print
-// a new prompt, unlike for classic CLI usage when the
-// program will print its usage string.
+// Generally, an empty command entered should just print a new prompt,
+// unlike for classic CLI usage when the program will print its usage string.
 // We simply remove any RunE from the root command, so that nothing is
 // printed/executed by default. Pre/Post runs are still used if any.
 func (c *Console) ensureNoRootRunner() {
