@@ -21,15 +21,15 @@ func (c *Console) Run() (err error) {
 	c.loadActiveHistories()
 
 	// Call the command generators for all menus.
-	c.initCommands()
+	// c.initCommands()
 
 	for {
-		c.reloadConfig()         // Rebind the prompt helpers, and similar stuff.
-		c.runPreLoopHooks()      // Run user-provided pre-loop hooks
-		c.ensureNoRootRunner()   // Avoid printing any help when the command line is empty
-		c.hideFilteredCommands() // Hide commands that are not available
-
 		menu := c.menus.current() // We work with the active menu.
+		menu.resetCommands()      // Regenerate the commands for the menu.
+		c.reloadConfig()          // Rebind the prompt helpers, and similar stuff.
+		c.runPreLoopHooks()       // Run user-provided pre-loop hooks
+		c.ensureNoRootRunner()    // Avoid printing any help when the command line is empty
+		c.hideFilteredCommands()  // Hide commands that are not available
 
 		// Block and read user input. Provides completion, syntax, hints, etc.
 		// Various types of errors might arise from here. We handle them in a
@@ -84,12 +84,11 @@ func (c *Console) loadActiveHistories() {
 	}
 }
 
-func (c *Console) initCommands() {
-	for _, menu := range c.menus {
-		menu.resetCommands()
-	}
-}
-
+//	func (c *Console) initCommands() {
+//		for _, menu := range c.menus {
+//			menu.resetCommands()
+//		}
+//	}
 func (c *Console) runPreLoopHooks() {
 	for _, hook := range c.PreReadlineHooks {
 		hook()
@@ -157,7 +156,4 @@ func (c *Console) execute(args []string) {
 	menu.Execute()
 
 	c.runPostRunHooks()
-
-	// Finally, reset the command tree to a blank state
-	menu.resetCommands()
 }

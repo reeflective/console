@@ -109,3 +109,9 @@ func (c *Console) SystemEditor(buffer []byte, filename string) ([]byte, error) {
 	// return []byte(string(runeUpdated)), err
 	return []byte{}, nil
 }
+
+// func (c *Console) LogTransient(format string, args ...interface{}) {
+// }
+//
+// func (c *Console) Log(format string, args ...interface{}) {
+// }
