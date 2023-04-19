@@ -31,9 +31,9 @@ func parseFlagTag(field reflect.StructField, options opts) (*Flag, *tag.MultiTag
 		return nil, flagTags, nil
 	}
 
-	flag.DefValue = flagTags.GetMany("default")
+	setFlagDefaultValues(flag, flagTags.GetMany("default"))
 	setFlagChoices(flag, flagTags.GetMany("choice"))
-	flag.OptionalValue = flagTags.GetMany("optional-value")
+	setFlagOptionalValues(flag, flagTags.GetMany("optional-value"))
 
 	if options.Prefix != "" && !ignorePrefix {
 		flag.Name = options.Prefix + flag.Name
@@ -186,6 +186,16 @@ func parseEnvTag(flagName string, field reflect.StructField, options opts) strin
 	return envVar
 }
 
+func setFlagDefaultValues(flag *Flag, choices []string) {
+	var allChoices []string
+
+	for _, choice := range choices {
+		allChoices = append(allChoices, strings.Split(choice, " ")...)
+	}
+
+	flag.DefValue = allChoices
+}
+
 func setFlagChoices(flag *Flag, choices []string) {
 	var allChoices []string
 
@@ -194,6 +204,16 @@ func setFlagChoices(flag *Flag, choices []string) {
 	}
 
 	flag.Choices = allChoices
+}
+
+func setFlagOptionalValues(flag *Flag, choices []string) {
+	var allChoices []string
+
+	for _, choice := range choices {
+		allChoices = append(allChoices, strings.Split(choice, " ")...)
+	}
+
+	flag.OptionalValue = allChoices
 }
 
 func hasOption(options []string, option string) bool {

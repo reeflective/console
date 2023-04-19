@@ -12,8 +12,7 @@ var (
 	seqFgReset  = "\x1b[39m"
 )
 
-//
-// // highlightSyntax - Entrypoint to all input syntax highlighting in the Wiregost console.
+// highlightSyntax - Entrypoint to all input syntax highlighting in the Wiregost console.
 func (c *Console) highlightSyntax(input []rune) (line string) {
 	// Split the line as shellwords
 	args, unprocessed, err := split(string(input), true)
@@ -36,10 +35,6 @@ func (c *Console) highlightSyntax(input []rune) (line string) {
 
 	// Join all words.
 	line = strings.Join(highlighted, "")
-
-	// Final adjustments.
-	// 1) When the line begins with spaces, the concatenation added an undesidered one.
-	line = strings.TrimPrefix(line, " ")
 
 	return line
 }

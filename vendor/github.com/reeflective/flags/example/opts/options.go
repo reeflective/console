@@ -31,8 +31,8 @@ type Machines string
 
 // Complete provides user@host completions.
 func (m *Machines) Complete(ctx carapace.Context) carapace.Action {
-	if strings.Contains(ctx.CallbackValue, "@") {
-		prefix := strings.SplitN(ctx.CallbackValue, "@", 2)[0]
+	if strings.Contains(ctx.Value, "@") {
+		prefix := strings.SplitN(ctx.Value, "@", 2)[0]
 		return net.ActionHosts().Invoke(ctx).Prefix(prefix + "@").ToA()
 	} else {
 		return net.ActionHosts()

@@ -3,7 +3,6 @@ package console
 import (
 	"errors"
 	"strings"
-	"unicode"
 
 	"github.com/reeflective/readline"
 	"github.com/rsteube/carapace"
@@ -23,7 +22,7 @@ func (c *Console) complete(line []rune, pos int) readline.Completions {
 	// Like in classic system shells, we need to add an empty
 	// argument if the last character is a space: the args
 	// returned from the previous call don't account for it.
-	if strings.HasSuffix(string(line), " ") || len(args) == 0 {
+	if strings.HasSuffix(string(rbuffer), " ") || len(args) == 0 {
 		args = append(args, "")
 	}
 
@@ -101,18 +100,4 @@ func splitArgs(line []rune) (args []string, prefix string) {
 	args = append(args, strings.Split(remain, " ")...)
 
 	return
-}
-
-func trimSpaceLeft(line []rune) []rune {
-	firstIndex := len(line)
-
-	for i, r := range line {
-		if !unicode.IsSpace(r) {
-			firstIndex = i
-
-			break
-		}
-	}
-
-	return line[firstIndex:]
 }

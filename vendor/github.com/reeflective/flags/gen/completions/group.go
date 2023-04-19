@@ -170,15 +170,15 @@ func flagCompsScanner(actions *flagSetComps) flags.FlagFunc {
 			return nil
 		}
 
+		action := comp.ActionCallback(completer)
+
 		// Then, and irrespectively of where the completer comes from,
 		// we adapt it considering the kind of type we're dealing with.
 		if isRepeatable && itemsImplement {
-			(*actions)[flag] = comp.ActionMultiParts(",", func(c comp.Context) comp.Action {
-				return completer(c).Invoke(c).Filter(c.Parts).ToA()
-			})
-		} else {
-			(*actions)[flag] = comp.ActionCallback(completer)
+			action = action.UniqueList(",")
 		}
+
+		(*actions)[flag] = action
 
 		return nil
 	}

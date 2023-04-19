@@ -15,7 +15,7 @@ const (
 )
 
 // Commands is a simple function a root cobra command containing an arbitrary tree
-// of subcommands, along with any behavior parameters normally found in cobra.j
+// of subcommands, along with any behavior parameters normally found in cobra.
 // This function is used by each menu to produce a new, blank command tree after
 // each execution run, as well as each command completion invocation.
 type Commands func() *cobra.Command

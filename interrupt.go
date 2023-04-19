@@ -1,13 +1,5 @@
 package console
 
-import (
-	"github.com/reeflective/readline"
-)
-
-// ErrCtrlC is returned when the user enters the Ctrl+C key
-// combination while the shell is reading and processing user input.
-var ErrCtrlC = readline.ErrCtrlC
-
 // AddInterrupt registers a handler to run when the console receives a given
 // interrupt error from the underlying readline shell. Mainly two interrupt
 // signals are concerned: io.EOF (returned when pressing CtrlD), and console.ErrCtrlC.

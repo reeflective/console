@@ -48,7 +48,7 @@ func Flatten(val bool) OptFunc { return func(opt *scan.Opts) { opt.Flatten = val
 func ParseAll() OptFunc { return func(opt *scan.Opts) { opt.ParseAll = true } }
 
 // Validator sets validator function for flags.
-// Check existed validators in flags/validator package.
+// Check existing validators in flags/validator and flags/validator/govalidator packages.
 func Validator(val ValidateFunc) OptFunc {
 	return func(opt *scan.Opts) { opt.Validator = scan.ValidateFunc(val) }
 }

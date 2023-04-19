@@ -13,7 +13,7 @@ import (
 // Prompt wraps an oh-my-posh prompt engine, so as to be able
 // to be configured/enhanced and used the same way oh-my-posh is.
 // Some methods have been added for ordering the application to
-// to recompute prompts, print logs in sync with them, etc.
+// recompute prompts, print logs in sync with them, etc.
 type Prompt struct {
 	*engine.Engine
 	console *Console
@@ -37,21 +37,23 @@ func (p *Prompt) LoadConfig(path string) error {
 }
 
 // bind reassigns the prompt printing functions to the shell helpers.
-func (p *Prompt) bind(shell *readline.Instance) {
-	shell.Prompt.Primary(p.PrintPrimary)
-	shell.Prompt.Right(p.PrintRPrompt)
+func (p *Prompt) bind(shell *readline.Shell) {
+	prompt := shell.Prompt()
+
+	prompt.Primary(p.PrintPrimary)
+	prompt.Right(p.PrintRPrompt)
 
 	secondary := func() string {
 		return p.PrintExtraPrompt(engine.Secondary)
 	}
-	shell.Prompt.Secondary(secondary)
+	prompt.Secondary(secondary)
 
 	transient := func() string {
 		return p.PrintExtraPrompt(engine.Transient)
 	}
-	shell.Prompt.Transient(transient)
+	prompt.Transient(transient)
 
-	shell.Prompt.Tooltip(p.PrintTooltip)
+	prompt.Tooltip(p.PrintTooltip)
 }
 
 // LogTransient prints a string message (a log, or more broadly, an

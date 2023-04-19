@@ -61,7 +61,7 @@ func newMenu(name string, console *Console) *Menu {
 	}
 
 	histName := fmt.Sprintf("local history %s", name)
-	hist := new(readline.MemoryHistory)
+	hist := readline.NewInMemoryHistory()
 
 	menu.historyNames = append(menu.historyNames, histName)
 	menu.histories[histName] = hist
@@ -106,6 +106,7 @@ func (m *Menu) DeleteHistorySource(name string) {
 		if name != "" {
 			name = " (" + name + ")"
 		}
+
 		name = fmt.Sprintf("local history%s", name)
 	}
 
@@ -195,10 +196,10 @@ func (c *Console) SwitchMenu(menu string) {
 
 		// Remove the currently bound history sources
 		// (old menu) and bind the ones peculiar to this one.
-		c.shell.DeleteHistorySource()
+		c.shell.DeleteHistory()
 
 		for _, name := range target.historyNames {
-			c.shell.AddHistorySource(name, target.histories[name])
+			c.shell.AddHistory(name, target.histories[name])
 		}
 	}
 }

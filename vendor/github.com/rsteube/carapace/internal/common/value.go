@@ -8,13 +8,17 @@ import (
 	"github.com/rsteube/carapace/pkg/style"
 )
 
+// FromInvokedAction provides access to RawValues within an InvokedAction.
+// It is intended for testing purposes in Sandbox (circumventing dependency issues).
+var FromInvokedAction func(action interface{}) (Meta, RawValues)
+
 // RawValue represents a completion candidate.
 type RawValue struct {
-	Value       string
-	Display     string
-	Description string `json:",omitempty"`
-	Style       string `json:",omitempty"`
-	Tag         string `json:",omitempty"`
+	Value       string `json:"value"`
+	Display     string `json:"display"`
+	Description string `json:"description,omitempty"`
+	Style       string `json:"style,omitempty"`
+	Tag         string `json:"tag,omitempty"`
 }
 
 // TrimmedDescription returns the trimmed description.
@@ -37,6 +41,20 @@ func RawValuesFrom(values ...string) RawValues {
 	for index, val := range values {
 		rawValues[index] = RawValue{Value: val, Display: val, Style: style.Default}
 	}
+	return rawValues
+}
+
+func (r RawValues) Unique() RawValues {
+	uniqueRawValues := make(map[string]RawValue)
+	for _, value := range r {
+		uniqueRawValues[value.Value] = value
+	}
+
+	rawValues := make([]RawValue, 0, len(uniqueRawValues))
+	for _, value := range uniqueRawValues {
+		rawValues = append(rawValues, value)
+	}
+	sort.Sort(ByDisplay(rawValues))
 	return rawValues
 }
 

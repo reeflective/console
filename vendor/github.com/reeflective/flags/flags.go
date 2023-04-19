@@ -12,26 +12,27 @@
 // package main
 //
 // import (
-//    "github.com/reeflective/flags/example/commands"
 //
-//    "github.com/reeflective/flags"
-//    genflags "github.com/reeflective/flags/gen/flags"
+//	"github.com/reeflective/flags/example/commands"
 //
-//    "github.com/reeflective/flags/validator"
-//    "github.com/reeflective/flags/gen/completions"
+//	"github.com/reeflective/flags"
+//	genflags "github.com/reeflective/flags/gen/flags"
+//
+//	"github.com/reeflective/flags/validator"
+//	"github.com/reeflective/flags/gen/completions"
+//
 // )
 //
-// func main() {
-//     var opts []flags.OptFunc
+//	func main() {
+//	    var opts []flags.OptFunc
 //
-//     opts = append(opts, flags.Validator(validator.New()))
+//	    opts = append(opts, flags.Validator(validator.New()))
 //
-//     rootData := &commands.Root{}
-//     rootCmd := genflags.Generate(rootData, opts...)
+//	    rootData := &commands.Root{}
+//	    rootCmd := genflags.Generate(rootData, opts...)
 //
-//     comps, _ := completions.Generate(rootCmd, rootData, nil)
-// }
-//
+//	    comps, _ := completions.Generate(rootCmd, rootData, nil)
+//	}
 //
 // 2) Global parsing options (base) ------------------------------------------------------
 //
@@ -64,7 +65,6 @@
 // tag attached to them. This is because by default the library does not considers untagged field anymore.
 // func ParseAll()
 //
-//
 // 3) Special parsing options/functions---------------------------------------------------
 //
 // ValidateFunc describes a validation func, that takes string val for flag from command line,
@@ -73,13 +73,10 @@
 //
 // type ValidateFunc func(val string, field reflect.StructField, data interface{}) error
 //
-//
 // Validator sets validator function for flags.
 // Check existing validators in flags/validator and flags/validator/govalidator packages.
 //
 // func Validator(val ValidateFunc)
-//
-//
 // FlagFunc is a generic function that can be applied to each
 // value that will end up being a flags *Flag, so that users
 // can perform more arbitrary operations on each, such as checking
@@ -87,10 +84,8 @@
 //
 // type FlagFunc func(flag string, tag tag.MultiTag, val reflect.Value) error
 //
-//
 // FlagHandler sets the handler function for flags, in order to perform arbitrary
 // operations on the value of the flag identified by the <flag> name parameter of FlagFunc.
 //
 // func FlagHandler(val FlagFunc)
-//
 package flags
