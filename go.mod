@@ -5,9 +5,9 @@ go 1.19
 require (
 	github.com/jandedobbeleer/oh-my-posh/src v0.0.0-20230120053452-1a1aecbd36f0
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
-	github.com/reeflective/flags v0.9.1-0.20230102052232-2085c9120702
+	github.com/reeflective/flags v0.10.0
 	github.com/reeflective/readline v0.1.0-beta.0.20230419174847-16f4f8a74f0e
-	github.com/rsteube/carapace v0.29.1
+	github.com/rsteube/carapace v0.30.0
 	github.com/spf13/cobra v1.7.0
 )
 

@@ -18,11 +18,6 @@ func Snippet(cmd *cobra.Command) string {
 }
 
 let-env config = {
-  completions: {
-    external: {
-      enable: true
-      completer: $external_completer
-    }
-  }
+  external_completer: $external_completer
 }`, cmd.Name(), uid.Executable())
 }

@@ -75,6 +75,7 @@ github.com/huandu/xstrings v1.4.0/go.mod h1:y5/lhBue+AyNmUVz9RLU9xbLR0o4KIIExikq
 github.com/imdario/mergo v0.3.11/go.mod h1:jmQim1M+e3UYxmgPu/WyfjB3N3VflVyUjjjwH0dnCYA=
 github.com/imdario/mergo v0.3.13 h1:lFzP57bqS/wsqKssCGmtLAb8A0wKjLGrve2q3PPVcBk=
 github.com/imdario/mergo v0.3.13/go.mod h1:4lJ1jqUDcsbIECGy0RUJAXNIhg+6ocWgb1ALK2O4oXg=
+github.com/inconshreveable/mousetrap v1.0.1/go.mod h1:vpF70FUmC8bwa3OWnCshd2FqLfsEA9PFc4w1p2J65bw=
 github.com/inconshreveable/mousetrap v1.1.0 h1:wN+x4NVGpMsO7ErUn/mUI3vEoE6Jt13X2s0bqwp9tc8=
 github.com/inconshreveable/mousetrap v1.1.0/go.mod h1:vpF70FUmC8bwa3OWnCshd2FqLfsEA9PFc4w1p2J65bw=
 github.com/jandedobbeleer/oh-my-posh/src v0.0.0-20230120053452-1a1aecbd36f0 h1:X8i6PBKSfnZH9adxykvPR4bSO/NmIC5UIScDQxzM9HA=
@@ -131,6 +132,8 @@ github.com/reeflective/carapace v0.25.2-0.20230416191807-fc9b8c3aa6f6 h1:3HHTRiX
 github.com/reeflective/carapace v0.25.2-0.20230416191807-fc9b8c3aa6f6/go.mod h1:jkLt41Ne2TD2xPuMdX/2O05Smhy8vMgG7O2TYvC0yOc=
 github.com/reeflective/flags v0.9.1-0.20230102052232-2085c9120702 h1:QxmgXzdqaLZ46/PyJvGBAYBY6SUxqFuHEZ4nITVJ20o=
 github.com/reeflective/flags v0.9.1-0.20230102052232-2085c9120702/go.mod h1:qaXsf+1KENM29sgDYlQIsNfDEy+qF0+k3KeWeoESuGw=
+github.com/reeflective/flags v0.10.0 h1:5fY0xY4chm1d1UwIMfb2adj6QybFOJL0nRdZGkopCj8=
+github.com/reeflective/flags v0.10.0/go.mod h1:xIacPlsX0y+6GP3cdQvwrBzBi1ffHdZpSWBy5142duY=
 github.com/reeflective/readline v0.1.0-beta.0.20230419174847-16f4f8a74f0e h1:K3Bwp8raFPRqyeZF+VeptgvEmlpTa6DH+AVtiKQXa4M=
 github.com/reeflective/readline v0.1.0-beta.0.20230419174847-16f4f8a74f0e/go.mod h1:1kS/+b3JDh8qYlo4ld9iuFVnl12Ju5wV7BsYbZ0C7vg=
 github.com/rivo/uniseg v0.2.0/go.mod h1:J6wj4VEh+S6ZtnVlnTBMWIodfgj8LQOQFoIToxlJtxc=
@@ -140,6 +143,8 @@ github.com/rogpeppe/go-internal v1.6.1/go.mod h1:xXDCJY+GAPziupqXw64V24skbSoqbTE
 github.com/rogpeppe/go-internal v1.8.0/go.mod h1:WmiCO8CzOY8rg0OYDC4/i/2WRWAB6poM+XZ2dLUbcbE=
 github.com/rogpeppe/go-internal v1.9.0 h1:73kH8U+JUqXU8lRuOHeVHaa/SZPifC7BkcraZVejAe8=
 github.com/rogpeppe/go-internal v1.9.0/go.mod h1:WtVeX8xhTBvf0smdhujwtBcq4Qrzq/fJaraNFVN+nFs=
+github.com/rsteube/carapace v0.30.0 h1:tJjVNqz1eBZPvMyFcSwCyncNgcTYy0bI/xZnOidX59U=
+github.com/rsteube/carapace v0.30.0/go.mod h1:/ALYHicIpak6TjQnKl7HupclqJydy2LQb6CkawYBxDo=
 github.com/rsteube/carapace-bin v0.19.0 h1:pmWOrtO0Fz4G+55OKHjjA4ihIKZKzDZh3Z8X1pY8IBk=
 github.com/rsteube/carapace-bin v0.19.0/go.mod h1:yAF4advL85gx7ZFxYYsJu8Rgp2akz4TqvD6M0Bg0VGc=
 github.com/russross/blackfriday/v2 v2.1.0/go.mod h1:+Rmxgy9KzJVeS9/2gXHxylqXiyQDYRxCVz55jmeOWTM=
@@ -153,6 +158,7 @@ github.com/shopspring/decimal v1.3.1/go.mod h1:DKyhrW/HYNuLGql+MJL6WCR6knT2jwCFR
 github.com/spf13/cast v1.3.1/go.mod h1:Qx5cxh0v+4UWYiBimWS+eyWzqEqokIECu5etghLkUJE=
 github.com/spf13/cast v1.5.0 h1:rj3WzYc11XZaIZMPKmwP96zkFEnnAmV8s6XbB2aY32w=
 github.com/spf13/cast v1.5.0/go.mod h1:SpXXQ5YoyJw6s3/6cMTQuxvgRl3PCJiyaX9p6b155UU=
+github.com/spf13/cobra v1.6.1/go.mod h1:IOw/AERYS7UzyrGinqmz6HLUo219MORXGxhbaJUqzrY=
 github.com/spf13/cobra v1.7.0 h1:hyqWnYt1ZQShIddO5kBpj3vu05/++x6tJ6dg8EC572I=
 github.com/spf13/cobra v1.7.0/go.mod h1:uLxZILRyS/50WlhOIKD7W6V5bgeIt+4sICxh6uRMrb0=
 github.com/spf13/pflag v1.0.2/go.mod h1:DYY7MBk1bdzusC3SYhjObp+wFpr4gzcvqqNjLnInEg4=

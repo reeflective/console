@@ -10,15 +10,15 @@ import (
 
 // FromInvokedAction provides access to RawValues within an InvokedAction.
 // It is intended for testing purposes in Sandbox (circumventing dependency issues).
-var FromInvokedAction func(action interface{}) (Meta, RawValues)
+var FromInvokedAction func(action interface{}) RawValues
 
 // RawValue represents a completion candidate.
 type RawValue struct {
-	Value       string `json:"value"`
-	Display     string `json:"display"`
-	Description string `json:"description,omitempty"`
-	Style       string `json:"style,omitempty"`
-	Tag         string `json:"tag,omitempty"`
+	Value       string
+	Display     string
+	Description string `json:",omitempty"`
+	Style       string `json:",omitempty"`
+	Tag         string `json:",omitempty"`
 }
 
 // TrimmedDescription returns the trimmed description.
@@ -41,20 +41,6 @@ func RawValuesFrom(values ...string) RawValues {
 	for index, val := range values {
 		rawValues[index] = RawValue{Value: val, Display: val, Style: style.Default}
 	}
-	return rawValues
-}
-
-func (r RawValues) Unique() RawValues {
-	uniqueRawValues := make(map[string]RawValue)
-	for _, value := range r {
-		uniqueRawValues[value.Value] = value
-	}
-
-	rawValues := make([]RawValue, 0, len(uniqueRawValues))
-	for _, value := range uniqueRawValues {
-		rawValues = append(rawValues, value)
-	}
-	sort.Sort(ByDisplay(rawValues))
 	return rawValues
 }
 
@@ -94,20 +80,18 @@ func (r RawValues) FilterPrefix(prefix string) RawValues {
 }
 
 func (r RawValues) EachTag(f func(tag string, values RawValues)) {
-	tags := make([]string, 0)
 	tagGroups := make(map[string]RawValues)
 	for _, val := range r {
 		if _, exists := tagGroups[val.Tag]; !exists {
 			tagGroups[val.Tag] = make(RawValues, 0)
-			tags = append(tags, val.Tag)
 		}
 		tagGroups[val.Tag] = append(tagGroups[val.Tag], val)
 	}
 
-	// tags := make([]string, 0)
-	// for tag := range tagGroups {
-	// 	tags = append(tags, tag)
-	// }
+	tags := make([]string, 0)
+	for tag := range tagGroups {
+		tags = append(tags, tag)
+	}
 	sort.Strings(tags)
 
 	for _, tag := range tags {

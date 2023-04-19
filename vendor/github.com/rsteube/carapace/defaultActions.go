@@ -3,16 +3,12 @@ package carapace
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"os"
-	"os/exec"
 	"strings"
 
 	"github.com/rsteube/carapace/internal/common"
 	"github.com/rsteube/carapace/internal/config"
-	"github.com/rsteube/carapace/internal/export"
-	"github.com/rsteube/carapace/internal/man"
+	"github.com/rsteube/carapace/internal/shell/export"
 	"github.com/rsteube/carapace/pkg/style"
 	"github.com/rsteube/carapace/third_party/github.com/acarl005/stripansi"
 	"github.com/spf13/cobra"
@@ -32,45 +28,18 @@ func ActionCallback(callback CompletionCallback) Action {
 //	})
 func ActionExecCommand(name string, arg ...string) func(f func(output []byte) Action) Action {
 	return func(f func(output []byte) Action) Action {
-		return ActionExecCommandE(name, arg...)(func(output []byte, err error) Action {
-			if err != nil {
-				if exitErr, ok := err.(*exec.ExitError); ok {
-					if firstLine := strings.SplitN(string(exitErr.Stderr), "\n", 2)[0]; strings.TrimSpace(firstLine) != "" {
-						err = errors.New(firstLine)
-					}
-				}
-				return ActionMessage(err.Error())
-			}
-			return f(output)
-		})
-	}
-}
-
-// ActionExecCommandE is like ActionExecCommand but with custom error handling.
-//
-//	carapace.ActionExecCommandE("supervisorctl", "--configuration", path, "status")(func(output []byte, err error) carapace.Action {
-//		if err != nil {
-//			const NOT_RUNNING = 3
-//			if exitErr, ok := err.(*exec.ExitError); !ok || exitErr.ExitCode() != NOT_RUNNING {
-//				return carapace.ActionMessage(err.Error())
-//			}
-//		}
-//		return carapace.ActionValues("success")
-//	})
-func ActionExecCommandE(name string, arg ...string) func(f func(output []byte, err error) Action) Action {
-	return func(f func(output []byte, err error) Action) Action {
 		return ActionCallback(func(c Context) Action {
 			var stdout, stderr bytes.Buffer
 			cmd := c.Command(name, arg...)
 			cmd.Stdout = &stdout
 			cmd.Stderr = &stderr
 			if err := cmd.Run(); err != nil {
-				if exitErr, ok := err.(*exec.ExitError); ok {
-					exitErr.Stderr = stderr.Bytes() // seems this needs to be set manually due to stdout being collected?
+				if firstLine := strings.SplitN(stderr.String(), "\n", 2)[0]; strings.TrimSpace(firstLine) != "" {
+					return ActionMessage(stripansi.Strip(firstLine))
 				}
-				return f(stdout.Bytes(), err)
+				return ActionMessage(err.Error())
 			}
-			return f(stdout.Bytes(), nil)
+			return f(stdout.Bytes())
 		})
 	}
 }
@@ -81,7 +50,7 @@ func ActionExecCommandE(name string, arg ...string) func(f func(output []byte, e
 //		carapace.ActionCallback(func(c carapace.Context) carapace.Action {
 //			args := []string{"_carapace", "export", ""}
 //			args = append(args, c.Args...)
-//			args = append(args, c.Value)
+//			args = append(args, c.CallbackValue)
 //			return carapace.ActionExecCommand("command", args...)(func(output []byte) carapace.Action {
 //				return carapace.ActionImport(output)
 //			})
@@ -94,19 +63,19 @@ func ActionImport(output []byte) Action {
 			return ActionMessage(err.Error())
 		}
 		return Action{
-			rawValues: e.Values,
+			rawValues: e.RawValues,
 			meta:      e.Meta,
 		}
 	})
 }
 
 // ActionExecute executes completion on an internal command
-// TODO example.
+// TODO example
 func ActionExecute(cmd *cobra.Command) Action {
 	return ActionCallback(func(c Context) Action {
 		args := []string{"_carapace", "export", cmd.Name()}
 		args = append(args, c.Args...)
-		args = append(args, c.Value)
+		args = append(args, c.CallbackValue)
 		cmd.SetArgs(args)
 
 		Gen(cmd).PreInvoke(func(cmd *cobra.Command, flag *pflag.Flag, action Action) Action {
@@ -131,14 +100,24 @@ func ActionExecute(cmd *cobra.Command) Action {
 // ActionDirectories completes directories.
 func ActionDirectories() Action {
 	return ActionCallback(func(c Context) Action {
-		return actionPath([]string{""}, true).Invoke(c).ToMultiPartsA("/").StyleF(style.ForPath)
+		return actionPath([]string{""}, true).Invoke(c).ToMultiPartsA("/").StyleF(func(s string, sc style.Context) string {
+			if abs, err := c.Abs(s); err == nil {
+				return style.ForPath(abs, c)
+			}
+			return ""
+		})
 	}).Tag("directories")
 }
 
 // ActionFiles completes files with optional suffix filtering.
 func ActionFiles(suffix ...string) Action {
 	return ActionCallback(func(c Context) Action {
-		return actionPath(suffix, false).Invoke(c).ToMultiPartsA("/").StyleF(style.ForPath)
+		return actionPath(suffix, false).Invoke(c).ToMultiPartsA("/").StyleF(func(s string, sc style.Context) string {
+			if abs, err := c.Abs(s); err == nil {
+				return style.ForPath(abs, c)
+			}
+			return ""
+		})
 	}).Tag("files")
 }
 
@@ -147,7 +126,7 @@ func ActionValues(values ...string) Action {
 	return ActionCallback(func(c Context) Action {
 		vals := make([]common.RawValue, 0, len(values))
 		for _, val := range values {
-			vals = append(vals, common.RawValue{Value: val, Display: val})
+			vals = append(vals, common.RawValue{Value: val, Display: val, Description: "", Style: style.Default})
 		}
 		return Action{rawValues: vals}
 	})
@@ -162,7 +141,7 @@ func ActionStyledValues(values ...string) Action {
 
 		vals := make([]common.RawValue, 0, len(values)/2)
 		for i := 0; i < len(values); i += 2 {
-			vals = append(vals, common.RawValue{Value: values[i], Display: values[i], Style: values[i+1]})
+			vals = append(vals, common.RawValue{Value: values[i], Display: values[i], Description: "", Style: values[i+1]})
 		}
 		return Action{rawValues: vals}
 	})
@@ -177,7 +156,7 @@ func ActionValuesDescribed(values ...string) Action {
 
 		vals := make([]common.RawValue, 0, len(values)/2)
 		for i := 0; i < len(values); i += 2 {
-			vals = append(vals, common.RawValue{Value: values[i], Display: values[i], Description: values[i+1]})
+			vals = append(vals, common.RawValue{Value: values[i], Display: values[i], Description: values[i+1], Style: style.Default})
 		}
 		return Action{rawValues: vals}
 	})
@@ -205,22 +184,22 @@ func ActionMessage(msg string, args ...interface{}) Action {
 			msg = fmt.Sprintf(msg, args...)
 		}
 		a := ActionValues().NoSpace()
-		a.meta.Messages.Add(stripansi.Strip(msg))
+		a.meta.Messages.Add(msg)
 		return a
 	})
 }
 
-// ActionMultiParts completes multiple parts of words separately where each part is separated by some char (Context.Value is set to the currently completed part during invocation).
+// ActionMultiParts completes multiple parts of words separately where each part is separated by some char (CallbackValue is set to the currently completed part during invocation)
 func ActionMultiParts(divider string, callback func(c Context) Action) Action {
 	return ActionCallback(func(c Context) Action {
-		index := strings.LastIndex(c.Value, string(divider))
+		index := strings.LastIndex(c.CallbackValue, string(divider))
 		prefix := ""
 		if len(divider) == 0 {
-			prefix = c.Value
-			c.Value = ""
+			prefix = c.CallbackValue
+			c.CallbackValue = ""
 		} else if index != -1 {
-			prefix = c.Value[0 : index+len(divider)]
-			c.Value = c.Value[index+len(divider):] // update Context.Value to only contain the currently completed part
+			prefix = c.CallbackValue[0 : index+len(divider)]
+			c.CallbackValue = c.CallbackValue[index+len(divider):] // update CallbackValue to only contain the currently completed part
 		}
 		parts := strings.Split(prefix, string(divider))
 		if len(parts) > 0 && len(divider) > 0 {
@@ -338,7 +317,7 @@ func ActionStyles(styles ...string) Action {
 				style.BrightWhite, _s(style.BrightWhite),
 			))
 
-			if strings.HasPrefix(c.Value, "color") {
+			if strings.HasPrefix(c.CallbackValue, "color") {
 				for i := 0; i <= 255; i++ {
 					batch = append(batch, ActionStyledValues(
 						fmt.Sprintf("color%v", i), _s(style.XTerm256Color(uint8(i))),
@@ -370,7 +349,7 @@ func ActionStyles(styles ...string) Action {
 				style.BgBrightWhite, _s(style.BgBrightWhite),
 			))
 
-			if strings.HasPrefix(c.Value, "bg-color") {
+			if strings.HasPrefix(c.CallbackValue, "bg-color") {
 				for i := 0; i <= 255; i++ {
 					batch = append(batch, ActionStyledValues(
 						fmt.Sprintf("bg-color%v", i), _s("bg-"+style.XTerm256Color(uint8(i))),
@@ -392,65 +371,4 @@ func ActionStyles(styles ...string) Action {
 
 		return batch.ToA()
 	}).Tag("styles")
-}
-
-// ActionExecutables completes PATH executables
-//
-//	nvim
-//	chmod
-func ActionExecutables() Action {
-	return ActionCallback(func(c Context) Action {
-		// TODO allow additional descriptions to be registered somewhere for carapace-bin (key, value,...)
-		batch := Batch()
-		manDescriptions := man.Descriptions(c.Value)
-		dirs := strings.Split(os.Getenv("PATH"), string(os.PathListSeparator))
-		for i := len(dirs) - 1; i >= 0; i-- {
-			batch = append(batch, actionDirectoryExecutables(dirs[i], c.Value, manDescriptions))
-		}
-		return batch.ToA()
-	}).Tag("executables")
-}
-
-func actionDirectoryExecutables(dir string, prefix string, manDescriptions map[string]string) Action {
-	return ActionCallback(func(c Context) Action {
-		if files, err := os.ReadDir(dir); err == nil {
-			vals := make([]string, 0)
-			for _, f := range files {
-				if strings.HasPrefix(f.Name(), prefix) {
-					if info, err := f.Info(); err == nil && !f.IsDir() && isExecAny(info.Mode()) {
-						vals = append(vals, f.Name(), manDescriptions[f.Name()], style.ForPath(dir+"/"+f.Name(), c))
-					}
-				}
-			}
-			return ActionStyledValuesDescribed(vals...)
-		}
-		return ActionValues()
-	})
-}
-
-func isExecAny(mode os.FileMode) bool {
-	return mode&0o111 != 0
-}
-
-// ActionPositional completes positional arguments for given command ignoring `--` (dash).
-// TODO: experimental - likely gives issues with preinvoke (does not have the full args)
-//
-//	carapace.Gen(cmd).DashAnyCompletion(
-//		carapace.ActionPositional(cmd),
-//	)
-func ActionPositional(cmd *cobra.Command) Action {
-	return ActionCallback(func(c Context) Action {
-		if cmd.ArgsLenAtDash() < 0 {
-			return ActionMessage("only allowed for dash arguments [ActionPositional]")
-		}
-
-		c.Args = cmd.Flags().Args()
-		entry := storage.get(cmd)
-
-		a := entry.positionalAny
-		if index := len(c.Args); index < len(entry.positional) {
-			a = entry.positional[len(c.Args)]
-		}
-		return a.Invoke(c).ToA()
-	})
 }

@@ -8,8 +8,6 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
-
-	"github.com/rsteube/carapace/pkg/xdg"
 )
 
 type configMap map[string]interface{}
@@ -64,7 +62,7 @@ func Load() error {
 }
 
 func load(name string, c configMap) error {
-	if dir, err := xdg.UserConfigDir(); err == nil {
+	if dir, err := os.UserConfigDir(); err == nil {
 		content, err := os.ReadFile(fmt.Sprintf("%v/carapace/%v.json", dir, name))
 		if err != nil {
 			if os.IsNotExist(err) {
@@ -99,7 +97,7 @@ func SetStyle(key, value string) error {
 }
 
 func set(name, key, value string) error {
-	dir, err := xdg.UserConfigDir()
+	dir, err := os.UserConfigDir()
 	if err != nil {
 		return err
 	}
@@ -110,9 +108,7 @@ func set(name, key, value string) error {
 		if !os.IsNotExist(err) {
 			return err
 		}
-		if err := os.MkdirAll(filepath.Dir(file), os.ModePerm); err != nil {
-			return err
-		}
+		os.MkdirAll(filepath.Dir(file), os.ModePerm)
 		content = []byte("{}")
 	}
 
@@ -138,5 +134,7 @@ func set(name, key, value string) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(file, marshalled, os.ModePerm)
+	os.WriteFile(file, marshalled, os.ModePerm)
+
+	return nil
 }

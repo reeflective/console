@@ -62,22 +62,20 @@ const (
 func getCompletionAction(name, value, desc string) comp.Action {
 	var action comp.Action
 
-	var ctx comp.Context
-
 	switch strings.ToLower(name) {
 	case "nospace":
 		return action.NoSpace()
 	case "nofiles":
 	case "filterext":
 		filterExts := strings.Split(value, ",")
-		action = comp.ActionFiles(filterExts...).Tag("filtered files").Invoke(ctx).ToA()
+		action = comp.ActionFiles(filterExts...).Tag("filtered extensions").NoSpace('/')
 	case "filterdirs":
-		action = comp.ActionDirectories().Tag("filtered directories") // TODO change this
+		action = comp.ActionDirectories().NoSpace('/').Tag("filtered directories") // TODO change this
 	case "files":
 		files := strings.Split(value, ",")
-		action = comp.ActionFiles(files...).Tag("files")
+		action = comp.ActionFiles(files...).NoSpace('/')
 	case "dirs":
-		action = comp.ActionDirectories().Tag("directories")
+		action = comp.ActionDirectories().NoSpace('/')
 
 	// Should normally not be used often
 	case "default":

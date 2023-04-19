@@ -19,8 +19,6 @@ type entry struct {
 	dash          []Action
 	dashAny       Action
 	preinvoke     func(cmd *cobra.Command, flag *pflag.Flag, action Action) Action
-	prerun        func(cmd *cobra.Command, args []string)
-	bridged       bool
 }
 
 type _storage map[*cobra.Command]*entry
@@ -32,16 +30,6 @@ func (s _storage) get(cmd *cobra.Command) (e *entry) {
 		s[cmd] = e
 	}
 	return
-}
-
-func (s _storage) bridge(cmd *cobra.Command) {
-	if entry := storage.get(cmd); !entry.bridged {
-		cobra.OnInitialize(func() {
-			registerValidArgsFunction(cmd)
-			registerFlagCompletion(cmd)
-		})
-		entry.bridged = true
-	}
 }
 
 func (s _storage) getFlag(cmd *cobra.Command, name string) Action {
@@ -60,44 +48,42 @@ func (s _storage) getFlag(cmd *cobra.Command, name string) Action {
 	}
 }
 
-func (s _storage) preRun(cmd *cobra.Command, args []string) {
-	if entry := s.get(cmd); entry.prerun != nil {
-		LOG.Printf("executing PreRun for %#v with args %#v", cmd.Name(), args)
-		entry.prerun(cmd, args)
-	}
-}
-
 func (s _storage) preinvoke(cmd *cobra.Command, flag *pflag.Flag, action Action) Action {
+	// TODO yuck - clean this up
+	entry := s.get(cmd)
 	a := action
-	if entry := s.get(cmd); entry.preinvoke != nil {
+	if entry.preinvoke != nil {
 		a = ActionCallback(func(c Context) Action {
 			return entry.preinvoke(cmd, flag, action)
 		})
 	}
-
 	if cmd.HasParent() {
+		// TODO from cmd passed to preinvoke function
 		return s.preinvoke(cmd.Parent(), flag, a)
 	}
 	return a
 }
 
-func (s _storage) getPositional(cmd *cobra.Command, index int) Action {
+func (s _storage) getPositional(cmd *cobra.Command, pos int) Action {
 	entry := s.get(cmd)
-	isDash := common.IsDash(cmd)
 
 	var a Action
-	switch {
-	case !isDash && len(entry.positional) > index:
-		a = s.preinvoke(cmd, nil, entry.positional[index])
-	case !isDash:
-		a = s.preinvoke(cmd, nil, entry.positionalAny)
-	case len(entry.dash) > index:
-		a = s.preinvoke(cmd, nil, entry.dash[index])
-	default:
-		a = s.preinvoke(cmd, nil, entry.dashAny)
+	// TODO nil check?
+	if !common.IsDash(cmd) {
+		if len(entry.positional) > pos {
+			a = s.preinvoke(cmd, nil, entry.positional[pos])
+		} else {
+			a = s.preinvoke(cmd, nil, entry.positionalAny)
+		}
+	} else {
+		if len(entry.dash) > pos {
+			a = s.preinvoke(cmd, nil, entry.dash[pos])
+		} else {
+			a = s.preinvoke(cmd, nil, entry.dashAny)
+		}
 	}
 
-	return ActionCallback(func(c Context) Action {
+	return ActionCallback(func(c Context) Action { // TODO verify order of execution is correct
 		invoked := a.Invoke(c)
 		if invoked.meta.Usage == "" && len(strings.Fields(cmd.Use)) > 1 {
 			invoked.meta.Usage = cmd.Use

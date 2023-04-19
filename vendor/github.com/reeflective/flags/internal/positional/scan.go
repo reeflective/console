@@ -24,7 +24,7 @@ func ScanArgs(val reflect.Value, stag tag.MultiTag, opts ...scan.OptFunc) (*Args
 	opt := scan.DefOpts().Apply(opts...)
 
 	// Holds our positional slots and manages them
-	args := &Args{allRequired: reqAll}
+	args := &Args{allRequired: reqAll, noTags: true}
 
 	// Each positional field is scanned for its number requirements,
 	// and underlying value to be used by the command's arg handlers/converters.
@@ -44,7 +44,9 @@ func ScanArgs(val reflect.Value, stag tag.MultiTag, opts ...scan.OptFunc) (*Args
 	// number of words allowed for this argument, and update the
 	// counter that will be used by handlers to sync their use
 	// of words
-	args.adjustMaximums()
+	if err := args.adjustMaximums(); err != nil {
+		return args, err
+	}
 
 	// Last minute internal counters adjustments
 	args.needed = args.totalMin
@@ -130,6 +132,11 @@ func parsePositionalTag(field reflect.StructField) (tag.MultiTag, string, error)
 func positionalReqs(val reflect.Value, mtag tag.MultiTag, all bool) (min, max int) {
 	required, max, set := parseArgsNumRequired(mtag)
 
+	// At least for each requirements are global
+	if all && required == 0 {
+		min = 1
+	}
+
 	// When the argument field is not a slice, we have to adjust for some defaults
 	isSlice := val.Type().Kind() == reflect.Slice || val.Type().Kind() == reflect.Map
 	if !isSlice {
@@ -155,7 +162,7 @@ func positionalReqs(val reflect.Value, mtag tag.MultiTag, all bool) (min, max in
 
 // parseArgsNumRequired sets the minimum/maximum requirements for an argument field.
 func parseArgsNumRequired(fieldTag tag.MultiTag) (required, maximum int, set bool) {
-	required = -1
+	required = 0
 	maximum = -1
 
 	sreq, set := fieldTag.Get("required")
@@ -188,7 +195,7 @@ func parseArgsNumRequired(fieldTag tag.MultiTag) (required, maximum int, set boo
 
 // adjustMaximums analyzes the position of a positional argument field,
 // and adjusts its maximum so that handlers can work on them correctly.
-func (args *Args) adjustMaximums() {
+func (args *Args) adjustMaximums() error {
 	for _, arg := range args.slots {
 		val := arg.Value
 		isSlice := val.Type().Kind() == reflect.Slice ||
@@ -200,22 +207,70 @@ func (args *Args) adjustMaximums() {
 			arg.StartMax = arg.StartMin
 		}
 
-		// The maximum is not left to -1 under some conditions:
-		// The field is unique, but required, so we want only one.
+		// The maximum is not left to -1 if the field is unique.
 		if arg.Maximum == -1 && !isSlice {
 			arg.Maximum = 1
 
-			return
+			if args.allRequired {
+				arg.Minimum = 1
+			}
+
+			continue
 		}
 
 		if isSlice && args.allRequired && args.noTags {
-			arg.Minimum = 0
-		}
-
-		// If we are the last, normally there is nothing to adjust for,
-		// especially the maximum -1 that is important if it was set.
-		if arg.Index == len(args.slots)-1 {
-			return
+			arg.Minimum = 1
 		}
 	}
+
+	return nil
+}
+
+// func (args *Args) adjustMaximums() error {
+// 	// hasSliceNoMax := false
+//
+// 	for _, arg := range args.slots {
+// 		val := arg.Value
+// 		isSlice := val.Type().Kind() == reflect.Slice ||
+// 			val.Type().Kind() == reflect.Map
+//
+// 		// First, the maximum index at which we should start
+// 		// parsing words can never be smaller than the minimum one
+// 		if arg.StartMax < arg.StartMin {
+// 			arg.StartMax = arg.StartMin
+// 		}
+//
+// 		// If we have a slice with no maximum before, it's always
+// 		// going to shadow all remaining positional slots.
+// 		// if hasSliceNoMax && args.allRequired {
+// 		// 	return args.errorSliceShadowing(arg.Name, arg.Index)
+// 		// }
+//
+// 		// The maximum is not left to -1 if the field is unique.
+// 		if arg.Maximum == -1 && !isSlice {
+// 			arg.Maximum = 1
+//
+// 			continue
+// 		}
+//
+// 		if isSlice && args.allRequired && args.noTags {
+// 			arg.Minimum = 1
+// 		}
+//
+// 		// if isSlice && arg.Maximum == -1 {
+// 		// 	hasSliceNoMax = true
+// 		// }
+// 	}
+//
+// 	return nil
+// }
+
+func (args *Args) errorSliceShadowing(arg string, index int) error {
+	shadowed := ""
+	for _, arg := range args.slots[index+1:] {
+		shadowed += fmt.Sprintf(" `%s`,", arg.Name)
+	}
+	shadowed = strings.TrimSuffix(shadowed, ",")
+
+	return fmt.Errorf("Positional `%s` is a slice with no maximum: will shadow%s positionals", arg, shadowed)
 }

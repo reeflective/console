@@ -17,33 +17,36 @@ type Carapace struct {
 // Gen initialized Carapace for given command.
 func Gen(cmd *cobra.Command) *Carapace {
 	addCompletionCommand(cmd)
-	storage.bridge(cmd)
+
+	cobra.OnInitialize(func() {
+		if opts.BridgeCompletion {
+			registerValidArgsFunction(cmd)
+			registerFlagCompletion(cmd)
+		}
+	})
 
 	return &Carapace{
 		cmd: cmd,
 	}
 }
 
-// PreRun sets a function to be run before completion.
+// PreRun sets a function to be run before completion (use on rootCmd).
 func (c Carapace) PreRun(f func(cmd *cobra.Command, args []string)) {
-	if entry := storage.get(c.cmd); entry.prerun != nil {
-		_f := entry.prerun
-		entry.prerun = func(cmd *cobra.Command, args []string) {
-			// TODO yuck - probably best to append to a slice in storage
-			_f(cmd, args)
-			f(cmd, args)
+	if completionCmd, _, err := c.cmd.Find([]string{"_carapace"}); err == nil {
+		completionCmd.PreRun = func(cmd *cobra.Command, args []string) {
+			if len(args) > 2 { // skip script generation
+				f(c.cmd, args[2:])
+			}
 		}
-	} else {
-		entry.prerun = f
 	}
 }
 
-// PreInvoke sets a function to alter actions before they are invoked.
+// PreInvoke sets a function to alter actions before they are invoked (use on rootCmd).
 func (c Carapace) PreInvoke(f func(cmd *cobra.Command, flag *pflag.Flag, action Action) Action) {
 	if entry := storage.get(c.cmd); entry.preinvoke != nil {
 		_f := entry.preinvoke
 		entry.preinvoke = func(cmd *cobra.Command, flag *pflag.Flag, action Action) Action {
-			return f(cmd, flag, _f(cmd, flag, action))
+			return f(cmd, flag, _f(cmd, flag, action)) // TODO verify if this is correct
 		}
 	} else {
 		entry.preinvoke = f

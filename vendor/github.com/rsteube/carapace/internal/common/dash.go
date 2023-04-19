@@ -6,5 +6,6 @@ import "github.com/spf13/cobra"
 //
 //	example action positional1 -- dash1 dash2
 func IsDash(cmd *cobra.Command) bool {
-	return cmd.ArgsLenAtDash() != -1
+	// TODO add test
+	return cmd.ArgsLenAtDash() != -1 && (cmd.ArgsLenAtDash() != len(cmd.Flags().Args()))
 }

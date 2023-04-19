@@ -4,6 +4,18 @@ import (
 	"reflect"
 )
 
+// PreRunner is the equivalent of cobra cmd.PreRun(cmd *cobra.Command, args []string).
+// The args parameter is populated following the same rules as `Commander.Execute()`.
+type PreRunner interface {
+	PreRun(args []string)
+}
+
+// PreRunnerE is the equivalent of cobra cmd.PreRunE(cmd *cobra.Command, args []string) error
+// The args parameter is populated following the same rules as `Commander.Execute()`.
+type PreRunnerE interface {
+	PreRunE(args []string) error
+}
+
 // Commander is the simplest and smallest interface that a type must
 // implement to be a valid, local, client command. This command can
 // be used either in a single-run CLI app, or in a closed-loop shell.
@@ -13,6 +25,31 @@ type Commander interface {
 	// neither on any parent command and/or its options, or this
 	// command and/or its args/options.
 	Execute(args []string) (err error)
+}
+
+// Runner is the equivalent of cobra cmd.Run(cmd *cobra.Command, args []string)
+// It will be ignored if the `flags.Commander` interface is satisfied.
+// The args parameter is populated following the same rules as `Commander.Execute()`.
+type Runner interface {
+	Run(args []string)
+}
+
+// PostRunnerE is the equivalent of cobra cmd.RunE(cmd *cobra.Command, args []string) error
+// The args parameter is populated following the same rules as `Commander.Execute()`.
+type RunnerE interface {
+	RunE(args []string) error
+}
+
+// PostRunnerE is the equivalent of cobra cmd.PostRun(cmd *cobra.Command, args []string)
+// The args parameter is populated following the same rules as `Commander.Execute()`.
+type PostRunner interface {
+	PostRun(args []string)
+}
+
+// PostRunnerE is the equivalent of cobra cmd.PostRunE(cmd *cobra.Command, args []string) error
+// The args parameter is populated following the same rules as `Commander.Execute()`.
+type PostRunnerE interface {
+	PostRunE(args []string) error
 }
 
 // IsCommand checks both tags and implementations on a pointer to a struct,
