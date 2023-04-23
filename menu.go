@@ -1,7 +1,10 @@
 package console
 
 import (
+	"bufio"
 	"fmt"
+	"io"
+	"os"
 	"sync"
 
 	"github.com/reeflective/readline"
@@ -31,6 +34,11 @@ type Menu struct {
 	// Command spawner
 	cmds Commands
 
+	// Input/output channels
+	stdout io.Writer
+	stderr io.Writer
+	buf    *bufio.ReadWriter
+
 	// expansionComps - A list of completion generators that are triggered when
 	// the given string is detected (anywhere, even in other completions) in the input line.
 	expansionComps map[rune]carapace.CompletionCallback
@@ -45,10 +53,12 @@ type Menu struct {
 
 func newMenu(name string, console *Console) *Menu {
 	menu := &Menu{
-		console:           console,
-		name:              name,
-		prompt:            &Prompt{console: console},
-		Command:           &cobra.Command{},
+		console: console,
+		name:    name,
+		prompt:  &Prompt{console: console},
+		Command: &cobra.Command{},
+		// stdout:            bufio.NewWriter(os.Stdout),
+		// stderr:            bufio.NewWriter(os.Stderr),
 		interruptHandlers: make(map[error]func(c *Console)),
 		expansionComps:    make(map[rune]carapace.CompletionCallback),
 		histories:         make(map[string]readline.History),
@@ -77,6 +87,14 @@ func (m *Menu) Name() string {
 // Prompt returns the prompt object for this menu.
 func (m *Menu) Prompt() *Prompt {
 	return m.prompt
+}
+
+func (m *Menu) Stdout() io.Writer {
+	return m.stdout
+}
+
+func (m *Menu) StdErr() io.Writer {
+	return m.stderr
 }
 
 // AddHistorySource adds a source of history commands that will
@@ -188,11 +206,18 @@ func (c *Console) SwitchMenu(menu string) {
 
 	// Only switch if the target menu was found.
 	if target, found := c.menus[menu]; found && target != nil {
-		if c.menus.current() != nil {
-			c.menus.current().active = false
+		current := c.menus.current()
+		if current != nil {
+			current.active = false
+			current.stdout = bufio.NewWriter(os.Stdout)
+			current.stderr = bufio.NewWriter(os.Stderr)
 		}
 
 		target.active = true
+
+		// Update stdout/stderr.
+		target.stdout = os.Stdout
+		target.stderr = os.Stderr
 
 		// Remove the currently bound history sources
 		// (old menu) and bind the ones peculiar to this one.

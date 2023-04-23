@@ -20,9 +20,6 @@ func (c *Console) Run() (err error) {
 	// current menu, they are not bound to the shell yet.
 	c.loadActiveHistories()
 
-	// Call the command generators for all menus.
-	// c.initCommands()
-
 	for {
 		menu := c.menus.current() // We work with the active menu.
 		menu.resetCommands()      // Regenerate the commands for the menu.
@@ -83,11 +80,6 @@ func (c *Console) loadActiveHistories() {
 	}
 }
 
-//	func (c *Console) initCommands() {
-//		for _, menu := range c.menus {
-//			menu.resetCommands()
-//		}
-//	}
 func (c *Console) runPreLoopHooks() {
 	for _, hook := range c.PreReadlineHooks {
 		hook()
