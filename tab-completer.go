@@ -30,7 +30,7 @@ func (c *Console) complete(line []rune, pos int) readline.Completions {
 	args = append([]string{"examples", "_carapace"}, args...)
 
 	// Call the completer with our current command context.
-	values, meta := carapace.Complete(menu.Command, args, menu.resetCommands)
+	values, meta := carapace.Complete(menu.Command, args, c.completeCommands(menu))
 
 	// Tranfer all completion results to our readline shell completions.
 	raw := make([]readline.Completion, len(values))
@@ -62,6 +62,16 @@ func (c *Console) complete(line []rune, pos int) readline.Completions {
 	}
 
 	return comps
+}
+
+// Regenerate commands and apply any filters.
+func (c *Console) completeCommands(menu *Menu) func() {
+	commands := func() {
+		menu.resetCommands()
+		c.hideFilteredCommands()
+	}
+
+	return commands
 }
 
 func sanitizeArgs(args []string) (sanitized []string) {

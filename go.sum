@@ -131,8 +131,8 @@ github.com/reeflective/carapace v0.25.2-0.20230416191807-fc9b8c3aa6f6 h1:3HHTRiX
 github.com/reeflective/carapace v0.25.2-0.20230416191807-fc9b8c3aa6f6/go.mod h1:jkLt41Ne2TD2xPuMdX/2O05Smhy8vMgG7O2TYvC0yOc=
 github.com/reeflective/flags v0.10.0 h1:5fY0xY4chm1d1UwIMfb2adj6QybFOJL0nRdZGkopCj8=
 github.com/reeflective/flags v0.10.0/go.mod h1:xIacPlsX0y+6GP3cdQvwrBzBi1ffHdZpSWBy5142duY=
-github.com/reeflective/readline v0.1.0-beta.0.20230419174847-16f4f8a74f0e h1:K3Bwp8raFPRqyeZF+VeptgvEmlpTa6DH+AVtiKQXa4M=
-github.com/reeflective/readline v0.1.0-beta.0.20230419174847-16f4f8a74f0e/go.mod h1:1kS/+b3JDh8qYlo4ld9iuFVnl12Ju5wV7BsYbZ0C7vg=
+github.com/reeflective/readline v0.1.0-beta.0.20230424001558-5e424c760214 h1:cMkKbDfAhRT+MkDZOWxw8zNmqf49uIO+YL0FkoAbDr8=
+github.com/reeflective/readline v0.1.0-beta.0.20230424001558-5e424c760214/go.mod h1:8HAqpVpqNCgdnOMmFQwWX9dH9QQBrJias1oPzpmD+SQ=
 github.com/rivo/uniseg v0.2.0/go.mod h1:J6wj4VEh+S6ZtnVlnTBMWIodfgj8LQOQFoIToxlJtxc=
 github.com/rivo/uniseg v0.4.3 h1:utMvzDsuh3suAEnhH0RdHmoPbU648o6CvXxTx4SBMOw=
 github.com/rivo/uniseg v0.4.3/go.mod h1:FN3SvrM+Zdj16jyLfmOkMNblXMcoc8DfTHruCPUcx88=

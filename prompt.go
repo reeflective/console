@@ -63,24 +63,24 @@ func (p *Prompt) bind(shell *readline.Shell) {
 // If this function is called while a command is running, the console
 // will simply print the log below the current line, and will not print
 // the prompt. In any other case this function will work normally.
-func (c *Console) LogTransient(msg string, args ...interface{}) {
+func (c *Console) LogTransient(msg string, args ...any) (n int, err error) {
 	if c.isExecuting {
-		fmt.Printf(msg, args...)
-	} else {
-		c.shell.LogTransient(msg, args...)
+		return fmt.Printf(msg, args...)
 	}
+
+	return c.shell.LogTransient(msg, args...)
 }
 
 // Log - A simple function to print a message and redisplay the prompt below it.
 // As with LogTransient, if this function is called while a command is running,
 // the console will simply print the log below the current line, and will not
 // print the prompt. In any other case this function will work normally.
-func (c *Console) Log(msg string, args ...interface{}) {
+func (c *Console) Log(msg string, args ...any) (n int, err error) {
 	if c.isExecuting {
-		fmt.Printf(msg, args...)
-	} else {
-		c.shell.Log(msg, args...)
+		return fmt.Printf(msg, args...)
 	}
+
+	return c.shell.Log(msg, args...)
 }
 
 // makes a prompt engine with default/builtin configuration.

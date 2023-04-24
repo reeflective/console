@@ -34,8 +34,8 @@ func (m *Menu) SetCommands(cmds Commands) {
 // menu are subsequently hidden, until ShowCommands("windows") is called.
 func (c *Console) HideCommands(filters ...string) {
 next:
-	for _, filt := range c.filters {
-		for _, filter := range filters {
+	for _, filt := range filters {
+		for _, filter := range c.filters {
 			if filt == filter {
 				continue next
 			}
