@@ -47,7 +47,7 @@ func newMenu(name string, console *Console) *Menu {
 	menu := &Menu{
 		console:           console,
 		name:              name,
-		prompt:            &Prompt{console: console},
+		prompt:            newPrompt(console),
 		Command:           &cobra.Command{},
 		buf:               bytes.NewBuffer(nil),
 		interruptHandlers: make(map[error]func(c *Console)),

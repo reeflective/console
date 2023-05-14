@@ -1,6 +1,8 @@
 package console
 
 import (
+	"fmt"
+
 	"github.com/reeflective/readline"
 )
 
@@ -15,6 +17,22 @@ type Prompt struct {
 	Tooltip   func(word string) string // Tooltip is used to hint on the root command, replacing right prompts if not empty.
 
 	console *Console
+}
+
+func newPrompt(app *Console) *Prompt {
+	prompt := &Prompt{console: app}
+
+	prompt.Primary = func() string {
+		if app.activeMenu().name == "" {
+			return app.name + " > "
+		}
+
+		m := app.activeMenu()
+
+		return app.name + fmt.Sprintf(" [%s]", m.name) + " > "
+	}
+
+	return prompt
 }
 
 // bind reassigns the prompt printing functions to the shell helpers.

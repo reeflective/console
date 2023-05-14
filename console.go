@@ -12,6 +12,7 @@ import (
 // Console is an integrated console application instance.
 type Console struct {
 	// Application ------------------------------------------------------------------
+	name string
 
 	// shell - The underlying shell provides the core readline functionality,
 	// including but not limited to: inputs, completions, hints, history.
@@ -71,6 +72,7 @@ type Console struct {
 // The app parameter is an optional name of the application using this console.
 func New(app string) *Console {
 	console := &Console{
+		name:  app,
 		shell: readline.NewShell(inputrc.WithApp(strings.ToLower(app))),
 		menus: make(map[string]*Menu),
 		mutex: &sync.RWMutex{},
