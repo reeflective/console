@@ -38,7 +38,7 @@ func (p *Prompt) LoadConfig(path string) error {
 
 // bind reassigns the prompt printing functions to the shell helpers.
 func (p *Prompt) bind(shell *readline.Shell) {
-	prompt := shell.Prompt()
+	prompt := shell.Prompt
 
 	prompt.Primary(p.PrintPrimary)
 	prompt.Right(p.PrintRPrompt)
@@ -68,7 +68,7 @@ func (c *Console) LogTransient(msg string, args ...any) (n int, err error) {
 		return fmt.Printf(msg, args...)
 	}
 
-	return c.shell.LogTransient(msg, args...)
+	return c.shell.PrintTransientf(msg, args...)
 }
 
 // Log - A simple function to print a message and redisplay the prompt below it.
@@ -80,7 +80,7 @@ func (c *Console) Log(msg string, args ...any) (n int, err error) {
 		return fmt.Printf(msg, args...)
 	}
 
-	return c.shell.Log(msg, args...)
+	return c.shell.Printf(msg, args...)
 }
 
 // makes a prompt engine with default/builtin configuration.
