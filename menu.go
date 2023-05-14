@@ -23,7 +23,7 @@ type Menu struct {
 	interruptHandlers map[error]func(c *Console)
 
 	// Input/output channels
-	buf *bytes.Buffer
+	out *bytes.Buffer
 
 	// The root cobra command/parser is the one returned by the handler provided
 	// through the `menu.SetCommands()` function. This command is thus renewed after
@@ -49,7 +49,7 @@ func newMenu(name string, console *Console) *Menu {
 		name:              name,
 		prompt:            newPrompt(console),
 		Command:           &cobra.Command{},
-		buf:               bytes.NewBuffer(nil),
+		out:               bytes.NewBuffer(nil),
 		interruptHandlers: make(map[error]func(c *Console)),
 		histories:         make(map[string]readline.History),
 		mutex:             &sync.RWMutex{},
@@ -134,18 +134,18 @@ func (m *Menu) DeleteHistorySource(name string) {
 // will simply print the log below the current line, and will not print
 // the prompt. In any other case this function will work normally.
 func (m *Menu) TransientPrintf(msg string, args ...any) (n int, err error) {
-	n, err = fmt.Fprintf(m.buf, msg, args...)
+	n, err = fmt.Fprintf(m.out, msg, args...)
 	if err != nil {
 		return
 	}
 
 	if !m.active {
-		m.buf.WriteString("\n")
+		m.out.WriteString("\n")
 		return
 	}
 
-	buf := m.buf.String()
-	m.buf.Reset()
+	buf := m.out.String()
+	m.out.Reset()
 
 	return m.console.TransientPrintf(buf)
 }
@@ -161,34 +161,34 @@ func (m *Menu) TransientPrintf(msg string, args ...any) (n int, err error) {
 // will simply print the log below the current line, and will not print
 // the prompt. In any other case this function will work normally.
 func (m *Menu) Printf(msg string, args ...any) (n int, err error) {
-	n, err = fmt.Fprintf(m.buf, msg, args...)
+	n, err = fmt.Fprintf(m.out, msg, args...)
 	if err != nil {
 		return
 	}
 
 	if !m.active {
-		m.buf.WriteString("\n")
+		m.out.WriteString("\n")
 		return
 	}
 
-	buf := m.buf.String()
-	m.buf.Reset()
+	buf := m.out.String()
+	m.out.Reset()
 
 	return m.console.Printf(buf)
 }
 
 func (m *Menu) resetCmdOutput() {
-	buf := strings.TrimSpace(m.buf.String())
+	buf := strings.TrimSpace(m.out.String())
 
 	// If our command has printed everything to stdout, nothing to do.
 	if len(buf) == 0 || buf == "" {
-		m.buf.Reset()
+		m.out.Reset()
 		return
 	}
 
 	// Add two newlines to the end of the buffer, so that the
 	// next command will be printed slightly below the current one.
-	m.buf.WriteString("\n\n")
+	m.out.WriteString("\n\n")
 }
 
 func (m *Menu) resetCommands() {

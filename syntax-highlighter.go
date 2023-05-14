@@ -39,19 +39,32 @@ func (c *Console) highlightSyntax(input []rune) (line string) {
 	return line
 }
 
-func (c *Console) highlightCommand(done, args []string, cmd *cobra.Command) ([]string, []string) {
+func (c *Console) highlightCommand(done, args []string, _ *cobra.Command) ([]string, []string) {
 	highlighted := make([]string, 0)
-	rest := make([]string, 0)
+	var rest []string
 
 	if len(args) == 0 {
 		return done, args
 	}
 
-	// The first word is the command, highlight it.
-	if rootcmd, _, _ := c.activeMenu().Find(args[1:]); rootcmd != nil {
-		highlighted = append(highlighted, seqFgGreen+args[0]+seqFgReset)
-		rest = args[1:]
+	// Highlight the root command when found, or any of its aliases.
+	for _, cmd := range c.activeMenu().Commands() {
+		cmdFound := cmd.Use == strings.TrimSpace(args[0])
+
+		for _, alias := range cmd.Aliases {
+			if alias == strings.TrimSpace(args[0]) {
+				cmdFound = true
+				break
+			}
+		}
+
+		if cmdFound {
+			highlighted = append(highlighted, seqFgGreen+args[0]+seqFgReset)
+			rest = args[1:]
+
+			return append(done, highlighted...), rest
+		}
 	}
 
-	return append(done, highlighted...), rest
+	return append(done, highlighted...), args
 }

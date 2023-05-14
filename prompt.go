@@ -2,6 +2,7 @@ package console
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/reeflective/readline"
 )
@@ -23,13 +24,23 @@ func newPrompt(app *Console) *Prompt {
 	prompt := &Prompt{console: app}
 
 	prompt.Primary = func() string {
-		if app.activeMenu().name == "" {
-			return app.name + " > "
+		promptStr := app.name
+
+		menu := app.activeMenu()
+
+		if menu.name == "" {
+			return promptStr + " > "
 		}
 
-		m := app.activeMenu()
+		promptStr += fmt.Sprintf(" [%s]", menu.name)
 
-		return app.name + fmt.Sprintf(" [%s]", m.name) + " > "
+		// If the buffered command output is not empty,
+		// add a special status indicator to the prompt.
+		if strings.TrimSpace(menu.out.String()) != "" {
+			promptStr += " $(...)"
+		}
+
+		return promptStr + " > "
 	}
 
 	return prompt
