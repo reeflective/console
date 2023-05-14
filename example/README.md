@@ -10,11 +10,11 @@ This directory contains an example console application containing:
 ## Installing
 Assuming that you have a working Go toolchain:
 ```bash
-# Install the example binary (in ~/$GOPATH/bin/)
-go install github.com/reeflective/console/example
+# Clone the repository and go to example directory
+git clone https://github.com/reeflective/console && cd console/example
 
-# Run the console
-example
+# Build and run the console
+go build . && ./example
 ```
 
 ## Directories and files
