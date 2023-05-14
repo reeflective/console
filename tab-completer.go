@@ -9,7 +9,7 @@ import (
 )
 
 func (c *Console) complete(line []rune, pos int) readline.Completions {
-	menu := c.menus.current()
+	menu := c.activeMenu()
 
 	// Split the line as shell words, only using
 	// what the right buffer (up to the cursor)

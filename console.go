@@ -17,7 +17,7 @@ type Console struct {
 	shell *readline.Shell
 
 	// Different menus with different command trees, prompt engines, etc.
-	menus menus
+	menus map[string]*Menu
 
 	// Execution --------------------------------------------------------------------
 
@@ -71,7 +71,7 @@ type Console struct {
 func New(app string) *Console {
 	console := &Console{
 		shell: readline.NewShell(inputrc.WithApp(strings.ToLower(app))),
-		menus: make(menus),
+		menus: make(map[string]*Menu),
 		mutex: &sync.RWMutex{},
 	}
 
@@ -104,12 +104,61 @@ func (c *Console) SetPrintLogo(f func(c *Console)) {
 	c.printLogo = f
 }
 
-func (c *Console) reloadConfig() {
+// NewMenu - Create a new command menu, to which the user
+// can attach any number of commands (with any nesting), as
+// well as some specific items like history sources, prompt
+// configurations, sets of expanded variables, and others.
+func (c *Console) NewMenu(name string) *Menu {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
+	menu := newMenu(name, c)
+	c.menus[name] = menu
+
+	return menu
+}
+
+// CurrentMenu - Return the current console menu. Because the Context
+// is just a reference, any modifications to this menu will persist.
+func (c *Console) CurrentMenu() *Menu {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	return c.activeMenu()
+}
+
+// Menu returns one of the console menus by name, or nil if no menu is found.
+func (c *Console) Menu(name string) *Menu {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	return c.menus[name]
+}
+
+// SwitchMenu - Given a name, the console switches its command menu:
+// The next time the console rebinds all of its commands, it will only bind those
+// that belong to this new menu. If the menu is invalid, i.e that no commands
+// are bound to this menu name, the current menu is kept.
+func (c *Console) SwitchMenu(menu string) {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
 
-	menu := c.menus.current()
-	menu.prompt.bind(c.shell)
+	// Only switch if the target menu was found.
+	if target, found := c.menus[menu]; found && target != nil {
+		current := c.activeMenu()
+		if current != nil {
+			current.active = false
+		}
+
+		target.active = true
+
+		// Remove the currently bound history sources
+		// (old menu) and bind the ones peculiar to this one.
+		c.shell.History.Delete()
+
+		for _, name := range target.historyNames {
+			c.shell.History.Add(name, target.histories[name])
+		}
+	}
 }
 
 // SystemEditor - This function is a renamed-reexport of the underlying readline.StartEditorWithBuffer
@@ -123,4 +172,23 @@ func (c *Console) SystemEditor(buffer []byte, filetype string) ([]byte, error) {
 	edited, err := c.shell.Buffers.EditBuffer([]rune(string(buffer)), "", filetype, emacs)
 
 	return []byte(string(edited)), err
+}
+
+func (c *Console) reloadConfig() {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
+
+	menu := c.activeMenu()
+	menu.prompt.bind(c.shell)
+}
+
+func (c *Console) activeMenu() *Menu {
+	for _, menu := range c.menus {
+		if menu.active {
+			return menu
+		}
+	}
+
+	// Else return the default menu.
+	return c.menus[""]
 }

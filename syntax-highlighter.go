@@ -25,7 +25,7 @@ func (c *Console) highlightSyntax(input []rune) (line string) {
 	trimmed := trimSpacesMatch(remain) // Match stuff against trimmed words
 
 	// Highlight the root command when found.
-	cmd, _, _ := c.menus.current().Find(trimmed)
+	cmd, _, _ := c.activeMenu().Find(trimmed)
 	if cmd != nil {
 		highlighted, remain = c.highlightCommand(highlighted, args, cmd)
 	}
@@ -48,7 +48,7 @@ func (c *Console) highlightCommand(done, args []string, cmd *cobra.Command) ([]s
 	}
 
 	// The first word is the command, highlight it.
-	if rootcmd, _, _ := c.menus.current().Find(args[1:]); rootcmd != nil {
+	if rootcmd, _, _ := c.activeMenu().Find(args[1:]); rootcmd != nil {
 		highlighted = append(highlighted, seqFgGreen+args[0]+seqFgReset)
 		rest = args[1:]
 	}

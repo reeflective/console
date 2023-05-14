@@ -3,6 +3,7 @@ package console
 import (
 	"bytes"
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/reeflective/readline"
@@ -122,90 +123,6 @@ func (m *Menu) DeleteHistorySource(name string) {
 	}
 }
 
-func (m *Menu) resetCommands() {
-	if m.cmds != nil {
-		m.Command = m.cmds()
-	}
-
-	if m.Command == nil {
-		m.Command = &cobra.Command{
-			Annotations: make(map[string]string),
-		}
-	}
-}
-
-// menus manages all created menus for the console application.
-type menus map[string]*Menu
-
-// current returns the current menu.
-func (m *menus) current() *Menu {
-	for _, menu := range *m {
-		if menu.active {
-			return menu
-		}
-	}
-
-	// Else return the default menu.
-	return (*m)[""]
-}
-
-// NewMenu - Create a new command menu, to which the user
-// can attach any number of commands (with any nesting), as
-// well as some specific items like history sources, prompt
-// configurations, sets of expanded variables, and others.
-func (c *Console) NewMenu(name string) *Menu {
-	c.mutex.RLock()
-	defer c.mutex.RUnlock()
-	menu := newMenu(name, c)
-	c.menus[name] = menu
-
-	return menu
-}
-
-// CurrentMenu - Return the current console menu. Because the Context
-// is just a reference, any modifications to this menu will persist.
-func (c *Console) CurrentMenu() *Menu {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-
-	return c.menus.current()
-}
-
-// Menu returns one of the console menus by name, or nil if no menu is found.
-func (c *Console) Menu(name string) *Menu {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-
-	return c.menus[name]
-}
-
-// SwitchMenu - Given a name, the console switches its command menu:
-// The next time the console rebinds all of its commands, it will only bind those
-// that belong to this new menu. If the menu is invalid, i.e that no commands
-// are bound to this menu name, the current menu is kept.
-func (c *Console) SwitchMenu(menu string) {
-	c.mutex.RLock()
-	defer c.mutex.RUnlock()
-
-	// Only switch if the target menu was found.
-	if target, found := c.menus[menu]; found && target != nil {
-		current := c.menus.current()
-		if current != nil {
-			current.active = false
-		}
-
-		target.active = true
-
-		// Remove the currently bound history sources
-		// (old menu) and bind the ones peculiar to this one.
-		c.shell.History.Delete()
-
-		for _, name := range target.historyNames {
-			c.shell.History.Add(name, target.histories[name])
-		}
-	}
-}
-
 // TransientPrintf prints a message to the console, but only if the current
 // menu is active. If the menu is not active, the message is buffered and will
 // be printed the next time the menu is active.
@@ -223,6 +140,7 @@ func (m *Menu) TransientPrintf(msg string, args ...any) (n int, err error) {
 	}
 
 	if !m.active {
+		m.buf.WriteString("\n")
 		return
 	}
 
@@ -249,6 +167,7 @@ func (m *Menu) Printf(msg string, args ...any) (n int, err error) {
 	}
 
 	if !m.active {
+		m.buf.WriteString("\n")
 		return
 	}
 
@@ -256,4 +175,30 @@ func (m *Menu) Printf(msg string, args ...any) (n int, err error) {
 	m.buf.Reset()
 
 	return m.console.Printf(buf)
+}
+
+func (m *Menu) resetCmdOutput() {
+	buf := strings.TrimSpace(m.buf.String())
+
+	// If our command has printed everything to stdout, nothing to do.
+	if len(buf) == 0 || buf == "" {
+		m.buf.Reset()
+		return
+	}
+
+	// Add two newlines to the end of the buffer, so that the
+	// next command will be printed slightly below the current one.
+	m.buf.WriteString("\n\n")
+}
+
+func (m *Menu) resetCommands() {
+	if m.cmds != nil {
+		m.Command = m.cmds()
+	}
+
+	if m.Command == nil {
+		m.Command = &cobra.Command{
+			Annotations: make(map[string]string),
+		}
+	}
 }
