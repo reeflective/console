@@ -20,6 +20,11 @@ func (c *Console) Run() (err error) {
 	// current menu, they are not bound to the shell yet.
 	c.loadActiveHistories()
 
+	// Print the console logo
+	if c.printLogo != nil {
+		c.printLogo(c)
+	}
+
 	for {
 		menu := c.menus.current() // We work with the active menu.
 		menu.resetCommands()      // Regenerate the commands for the menu.
@@ -73,10 +78,10 @@ func (c *Console) ensureNoRootRunner() {
 }
 
 func (c *Console) loadActiveHistories() {
-	c.shell.DeleteHistory()
+	c.shell.History.Delete()
 
 	for _, name := range c.menus.current().historyNames {
-		c.shell.AddHistory(name, c.menus.current().histories[name])
+		c.shell.History.Add(name, c.menus.current().histories[name])
 	}
 }
 
@@ -140,6 +145,10 @@ func (c *Console) execute(args []string) {
 
 	// Assign those arguments to our parser
 	menu.SetArgs(args)
+
+	if c.LeaveNewline {
+		fmt.Println()
+	}
 
 	// Execute the command line, with the current menu' parser.
 	// Process the errors raised by the parser.

@@ -1,14 +1,11 @@
 package console
 
 import (
-	"bufio"
+	"bytes"
 	"fmt"
-	"io"
-	"os"
 	"sync"
 
 	"github.com/reeflective/readline"
-	"github.com/rsteube/carapace"
 	"github.com/spf13/cobra"
 )
 
@@ -24,6 +21,9 @@ type Menu struct {
 	// Maps interrupt signals (CtrlC/IOF, etc) to specific error handlers.
 	interruptHandlers map[error]func(c *Console)
 
+	// Input/output channels
+	buf *bytes.Buffer
+
 	// The root cobra command/parser is the one returned by the handler provided
 	// through the `menu.SetCommands()` function. This command is thus renewed after
 	// each command invocation/execution.
@@ -33,15 +33,6 @@ type Menu struct {
 
 	// Command spawner
 	cmds Commands
-
-	// Input/output channels
-	stdout io.Writer
-	stderr io.Writer
-	buf    *bufio.ReadWriter
-
-	// expansionComps - A list of completion generators that are triggered when
-	// the given string is detected (anywhere, even in other completions) in the input line.
-	expansionComps map[rune]carapace.CompletionCallback
 
 	// History sources peculiar to this menu.
 	historyNames []string
@@ -53,24 +44,24 @@ type Menu struct {
 
 func newMenu(name string, console *Console) *Menu {
 	menu := &Menu{
-		console: console,
-		name:    name,
-		prompt:  &Prompt{console: console},
-		Command: &cobra.Command{},
-		// stdout:            bufio.NewWriter(os.Stdout),
-		// stderr:            bufio.NewWriter(os.Stderr),
+		console:           console,
+		name:              name,
+		prompt:            &Prompt{console: console},
+		Command:           &cobra.Command{},
+		buf:               bytes.NewBuffer(nil),
 		interruptHandlers: make(map[error]func(c *Console)),
-		expansionComps:    make(map[rune]carapace.CompletionCallback),
 		histories:         make(map[string]readline.History),
 		mutex:             &sync.RWMutex{},
 	}
 
 	// Add a default in memory history to each menu
+	// This source is dropped if another source is added
+	// to the menu via `AddHistorySource()`.
 	if name != "" {
-		name = "(" + name + ")"
+		name = " (" + name + ")"
 	}
 
-	histName := fmt.Sprintf("local history %s", name)
+	histName := fmt.Sprintf("local history%s", name)
 	hist := readline.NewInMemoryHistory()
 
 	menu.historyNames = append(menu.historyNames, histName)
@@ -87,14 +78,6 @@ func (m *Menu) Name() string {
 // Prompt returns the prompt object for this menu.
 func (m *Menu) Prompt() *Prompt {
 	return m.prompt
-}
-
-func (m *Menu) Stdout() io.Writer {
-	return m.stdout
-}
-
-func (m *Menu) StdErr() io.Writer {
-	return m.stderr
 }
 
 // AddHistorySource adds a source of history commands that will
@@ -209,22 +192,68 @@ func (c *Console) SwitchMenu(menu string) {
 		current := c.menus.current()
 		if current != nil {
 			current.active = false
-			current.stdout = bufio.NewWriter(os.Stdout)
-			current.stderr = bufio.NewWriter(os.Stderr)
 		}
 
 		target.active = true
 
-		// Update stdout/stderr.
-		target.stdout = os.Stdout
-		target.stderr = os.Stderr
-
 		// Remove the currently bound history sources
 		// (old menu) and bind the ones peculiar to this one.
-		c.shell.DeleteHistory()
+		c.shell.History.Delete()
 
 		for _, name := range target.historyNames {
-			c.shell.AddHistory(name, target.histories[name])
+			c.shell.History.Add(name, target.histories[name])
 		}
 	}
+}
+
+// TransientPrintf prints a message to the console, but only if the current
+// menu is active. If the menu is not active, the message is buffered and will
+// be printed the next time the menu is active.
+//
+// The message is printed as a transient message, meaning that it will be
+// printed above the current prompt, effectively "pushing" the prompt down.
+//
+// If this function is called while a command is running, the console
+// will simply print the log below the current line, and will not print
+// the prompt. In any other case this function will work normally.
+func (m *Menu) TransientPrintf(msg string, args ...any) (n int, err error) {
+	n, err = fmt.Fprintf(m.buf, msg, args...)
+	if err != nil {
+		return
+	}
+
+	if !m.active {
+		return
+	}
+
+	buf := m.buf.String()
+	m.buf.Reset()
+
+	return m.console.TransientPrintf(buf)
+}
+
+// Printf prints a message to the console, but only if the current menu
+// is active. If the menu is not active, the message is buffered and will
+// be printed the next time the menu is active.
+//
+// Unlike TransientPrintf, this function will not print the message above
+// the current prompt, but will instead print it below it.
+//
+// If this function is called while a command is running, the console
+// will simply print the log below the current line, and will not print
+// the prompt. In any other case this function will work normally.
+func (m *Menu) Printf(msg string, args ...any) (n int, err error) {
+	n, err = fmt.Fprintf(m.buf, msg, args...)
+	if err != nil {
+		return
+	}
+
+	if !m.active {
+		return
+	}
+
+	buf := m.buf.String()
+	m.buf.Reset()
+
+	return m.console.Printf(buf)
 }

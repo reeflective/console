@@ -1,9 +1,11 @@
 package console
 
 import (
+	"strings"
 	"sync"
 
 	"github.com/reeflective/readline"
+	"github.com/reeflective/readline/inputrc"
 )
 
 // Console is an integrated console application instance.
@@ -18,6 +20,10 @@ type Console struct {
 	menus menus
 
 	// Execution --------------------------------------------------------------------
+
+	// LeaveNewline - If true, the console will leave an empty line before
+	// executing the command.
+	LeaveNewline bool
 
 	// PreReadlineHooks - All the functions in this list will be executed,
 	// in their respective orders, before the console starts reading
@@ -51,6 +57,8 @@ type Console struct {
 
 	// Other ------------------------------------------------------------------------
 
+	printLogo func(c *Console)
+
 	// A list of tags by which commands may have been registered, and which
 	// can be set to true in order to hide all of the tagged commands.
 	filters []string
@@ -59,9 +67,10 @@ type Console struct {
 // New - Instantiates a new console application, with sane but powerful defaults.
 // This instance can then be passed around and used to bind commands, setup additional
 // things, print asynchronous messages, or modify various operating parameters on the fly.
-func New() *Console {
+// The app parameter is an optional name of the application using this console.
+func New(app string) *Console {
 	console := &Console{
-		shell: readline.NewShell(),
+		shell: readline.NewShell(inputrc.WithApp(strings.ToLower(app))),
 		menus: make(menus),
 		mutex: &sync.RWMutex{},
 	}
@@ -73,7 +82,7 @@ func New() *Console {
 
 	// Set the history for this menu
 	for _, name := range defaultMenu.historyNames {
-		console.shell.AddHistory(name, defaultMenu.histories[name])
+		console.shell.History.Add(name, defaultMenu.histories[name])
 	}
 
 	// Command completion, syntax highlighting, multiline callbacks, etc.
@@ -90,6 +99,11 @@ func (c *Console) Shell() *readline.Shell {
 	return c.shell
 }
 
+// SetPrintLogo - Sets the function that will be called to print the logo.
+func (c *Console) SetPrintLogo(f func(c *Console)) {
+	c.printLogo = f
+}
+
 func (c *Console) reloadConfig() {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
@@ -103,9 +117,10 @@ func (c *Console) reloadConfig() {
 // Naturally, the function will block until the editor is exited, and the updated buffer is returned.
 // The filename parameter can be used to pass a specific filename.ext pattern, which might be useful
 // if the editor has builtin filetype plugin functionality.
-func (c *Console) SystemEditor(buffer []byte, filename string) ([]byte, error) {
-	// runeUpdated, err := c.shell.StartEditorWithBuffer([]rune(string(buffer)), filename)
-	//
-	// return []byte(string(runeUpdated)), err
-	return []byte{}, nil
+func (c *Console) SystemEditor(buffer []byte, filetype string) ([]byte, error) {
+	emacs := c.shell.Config.GetString("editing-mode") == "emacs"
+
+	edited, err := c.shell.Buffers.EditBuffer([]rune(string(buffer)), "", filetype, emacs)
+
+	return []byte(string(edited)), err
 }
