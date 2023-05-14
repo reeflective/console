@@ -18,6 +18,7 @@ require (
 	github.com/Masterminds/semver/v3 v3.2.0 // indirect
 	github.com/Masterminds/sprig/v3 v3.2.3 // indirect
 	github.com/agext/levenshtein v1.2.3 // indirect
+	github.com/alecthomas/repr v0.2.0 // indirect
 	github.com/apparentlymart/go-textseg/v13 v13.0.0 // indirect
 	github.com/esimov/stackblur-go v1.1.0 // indirect
 	github.com/fogleman/gg v1.3.0 // indirect
