@@ -24,8 +24,8 @@ Note that these files are also the ones used as demonstration snippets in the [w
 
 - `main.go`         - The entrypoint where all our bindings functions are called, and the application is run.
 - `menu.go`         - In here, we create a new menu, and bind some various stuff to it.
-- `prompt.go`       - This file demonstrates how to load and customize prompt engines, per menu.
 - `commands.go`     - Here we generate and bind our cobra command tree to one of the menus.
 - `interrupt.go`    - Declares some special interrupt handlers to be used on certain keystrokes.
-- `prompt.omp.json` - An [oh-my-posh valid configuration](https://ohmyposh.dev/docs/configuration/overview) used by one of our menu.
-- `.example-history` - A history file used as a source of command history.
+- `.example-history` - A history file used as a source of command history, embedded in the binary.
+
+
