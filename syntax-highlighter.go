@@ -43,15 +43,14 @@ func (c *Console) highlightCommand(done, args []string, cmd *cobra.Command) ([]s
 	highlighted := make([]string, 0)
 	rest := make([]string, 0)
 
-	for i, arg := range args {
-		if strings.TrimSpace(arg) == cmd.Name() {
-			highlighted = append(highlighted, seqFgGreen+arg+seqFgReset)
-			rest = args[i+1:]
+	if len(args) == 0 {
+		return done, args
+	}
 
-			break
-		}
-
-		highlighted = append(highlighted, arg)
+	// The first word is the command, highlight it.
+	if rootcmd, _, _ := c.menus.current().Find(args[1:]); rootcmd != nil {
+		highlighted = append(highlighted, seqFgGreen+args[0]+seqFgReset)
+		rest = args[1:]
 	}
 
 	return append(done, highlighted...), rest
