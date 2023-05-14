@@ -11,11 +11,6 @@ import (
 // The error returned will always be an error that the console
 // application does not understand or cannot handle.
 func (c *Console) Run() (err error) {
-	// Since we avoid loading prompt engines before running the application
-	// (due to a library consumer having to load a custom prompt configuration)
-	// we ensure all menus have a non-nil engine.
-	c.checkPrompts()
-
 	// Also, if the user specified custom histories to the
 	// current menu, they are not bound to the shell yet.
 	c.loadActiveHistories()

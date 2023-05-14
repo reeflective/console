@@ -1,6 +1,7 @@
 package console
 
 import (
+	"fmt"
 	"strings"
 	"sync"
 
@@ -162,6 +163,33 @@ func (c *Console) SwitchMenu(menu string) {
 			c.shell.History.Add(name, target.histories[name])
 		}
 	}
+}
+
+// TransientPrintf prints a string message (a log, or more broadly, an asynchronous event)
+// without bothering the user, displaying the message and "pushing" the prompt below it.
+// The message is printed regardless of the current menu.
+//
+// If this function is called while a command is running, the console will simply print the log
+// below the line, and will not print the prompt. In any other case this function works normally.
+func (c *Console) TransientPrintf(msg string, args ...any) (n int, err error) {
+	if c.isExecuting {
+		return fmt.Printf(msg, args...)
+	}
+
+	return c.shell.PrintTransientf(msg, args...)
+}
+
+// Printf prints a string message (a log, or more broadly, an asynchronous event)
+// below the current prompt. The message is printed regardless of the current menu.
+//
+// If this function is called while a command is running, the console will simply print the log
+// below the line, and will not print the prompt. In any other case this function works normally.
+func (c *Console) Printf(msg string, args ...any) (n int, err error) {
+	if c.isExecuting {
+		return fmt.Printf(msg, args...)
+	}
+
+	return c.shell.Printf(msg, args...)
 }
 
 // SystemEditor - This function is a renamed-reexport of the underlying readline.StartEditorWithBuffer
