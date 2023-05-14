@@ -75,6 +75,9 @@ func New(app string) *Console {
 		mutex: &sync.RWMutex{},
 	}
 
+	// Quality of life improvements.
+	console.setupShell()
+
 	// Make a default menu and make it current.
 	// Each menu is created with a default prompt engine.
 	defaultMenu := console.NewMenu("")
@@ -172,6 +175,15 @@ func (c *Console) SystemEditor(buffer []byte, filetype string) ([]byte, error) {
 	edited, err := c.shell.Buffers.EditBuffer([]rune(string(buffer)), "", filetype, emacs)
 
 	return []byte(string(edited)), err
+}
+
+func (c *Console) setupShell() {
+	cfg := c.shell.Config
+
+	// Some options should be set to on because they
+	// are quite neceessary for efficient console use.
+	cfg.Set("skip-completed-text", true)
+	cfg.Set("menu-complete-display-prefix", true)
 }
 
 func (c *Console) reloadConfig() {
