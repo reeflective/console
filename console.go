@@ -11,21 +11,26 @@ import (
 
 // Console is an integrated console application instance.
 type Console struct {
-	// Application ------------------------------------------------------------------
-	name string
+	// Application
+	name        string           // Used in the prompt, and for readline `.inputrc` application-specific settings.
+	shell       *readline.Shell  // Provides readline functionality (inputs, completions, hints, history)
+	printLogo   func(c *Console) // Simple logo printer.
+	menus       map[string]*Menu // Different command trees, prompt engines, etc.
+	filters     []string         // Hide commands based on their attributes and current context.
+	isExecuting bool             // Used by log functions, which need to adapt behavior (print the prompt, , etc)
+	mutex       *sync.RWMutex    // Concurrency management.
 
-	// shell - The underlying shell provides the core readline functionality,
-	// including but not limited to: inputs, completions, hints, history.
-	shell *readline.Shell
+	// Execution
 
-	// Different menus with different command trees, prompt engines, etc.
-	menus map[string]*Menu
+	// Leave an empty line before executing the command.
+	NewlineBefore bool
 
-	// Execution --------------------------------------------------------------------
-
-	// LeaveNewline - If true, the console will leave an empty line before
-	// executing the command.
-	LeaveNewline bool
+	// Leave an empty line after executing the command.
+	// Note that if you also want this newline to be used when logging messages
+	// with TransientPrintf(), Printf() calls, you should leave this to false,
+	// and add a leading newline to your prompt instead: the readline shell will
+	// know how to handle it in all situations.
+	NewlineAfter bool
 
 	// PreReadlineHooks - All the functions in this list will be executed,
 	// in their respective orders, before the console starts reading
@@ -48,22 +53,6 @@ type Console struct {
 	// These hooks are distinct from the cobra.PreRun() or OnFinalize hooks,
 	// and might be used in combination with them.
 	PostCmdRunHooks []func()
-
-	// True if the console is currently running a command. This is used by
-	// the various asynchronous log/message functions, which need to adapt their
-	// behavior (do we reprint the prompt, where, etc) based on this.
-	isExecuting bool
-
-	// concurrency management.
-	mutex *sync.RWMutex
-
-	// Other ------------------------------------------------------------------------
-
-	printLogo func(c *Console)
-
-	// A list of tags by which commands may have been registered, and which
-	// can be set to true in order to hide all of the tagged commands.
-	filters []string
 }
 
 // New - Instantiates a new console application, with sane but powerful defaults.

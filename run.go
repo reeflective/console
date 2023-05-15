@@ -1,7 +1,12 @@
 package console
 
 import (
+	"context"
+	"errors"
 	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/kballard/go-shellquote"
 	"github.com/spf13/cobra"
@@ -144,14 +149,59 @@ func (c *Console) execute(args []string) {
 	// Assign those arguments to our parser
 	menu.SetArgs(args)
 
-	if c.LeaveNewline {
+	if c.NewlineBefore {
 		fmt.Println()
 	}
 
-	// Execute the command line, with the current menu' parser.
-	// Process the errors raised by the parser.
-	// A few of them are not really errors, and trigger some stuff.
-	menu.Execute()
+	// The command execution should happen in a separate goroutine,
+	// and should notify the main goroutine when it is done.
+	cmdCtx, cancel := context.WithCancel(context.Background())
 
-	c.runPostRunHooks()
+	sigchan := c.monitorSignals()
+
+	go func() {
+		// Run the main command runner.
+		// We don't check the returned error for several reasons:
+		// - The error is generally printed by the command itself.
+		// - The error can be the command context being cancelled,
+		//   in which case we handle it in the main goroutine.
+		menu.ExecuteContext(cmdCtx)
+
+		// And the post-run hooks in the same goroutine,
+		// because they should not be skipped even if
+		// the command is backgrounded by the user.
+		c.runPostRunHooks()
+
+		// Notify the main goroutine that the command is done.
+		cancel()
+	}()
+
+	// Wait for the command to finish, or for an OS signal to be caugth.
+	// If the user presses Ctrl+C, we cancel the command context.
+	select {
+	case <-cmdCtx.Done():
+	case signal := <-sigchan:
+		cancel()
+		menu.handleInterrupt(errors.New(signal.String()))
+	}
+
+	if c.NewlineAfter {
+		fmt.Println()
+	}
+}
+
+// monitorSignals - Monitor the signals that can be sent to the process
+// while a command is running. We want to be able to cancel the command.
+func (c *Console) monitorSignals() <-chan os.Signal {
+	sigchan := make(chan os.Signal, 1)
+
+	signal.Notify(
+		sigchan,
+		syscall.SIGINT,
+		syscall.SIGTERM,
+		syscall.SIGQUIT,
+		// syscall.SIGKILL,
+	)
+
+	return sigchan
 }

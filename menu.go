@@ -148,7 +148,7 @@ func (m *Menu) TransientPrintf(msg string, args ...any) (n int, err error) {
 	}
 
 	if !m.active {
-		m.out.WriteString("\n")
+		fmt.Fprintf(m.out, "\n")
 		return
 	}
 
@@ -175,7 +175,7 @@ func (m *Menu) Printf(msg string, args ...any) (n int, err error) {
 	}
 
 	if !m.active {
-		m.out.WriteString("\n")
+		fmt.Fprintf(m.out, "\n")
 		return
 	}
 
@@ -196,7 +196,7 @@ func (m *Menu) resetCmdOutput() {
 
 	// Add two newlines to the end of the buffer, so that the
 	// next command will be printed slightly below the current one.
-	m.out.WriteString("\n\n")
+	m.out.WriteString("\n")
 }
 
 func (m *Menu) resetCommands() {
@@ -209,6 +209,8 @@ func (m *Menu) resetCommands() {
 			Annotations: make(map[string]string),
 		}
 	}
+
+	m.SilenceUsage = true
 }
 
 func (m *Menu) defaultHistoryName() string {
