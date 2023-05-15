@@ -58,11 +58,7 @@ func newMenu(name string, console *Console) *Menu {
 	// Add a default in memory history to each menu
 	// This source is dropped if another source is added
 	// to the menu via `AddHistorySource()`.
-	if name != "" {
-		name = " (" + name + ")"
-	}
-
-	histName := fmt.Sprintf("local history%s", name)
+	histName := menu.defaultHistoryName()
 	hist := readline.NewInMemoryHistory()
 
 	menu.historyNames = append(menu.historyNames, histName)
@@ -85,18 +81,30 @@ func (m *Menu) Prompt() *Prompt {
 // be accessible to the shell when the menu is active.
 func (m *Menu) AddHistorySource(name string, source readline.History) {
 	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+
+	if len(m.histories) == 1 && m.historyNames[0] == m.defaultHistoryName() {
+		delete(m.histories, m.defaultHistoryName())
+		m.historyNames = make([]string, 0)
+	}
+
 	m.historyNames = append(m.historyNames, name)
 	m.histories[name] = source
-	m.mutex.RUnlock()
 }
 
 // AddHistorySourceFile adds a new source of history populated from
 // and writing to the specified "filepath" parameter.
 func (m *Menu) AddHistorySourceFile(name string, filepath string) {
 	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+
+	if len(m.histories) == 1 && m.historyNames[0] == m.defaultHistoryName() {
+		delete(m.histories, m.defaultHistoryName())
+		m.historyNames = make([]string, 0)
+	}
+
 	m.historyNames = append(m.historyNames, name)
 	m.histories[name], _ = readline.NewHistoryFromFile(filepath)
-	m.mutex.RUnlock()
 }
 
 // DeleteHistorySource removes a history source from the menu.
@@ -201,4 +209,14 @@ func (m *Menu) resetCommands() {
 			Annotations: make(map[string]string),
 		}
 	}
+}
+
+func (m *Menu) defaultHistoryName() string {
+	var name string
+
+	if m.name != "" {
+		name = " (" + m.name + ")"
+	}
+
+	return fmt.Sprintf("local history%s", name)
 }
