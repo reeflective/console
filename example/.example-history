@@ -96,3 +96,10 @@
 {"datetime":"2023-05-06T10:33:54.933490702+02:00","block":"valid-flags --elems"}
 {"datetime":"2023-05-07T08:28:09.323517912+02:00","block":"this is [ another ] test"}
 {"datetime":"2023-05-07T09:31:36.446616828+02:00","block":"this  is { another } test \"another\""}
+{"datetime":"2023-05-17T02:36:56.221339513+02:00","block":"help help"}
+{"datetime":"2023-05-17T02:36:59.298099991+02:00","block":"help client"}
+{"datetime":"2023-05-17T02:37:04.911736647+02:00","block":"help ignored"}
+{"datetime":"2023-05-17T02:49:26.611062064+02:00","block":"help client"}
+{"datetime":"2023-05-17T15:11:48.33711594+02:00","block":"this is a test line saved to history"}
+{"datetime":"2023-05-17T15:16:05.987285843+02:00","block":"client"}
+{"datetime":"2023-05-17T15:26:07.718906666+02:00","block":"another test"}
