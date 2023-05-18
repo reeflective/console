@@ -184,10 +184,6 @@ func (c *Console) execute(args []string) {
 		cancel()
 		menu.handleInterrupt(errors.New(signal.String()))
 	}
-
-	if c.NewlineAfter {
-		fmt.Println()
-	}
 }
 
 // monitorSignals - Monitor the signals that can be sent to the process

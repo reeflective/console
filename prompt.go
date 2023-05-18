@@ -26,6 +26,10 @@ func newPrompt(app *Console) *Prompt {
 	prompt.Primary = func() string {
 		promptStr := app.name
 
+		if app.NewlineAfter {
+			promptStr = "\n" + promptStr
+		}
+
 		menu := app.activeMenu()
 
 		if menu.name == "" {
