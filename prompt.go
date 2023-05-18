@@ -26,10 +26,6 @@ func newPrompt(app *Console) *Prompt {
 	prompt.Primary = func() string {
 		promptStr := app.name
 
-		if app.NewlineAfter {
-			promptStr = "\n" + promptStr
-		}
-
 		menu := app.activeMenu()
 
 		if menu.name == "" {
@@ -54,7 +50,24 @@ func newPrompt(app *Console) *Prompt {
 func (p *Prompt) bind(shell *readline.Shell) {
 	prompt := shell.Prompt
 
-	prompt.Primary(p.Primary)
+	// If the user has bound its own primary prompt and the shell
+	// must leave a newline after command/log output, wrap its function
+	// to add a newline before the prompt.
+	primary := func() string {
+		if p.Primary == nil {
+			return ""
+		}
+
+		prompt := p.Primary()
+
+		if p.console.NewlineAfter && !strings.HasPrefix(prompt, "\n") {
+			return "\n" + prompt
+		}
+
+		return prompt
+	}
+
+	prompt.Primary(primary)
 	prompt.Right(p.Right)
 	prompt.Secondary(p.Secondary)
 	prompt.Transient(p.Transient)
