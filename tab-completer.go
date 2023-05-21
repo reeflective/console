@@ -28,6 +28,10 @@ func (c *Console) complete(line []rune, pos int) readline.Completions {
 		args = append(args, "")
 	}
 
+	// Prepare arguments for the carapace completer
+	// (we currently need those two dummies for avoiding a panic).
+	args = append([]string{"examples", "_carapace"}, args...)
+
 	// Call the completer with our current command context.
 	values, meta := carapace.Complete(menu.Command, args, c.completeCommands(menu))
 
