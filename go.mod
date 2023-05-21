@@ -5,7 +5,7 @@ go 1.19
 require (
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/reeflective/flags v0.10.0
-	github.com/reeflective/readline v0.1.0-beta.0.20230514154005-276299f84218
+	github.com/reeflective/readline v0.1.0-beta.0.20230521195017-0ef8513aa6c4
 	github.com/rsteube/carapace v0.30.0
 	github.com/spf13/cobra v1.7.0
 )
