@@ -2,100 +2,74 @@ package console
 
 import (
 	"fmt"
-	"os"
+	"strings"
 
-	"github.com/jandedobbeleer/oh-my-posh/src/engine"
-	"github.com/jandedobbeleer/oh-my-posh/src/platform"
-	"github.com/jandedobbeleer/oh-my-posh/src/shell"
 	"github.com/reeflective/readline"
 )
 
-// Prompt wraps an oh-my-posh prompt engine, so as to be able
-// to be configured/enhanced and used the same way oh-my-posh is.
-// Some methods have been added for ordering the application to
-// recompute prompts, print logs in sync with them, etc.
+// Prompt - A prompt is a set of functions that return the strings to print
+// for each prompt type. The console will call these functions to retrieve
+// the prompt strings to print. Each menu has its own prompt.
 type Prompt struct {
-	*engine.Engine
+	Primary   func() string            // Primary is the main prompt.
+	Secondary func() string            // Secondary is the prompt used when the user is typing a multi-line command.
+	Transient func() string            // Transient is used if the console shell is configured to be transient.
+	Right     func() string            // Right is the prompt printed on the right side of the screen.
+	Tooltip   func(word string) string // Tooltip is used to hint on the root command, replacing right prompts if not empty.
+
 	console *Console
 }
 
-// LoadConfig loads the prompt JSON configuration at the specified path.
-// It returns an error if the file is not found, or could not be read.
-func (p *Prompt) LoadConfig(path string) error {
-	if _, err := os.Stat(path); err != nil {
-		return err
+func newPrompt(app *Console) *Prompt {
+	prompt := &Prompt{console: app}
+
+	prompt.Primary = func() string {
+		promptStr := app.name
+
+		menu := app.activeMenu()
+
+		if menu.name == "" {
+			return promptStr + " > "
+		}
+
+		promptStr += fmt.Sprintf(" [%s]", menu.name)
+
+		// If the buffered command output is not empty,
+		// add a special status indicator to the prompt.
+		if strings.TrimSpace(menu.out.String()) != "" {
+			promptStr += " $(...)"
+		}
+
+		return promptStr + " > "
 	}
 
-	flags := &platform.Flags{
-		Shell:  shell.GENERIC,
-		Config: path,
-	}
-
-	p.Engine = engine.New(flags)
-
-	return nil
+	return prompt
 }
 
 // bind reassigns the prompt printing functions to the shell helpers.
 func (p *Prompt) bind(shell *readline.Shell) {
-	prompt := shell.Prompt()
+	prompt := shell.Prompt
 
-	prompt.Primary(p.PrintPrimary)
-	prompt.Right(p.PrintRPrompt)
-
-	secondary := func() string {
-		return p.PrintExtraPrompt(engine.Secondary)
-	}
-	prompt.Secondary(secondary)
-
-	transient := func() string {
-		return p.PrintExtraPrompt(engine.Transient)
-	}
-	prompt.Transient(transient)
-
-	prompt.Tooltip(p.PrintTooltip)
-}
-
-// LogTransient prints a string message (a log, or more broadly, an
-// asynchronous event) without bothering the user, and by "pushing"
-// the prompt below the message.
-//
-// If this function is called while a command is running, the console
-// will simply print the log below the current line, and will not print
-// the prompt. In any other case this function will work normally.
-func (c *Console) LogTransient(msg string, args ...any) (n int, err error) {
-	if c.isExecuting {
-		return fmt.Printf(msg, args...)
-	}
-
-	return c.shell.LogTransient(msg, args...)
-}
-
-// Log - A simple function to print a message and redisplay the prompt below it.
-// As with LogTransient, if this function is called while a command is running,
-// the console will simply print the log below the current line, and will not
-// print the prompt. In any other case this function will work normally.
-func (c *Console) Log(msg string, args ...any) (n int, err error) {
-	if c.isExecuting {
-		return fmt.Printf(msg, args...)
-	}
-
-	return c.shell.Log(msg, args...)
-}
-
-// makes a prompt engine with default/builtin configuration.
-func newDefaultEngine() *engine.Engine {
-	flags := &platform.Flags{
-		Shell: shell.GENERIC,
-	}
-
-	return engine.New(flags)
-}
-
-func (c *Console) checkPrompts() {
-	for _, menu := range c.menus {
-		if menu.prompt.Engine == nil {
-			menu.prompt.Engine = newDefaultEngine()
+	// If the user has bound its own primary prompt and the shell
+	// must leave a newline after command/log output, wrap its function
+	// to add a newline before the prompt.
+	primary := func() string {
+		if p.Primary == nil {
+			return ""
 		}
+
+		prompt := p.Primary()
+
+		if p.console.NewlineAfter && !strings.HasPrefix(prompt, "\n") {
+			return "\n" + prompt
+		}
+
+		return prompt
 	}
+
+	prompt.Primary(primary)
+	prompt.Right(p.Right)
+	prompt.Secondary(p.Secondary)
+	prompt.Transient(p.Transient)
+	prompt.Tooltip(p.Tooltip)
 }

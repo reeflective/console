@@ -99,7 +99,7 @@ func (c *Console) isFiltered(cmd *cobra.Command) bool {
 // hide commands that are filtered so that they are not
 // shown in the help strings or proposed as completions.
 func (c *Console) hideFilteredCommands() {
-	for _, cmd := range c.menus.current().Commands() {
+	for _, cmd := range c.activeMenu().Commands() {
 		// Don't override commands if they are already hidden
 		if cmd.Hidden {
 			continue

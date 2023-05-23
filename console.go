@@ -1,23 +1,36 @@
 package console
 
 import (
+	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/reeflective/readline"
+	"github.com/reeflective/readline/inputrc"
 )
 
 // Console is an integrated console application instance.
 type Console struct {
-	// Application ------------------------------------------------------------------
+	// Application
+	name        string           // Used in the prompt, and for readline `.inputrc` application-specific settings.
+	shell       *readline.Shell  // Provides readline functionality (inputs, completions, hints, history)
+	printLogo   func(c *Console) // Simple logo printer.
+	menus       map[string]*Menu // Different command trees, prompt engines, etc.
+	filters     []string         // Hide commands based on their attributes and current context.
+	isExecuting bool             // Used by log functions, which need to adapt behavior (print the prompt, , etc)
+	mutex       *sync.RWMutex    // Concurrency management.
 
-	// shell - The underlying shell provides the core readline functionality,
-	// including but not limited to: inputs, completions, hints, history.
-	shell *readline.Shell
+	// Execution
 
-	// Different menus with different command trees, prompt engines, etc.
-	menus menus
+	// Leave an empty line before executing the command.
+	NewlineBefore bool
 
-	// Execution --------------------------------------------------------------------
+	// Leave an empty line after executing the command.
+	// Note that if you also want this newline to be used when logging messages
+	// with TransientPrintf(), Printf() calls, you should leave this to false,
+	// and add a leading newline to your prompt instead: the readline shell will
+	// know how to handle it in all situations.
+	NewlineAfter bool
 
 	// PreReadlineHooks - All the functions in this list will be executed,
 	// in their respective orders, before the console starts reading
@@ -40,31 +53,22 @@ type Console struct {
 	// These hooks are distinct from the cobra.PreRun() or OnFinalize hooks,
 	// and might be used in combination with them.
 	PostCmdRunHooks []func()
-
-	// True if the console is currently running a command. This is used by
-	// the various asynchronous log/message functions, which need to adapt their
-	// behavior (do we reprint the prompt, where, etc) based on this.
-	isExecuting bool
-
-	// concurrency management.
-	mutex *sync.RWMutex
-
-	// Other ------------------------------------------------------------------------
-
-	// A list of tags by which commands may have been registered, and which
-	// can be set to true in order to hide all of the tagged commands.
-	filters []string
 }
 
 // New - Instantiates a new console application, with sane but powerful defaults.
 // This instance can then be passed around and used to bind commands, setup additional
 // things, print asynchronous messages, or modify various operating parameters on the fly.
-func New() *Console {
+// The app parameter is an optional name of the application using this console.
+func New(app string) *Console {
 	console := &Console{
-		shell: readline.NewShell(),
-		menus: make(menus),
+		name:  app,
+		shell: readline.NewShell(inputrc.WithApp(strings.ToLower(app))),
+		menus: make(map[string]*Menu),
 		mutex: &sync.RWMutex{},
 	}
+
+	// Quality of life improvements.
+	console.setupShell()
 
 	// Make a default menu and make it current.
 	// Each menu is created with a default prompt engine.
@@ -73,7 +77,7 @@ func New() *Console {
 
 	// Set the history for this menu
 	for _, name := range defaultMenu.historyNames {
-		console.shell.AddHistory(name, defaultMenu.histories[name])
+		console.shell.History.Add(name, defaultMenu.histories[name])
 	}
 
 	// Command completion, syntax highlighting, multiline callbacks, etc.
@@ -90,12 +94,93 @@ func (c *Console) Shell() *readline.Shell {
 	return c.shell
 }
 
-func (c *Console) reloadConfig() {
+// SetPrintLogo - Sets the function that will be called to print the logo.
+func (c *Console) SetPrintLogo(f func(c *Console)) {
+	c.printLogo = f
+}
+
+// NewMenu - Create a new command menu, to which the user
+// can attach any number of commands (with any nesting), as
+// well as some specific items like history sources, prompt
+// configurations, sets of expanded variables, and others.
+func (c *Console) NewMenu(name string) *Menu {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
+	menu := newMenu(name, c)
+	c.menus[name] = menu
+
+	return menu
+}
+
+// CurrentMenu - Return the current console menu. Because the Context
+// is just a reference, any modifications to this menu will persist.
+func (c *Console) CurrentMenu() *Menu {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	return c.activeMenu()
+}
+
+// Menu returns one of the console menus by name, or nil if no menu is found.
+func (c *Console) Menu(name string) *Menu {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	return c.menus[name]
+}
+
+// SwitchMenu - Given a name, the console switches its command menu:
+// The next time the console rebinds all of its commands, it will only bind those
+// that belong to this new menu. If the menu is invalid, i.e that no commands
+// are bound to this menu name, the current menu is kept.
+func (c *Console) SwitchMenu(menu string) {
 	c.mutex.RLock()
 	defer c.mutex.RUnlock()
 
-	menu := c.menus.current()
-	menu.prompt.bind(c.shell)
+	// Only switch if the target menu was found.
+	if target, found := c.menus[menu]; found && target != nil {
+		current := c.activeMenu()
+		if current != nil {
+			current.active = false
+		}
+
+		target.active = true
+
+		// Remove the currently bound history sources
+		// (old menu) and bind the ones peculiar to this one.
+		c.shell.History.Delete()
+
+		for _, name := range target.historyNames {
+			c.shell.History.Add(name, target.histories[name])
+		}
+	}
+}
+
+// TransientPrintf prints a string message (a log, or more broadly, an asynchronous event)
+// without bothering the user, displaying the message and "pushing" the prompt below it.
+// The message is printed regardless of the current menu.
+//
+// If this function is called while a command is running, the console will simply print the log
+// below the line, and will not print the prompt. In any other case this function works normally.
+func (c *Console) TransientPrintf(msg string, args ...any) (n int, err error) {
+	if c.isExecuting {
+		return fmt.Printf(msg, args...)
+	}
+
+	return c.shell.PrintTransientf(msg, args...)
+}
+
+// Printf prints a string message (a log, or more broadly, an asynchronous event)
+// below the current prompt. The message is printed regardless of the current menu.
+//
+// If this function is called while a command is running, the console will simply print the log
+// below the line, and will not print the prompt. In any other case this function works normally.
+func (c *Console) Printf(msg string, args ...any) (n int, err error) {
+	if c.isExecuting {
+		return fmt.Printf(msg, args...)
+	}
+
+	return c.shell.Printf(msg, args...)
 }
 
 // SystemEditor - This function is a renamed-reexport of the underlying readline.StartEditorWithBuffer
@@ -103,9 +188,38 @@ func (c *Console) reloadConfig() {
 // Naturally, the function will block until the editor is exited, and the updated buffer is returned.
 // The filename parameter can be used to pass a specific filename.ext pattern, which might be useful
 // if the editor has builtin filetype plugin functionality.
-func (c *Console) SystemEditor(buffer []byte, filename string) ([]byte, error) {
-	// runeUpdated, err := c.shell.StartEditorWithBuffer([]rune(string(buffer)), filename)
-	//
-	// return []byte(string(runeUpdated)), err
-	return []byte{}, nil
+func (c *Console) SystemEditor(buffer []byte, filetype string) ([]byte, error) {
+	emacs := c.shell.Config.GetString("editing-mode") == "emacs"
+
+	edited, err := c.shell.Buffers.EditBuffer([]rune(string(buffer)), "", filetype, emacs)
+
+	return []byte(string(edited)), err
+}
+
+func (c *Console) setupShell() {
+	cfg := c.shell.Config
+
+	// Some options should be set to on because they
+	// are quite neceessary for efficient console use.
+	cfg.Set("skip-completed-text", true)
+	cfg.Set("menu-complete-display-prefix", true)
+}
+
+func (c *Console) reloadConfig() {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
+
+	menu := c.activeMenu()
+	menu.prompt.bind(c.shell)
+}
+
+func (c *Console) activeMenu() *Menu {
+	for _, menu := range c.menus {
+		if menu.active {
+			return menu
+		}
+	}
+
+	// Else return the default menu.
+	return c.menus[""]
 }

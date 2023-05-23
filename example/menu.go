@@ -8,7 +8,6 @@ import (
 	"os/exec"
 	"time"
 
-	"github.com/jandedobbeleer/oh-my-posh/src/engine"
 	"github.com/reeflective/console"
 	"github.com/spf13/cobra"
 )
@@ -21,13 +20,6 @@ func createMenus(c *console.Console) {
 	// handlers and for sparing use to write a dedicated command,
 	// we use a custom interrupt handler to switch back to main menu.
 	clientMenu.AddInterrupt(io.EOF, errorCtrlSwitchMenu)
-
-	// Add custom segments to the prompt for this menu only,
-	// and load the configuration making use of them.
-	prompt := clientMenu.Prompt()
-	prompt.LoadConfig("prompt.omp.json")
-
-	engine.Segments[engine.SegmentType("module")] = func() engine.SegmentWriter { return module }
 
 	// Add some commands to our client menu.
 	// This is an example of binding "traditionally defined" cobra.Commands.
@@ -52,6 +44,7 @@ func makeClientCommands(app *console.Console) console.Commands {
 			Use:   "ticker",
 			Short: "Triggers some asynchronous notifications to the shell, demonstrating async logging",
 			Run: func(cmd *cobra.Command, args []string) {
+				menu := app.CurrentMenu()
 				timer := time.Tick(2 * time.Second)
 				messages := []string{
 					"Info:    notification 1",
@@ -65,10 +58,10 @@ func makeClientCommands(app *console.Console) console.Commands {
 					for {
 						<-timer
 						if count == 5 {
-							app.Log("This message is more important, printing it below the prompt first")
+							app.Printf("This message is more important, printing it below the prompt and in every menu")
 							return
 						}
-						app.LogTransient(messages[count])
+						menu.TransientPrintf(messages[count])
 						count++
 					}
 				}()
@@ -116,6 +109,38 @@ func makeClientCommands(app *console.Console) console.Commands {
 			},
 		}
 		root.AddCommand(shell)
+
+		interruptible := &cobra.Command{
+			Use:                "interrupt",
+			Short:              "A command which prints a few status messages, but can be interrupted with CtrlC",
+			DisableFlagParsing: true,
+			RunE: func(cmd *cobra.Command, args []string) error {
+				menu := app.CurrentMenu()
+				timer := time.Tick(2 * time.Second)
+				messages := []string{
+					"Info:    notification 1",
+					"Info:    notification 2",
+					"Warning: notification 3",
+					"Info:    notification 4",
+					"Error:   done notifying",
+				}
+				count := 0
+				for {
+					select {
+					case <-menu.Context().Done():
+						menu.TransientPrintf("Interrupted")
+						return nil
+					case <-timer:
+						if count == 5 {
+							return nil
+						}
+						menu.TransientPrintf(messages[count] + "\n")
+						count++
+					}
+				}
+			},
+		}
+		root.AddCommand(interruptible)
 
 		return root
 	}

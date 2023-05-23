@@ -9,7 +9,7 @@ import (
 )
 
 func (c *Console) complete(line []rune, pos int) readline.Completions {
-	menu := c.menus.current()
+	menu := c.activeMenu()
 
 	// Split the line as shell words, only using
 	// what the right buffer (up to the cursor)
@@ -24,9 +24,12 @@ func (c *Console) complete(line []rune, pos int) readline.Completions {
 	// returned from the previous call don't account for it.
 	if strings.HasSuffix(string(rbuffer), " ") || len(args) == 0 {
 		args = append(args, "")
+	} else if strings.HasSuffix(string(rbuffer), "\n") {
+		args = append(args, "")
 	}
 
 	// Prepare arguments for the carapace completer
+	// (we currently need those two dummies for avoiding a panic).
 	args = append([]string{"examples", "_carapace"}, args...)
 
 	// Call the completer with our current command context.
@@ -49,6 +52,7 @@ func (c *Console) complete(line []rune, pos int) readline.Completions {
 	// Assign both completions and command/flags/args usage strings.
 	comps := readline.CompleteRaw(raw)
 	comps = comps.Usage(meta.Usage)
+	comps = c.justifyCommandComps(comps)
 
 	// Suffix matchers for the completions if any.
 	if meta.Nospace.String() != "" {
@@ -64,14 +68,27 @@ func (c *Console) complete(line []rune, pos int) readline.Completions {
 	return comps
 }
 
-// Regenerate commands and apply any filters.
-func (c *Console) completeCommands(menu *Menu) func() {
-	commands := func() {
-		menu.resetCommands()
-		c.hideFilteredCommands()
+func splitArgs(line []rune) (args []string, prefix string) {
+	// Split the line as shellwords, return them if all went fine.
+	args, remain, err := split(string(line), false)
+	if err == nil {
+		return
 	}
 
-	return commands
+	// If we had an error, it's because we have an unterminated quote/escape sequence.
+	// In this case we split the remainder again, as the completer only ever considers
+	// words as space-separated chains of characters.
+	if errors.Is(err, errUnterminatedDoubleQuote) {
+		remain = strings.Trim(remain, "\"")
+		prefix = "\""
+	} else if errors.Is(err, errUnterminatedSingleQuote) {
+		remain = strings.Trim(remain, "'")
+		prefix = "'"
+	}
+
+	args = append(args, strings.Split(remain, " ")...)
+
+	return
 }
 
 func sanitizeArgs(args []string) (sanitized []string) {
@@ -83,31 +100,38 @@ func sanitizeArgs(args []string) (sanitized []string) {
 	last := args[len(args)-1]
 
 	// The last word should not comprise newlines.
-	last = strings.ReplaceAll(last, "\n", "")
+	last = strings.ReplaceAll(last, "\n", " ")
 	sanitized = append(sanitized, last)
 
 	return sanitized
 }
 
-func splitArgs(line []rune) (args []string, prefix string) {
-	// Split the line as shellwords, return them if all went fine.
-	args, remain, err := split(string(line), false)
-	if err == nil {
-		return
+// Regenerate commands and apply any filters.
+func (c *Console) completeCommands(menu *Menu) func() {
+	commands := func() {
+		menu.resetCommands()
+		c.hideFilteredCommands()
 	}
 
-	// If we had an error, it's because we have an unterminated quote/escape sequence.
-	// In this case we split the remainder again, as the completer only ever considers
-	// words as space-separated chains of characters.
-	if errors.Is(err, unterminatedDoubleQuoteError) {
-		remain = strings.Trim(remain, "\"")
-		prefix = "\""
-	} else if errors.Is(err, unterminatedSingleQuoteError) {
-		remain = strings.Trim(remain, "'")
-		prefix = "'"
+	return commands
+}
+
+func (c *Console) justifyCommandComps(comps readline.Completions) readline.Completions {
+	justified := []string{}
+
+	comps.EachValue(func(comp readline.Completion) readline.Completion {
+		if !strings.HasSuffix(comp.Tag, "commands") {
+			return comp
+		}
+
+		justified = append(justified, comp.Tag)
+
+		return comp
+	})
+
+	if len(justified) > 0 {
+		return comps.JustifyDescriptions(justified...)
 	}
 
-	args = append(args, strings.Split(remain, " ")...)
-
-	return
+	return comps
 }

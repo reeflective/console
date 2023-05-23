@@ -16,15 +16,14 @@ var (
 )
 
 var (
-	unterminatedSingleQuoteError = errors.New("unterminated single-quoted string")
-	unterminatedDoubleQuoteError = errors.New("unterminated double-quoted string")
-	unterminatedEscapeError      = errors.New("unterminated backslash-escape")
+	errUnterminatedSingleQuote = errors.New("unterminated single-quoted string")
+	errUnterminatedDoubleQuote = errors.New("unterminated double-quoted string")
+	errUnterminatedEscape      = errors.New("unterminated backslash-escape")
 )
 
 // acceptMultiline determines if the line just accepted is complete (in which case
 // we should execute it), or incomplete (in which case we must read in multiline).
 func (c *Console) acceptMultiline(line []rune) (accept bool) {
-	// We just split the line, sh-style.
 	// Errors are either: unterminated quotes, or unterminated escapes.
 	_, _, err := split(string(line), false)
 	if err == nil {
@@ -33,10 +32,14 @@ func (c *Console) acceptMultiline(line []rune) (accept bool) {
 
 	// Currently, unterminated quotes are obvious to treat: keep reading.
 	switch err {
-	case unterminatedDoubleQuoteError, unterminatedSingleQuoteError:
+	case errUnterminatedDoubleQuote, errUnterminatedSingleQuote:
 		return false
-	case unterminatedEscapeError:
-		// TODO: How to treat those ? Generally, a single slash means "not done".
+	case errUnterminatedEscape:
+		if len(line) > 0 && line[len(line)-1] == '\\' {
+			return false
+		}
+
+		return true
 	}
 
 	return true
@@ -60,6 +63,7 @@ func split(input string, hl bool) (words []string, remainder string, err error) 
 					words[len(words)-1] += string(c)
 				}
 			}
+
 			input = input[l:]
 			continue
 		} else if c == escapeChar {
@@ -69,11 +73,18 @@ func split(input string, hl bool) (words []string, remainder string, err error) 
 				if hl {
 					remainder = string(escapeChar)
 				}
-				err = unterminatedEscapeError
+				err = errUnterminatedEscape
 				return
 			}
 			c2, l2 := utf8.DecodeRuneInString(next)
 			if c2 == '\n' {
+				if hl {
+					if len(words) == 0 {
+						words = append(words, string(c)+string(c2))
+					} else {
+						words[len(words)-1] += string(c) + string(c2)
+					}
+				}
 				input = next[l2:]
 				continue
 			}
@@ -121,6 +132,7 @@ raw:
 				if hl {
 					buf.WriteRune(c)
 				}
+
 				return buf.String(), cur, nil
 			}
 		}
@@ -137,7 +149,7 @@ escape:
 			if hl {
 				input = buf.String() + input
 			}
-			return "", input, unterminatedEscapeError
+			return "", input, errUnterminatedEscape
 		}
 		c, l := utf8.DecodeRuneInString(input)
 		if c == '\n' {
@@ -156,7 +168,7 @@ single:
 			if hl {
 				input = buf.String() + seqFgYellow + string(singleChar) + input
 			}
-			return "", input, unterminatedSingleQuoteError
+			return "", input, errUnterminatedSingleQuote
 		}
 		// Catch up opening quote
 		if hl {
@@ -215,7 +227,7 @@ double:
 			input = buf.String() + seqFgYellow + string(doubleChar) + input
 		}
 
-		return "", input, unterminatedDoubleQuoteError
+		return "", input, errUnterminatedDoubleQuote
 	}
 
 done:

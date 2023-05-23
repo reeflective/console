@@ -1,14 +1,12 @@
 package console
 
 import (
-	"bufio"
+	"bytes"
 	"fmt"
-	"io"
-	"os"
+	"strings"
 	"sync"
 
 	"github.com/reeflective/readline"
-	"github.com/rsteube/carapace"
 	"github.com/spf13/cobra"
 )
 
@@ -24,6 +22,9 @@ type Menu struct {
 	// Maps interrupt signals (CtrlC/IOF, etc) to specific error handlers.
 	interruptHandlers map[error]func(c *Console)
 
+	// Input/output channels
+	out *bytes.Buffer
+
 	// The root cobra command/parser is the one returned by the handler provided
 	// through the `menu.SetCommands()` function. This command is thus renewed after
 	// each command invocation/execution.
@@ -33,15 +34,6 @@ type Menu struct {
 
 	// Command spawner
 	cmds Commands
-
-	// Input/output channels
-	stdout io.Writer
-	stderr io.Writer
-	buf    *bufio.ReadWriter
-
-	// expansionComps - A list of completion generators that are triggered when
-	// the given string is detected (anywhere, even in other completions) in the input line.
-	expansionComps map[rune]carapace.CompletionCallback
 
 	// History sources peculiar to this menu.
 	historyNames []string
@@ -53,24 +45,20 @@ type Menu struct {
 
 func newMenu(name string, console *Console) *Menu {
 	menu := &Menu{
-		console: console,
-		name:    name,
-		prompt:  &Prompt{console: console},
-		Command: &cobra.Command{},
-		// stdout:            bufio.NewWriter(os.Stdout),
-		// stderr:            bufio.NewWriter(os.Stderr),
+		console:           console,
+		name:              name,
+		prompt:            newPrompt(console),
+		Command:           &cobra.Command{},
+		out:               bytes.NewBuffer(nil),
 		interruptHandlers: make(map[error]func(c *Console)),
-		expansionComps:    make(map[rune]carapace.CompletionCallback),
 		histories:         make(map[string]readline.History),
 		mutex:             &sync.RWMutex{},
 	}
 
 	// Add a default in memory history to each menu
-	if name != "" {
-		name = "(" + name + ")"
-	}
-
-	histName := fmt.Sprintf("local history %s", name)
+	// This source is dropped if another source is added
+	// to the menu via `AddHistorySource()`.
+	histName := menu.defaultHistoryName()
 	hist := readline.NewInMemoryHistory()
 
 	menu.historyNames = append(menu.historyNames, histName)
@@ -89,30 +77,34 @@ func (m *Menu) Prompt() *Prompt {
 	return m.prompt
 }
 
-func (m *Menu) Stdout() io.Writer {
-	return m.stdout
-}
-
-func (m *Menu) StdErr() io.Writer {
-	return m.stderr
-}
-
 // AddHistorySource adds a source of history commands that will
 // be accessible to the shell when the menu is active.
 func (m *Menu) AddHistorySource(name string, source readline.History) {
 	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+
+	if len(m.histories) == 1 && m.historyNames[0] == m.defaultHistoryName() {
+		delete(m.histories, m.defaultHistoryName())
+		m.historyNames = make([]string, 0)
+	}
+
 	m.historyNames = append(m.historyNames, name)
 	m.histories[name] = source
-	m.mutex.RUnlock()
 }
 
 // AddHistorySourceFile adds a new source of history populated from
 // and writing to the specified "filepath" parameter.
 func (m *Menu) AddHistorySourceFile(name string, filepath string) {
 	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+
+	if len(m.histories) == 1 && m.historyNames[0] == m.defaultHistoryName() {
+		delete(m.histories, m.defaultHistoryName())
+		m.historyNames = make([]string, 0)
+	}
+
 	m.historyNames = append(m.historyNames, name)
 	m.histories[name], _ = readline.NewHistoryFromFile(filepath)
-	m.mutex.RUnlock()
 }
 
 // DeleteHistorySource removes a history source from the menu.
@@ -139,6 +131,74 @@ func (m *Menu) DeleteHistorySource(name string) {
 	}
 }
 
+// TransientPrintf prints a message to the console, but only if the current
+// menu is active. If the menu is not active, the message is buffered and will
+// be printed the next time the menu is active.
+//
+// The message is printed as a transient message, meaning that it will be
+// printed above the current prompt, effectively "pushing" the prompt down.
+//
+// If this function is called while a command is running, the console
+// will simply print the log below the current line, and will not print
+// the prompt. In any other case this function will work normally.
+func (m *Menu) TransientPrintf(msg string, args ...any) (n int, err error) {
+	n, err = fmt.Fprintf(m.out, msg, args...)
+	if err != nil {
+		return
+	}
+
+	if !m.active {
+		fmt.Fprintf(m.out, "\n")
+		return
+	}
+
+	buf := m.out.String()
+	m.out.Reset()
+
+	return m.console.TransientPrintf(buf)
+}
+
+// Printf prints a message to the console, but only if the current menu
+// is active. If the menu is not active, the message is buffered and will
+// be printed the next time the menu is active.
+//
+// Unlike TransientPrintf, this function will not print the message above
+// the current prompt, but will instead print it below it.
+//
+// If this function is called while a command is running, the console
+// will simply print the log below the current line, and will not print
+// the prompt. In any other case this function will work normally.
+func (m *Menu) Printf(msg string, args ...any) (n int, err error) {
+	n, err = fmt.Fprintf(m.out, msg, args...)
+	if err != nil {
+		return
+	}
+
+	if !m.active {
+		fmt.Fprintf(m.out, "\n")
+		return
+	}
+
+	buf := m.out.String()
+	m.out.Reset()
+
+	return m.console.Printf(buf)
+}
+
+func (m *Menu) resetCmdOutput() {
+	buf := strings.TrimSpace(m.out.String())
+
+	// If our command has printed everything to stdout, nothing to do.
+	if len(buf) == 0 || buf == "" {
+		m.out.Reset()
+		return
+	}
+
+	// Add two newlines to the end of the buffer, so that the
+	// next command will be printed slightly below the current one.
+	m.out.WriteString("\n")
+}
+
 func (m *Menu) resetCommands() {
 	if m.cmds != nil {
 		m.Command = m.cmds()
@@ -149,82 +209,16 @@ func (m *Menu) resetCommands() {
 			Annotations: make(map[string]string),
 		}
 	}
+
+	m.SilenceUsage = true
 }
 
-// menus manages all created menus for the console application.
-type menus map[string]*Menu
+func (m *Menu) defaultHistoryName() string {
+	var name string
 
-// current returns the current menu.
-func (m *menus) current() *Menu {
-	for _, menu := range *m {
-		if menu.active {
-			return menu
-		}
+	if m.name != "" {
+		name = " (" + m.name + ")"
 	}
 
-	// Else return the default menu.
-	return (*m)[""]
-}
-
-// NewMenu - Create a new command menu, to which the user
-// can attach any number of commands (with any nesting), as
-// well as some specific items like history sources, prompt
-// configurations, sets of expanded variables, and others.
-func (c *Console) NewMenu(name string) *Menu {
-	c.mutex.RLock()
-	defer c.mutex.RUnlock()
-	menu := newMenu(name, c)
-	c.menus[name] = menu
-
-	return menu
-}
-
-// CurrentMenu - Return the current console menu. Because the Context
-// is just a reference, any modifications to this menu will persist.
-func (c *Console) CurrentMenu() *Menu {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-
-	return c.menus.current()
-}
-
-// Menu returns one of the console menus by name, or nil if no menu is found.
-func (c *Console) Menu(name string) *Menu {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-
-	return c.menus[name]
-}
-
-// SwitchMenu - Given a name, the console switches its command menu:
-// The next time the console rebinds all of its commands, it will only bind those
-// that belong to this new menu. If the menu is invalid, i.e that no commands
-// are bound to this menu name, the current menu is kept.
-func (c *Console) SwitchMenu(menu string) {
-	c.mutex.RLock()
-	defer c.mutex.RUnlock()
-
-	// Only switch if the target menu was found.
-	if target, found := c.menus[menu]; found && target != nil {
-		current := c.menus.current()
-		if current != nil {
-			current.active = false
-			current.stdout = bufio.NewWriter(os.Stdout)
-			current.stderr = bufio.NewWriter(os.Stderr)
-		}
-
-		target.active = true
-
-		// Update stdout/stderr.
-		target.stdout = os.Stdout
-		target.stderr = os.Stderr
-
-		// Remove the currently bound history sources
-		// (old menu) and bind the ones peculiar to this one.
-		c.shell.DeleteHistory()
-
-		for _, name := range target.historyNames {
-			c.shell.AddHistory(name, target.histories[name])
-		}
-	}
+	return fmt.Sprintf("local history%s", name)
 }
