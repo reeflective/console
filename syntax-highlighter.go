@@ -81,7 +81,7 @@ func (c *Console) highlightCommand(done, args []string, _ *cobra.Command) ([]str
 		}
 
 		if cmdFound {
-			highlighted = append(highlighted, bold+seqFgGreen+args[0]+seqFgReset)
+			highlighted = append(highlighted, bold+seqFgGreen+args[0]+seqFgReset+boldReset)
 			rest = args[1:]
 
 			return append(done, highlighted...), rest

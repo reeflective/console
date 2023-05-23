@@ -110,6 +110,38 @@ func makeClientCommands(app *console.Console) console.Commands {
 		}
 		root.AddCommand(shell)
 
+		interruptible := &cobra.Command{
+			Use:                "interrupt",
+			Short:              "A command which prints a few status messages, but can be interrupted with CtrlC",
+			DisableFlagParsing: true,
+			RunE: func(cmd *cobra.Command, args []string) error {
+				menu := app.CurrentMenu()
+				timer := time.Tick(2 * time.Second)
+				messages := []string{
+					"Info:    notification 1",
+					"Info:    notification 2",
+					"Warning: notification 3",
+					"Info:    notification 4",
+					"Error:   done notifying",
+				}
+				count := 0
+				for {
+					select {
+					case <-menu.Context().Done():
+						menu.TransientPrintf("Interrupted")
+						return nil
+					case <-timer:
+						if count == 5 {
+							return nil
+						}
+						menu.TransientPrintf(messages[count] + "\n")
+						count++
+					}
+				}
+			},
+		}
+		root.AddCommand(interruptible)
+
 		return root
 	}
 }

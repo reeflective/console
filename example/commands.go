@@ -68,6 +68,9 @@ func makeflagsCommands(app *console.Console) console.Commands {
 		rootCmd.AddGroup(&cobra.Group{ID: "core", Title: "core"})
 		rootCmd.AddCommand(clientMenuCommand)
 
+		rootCmd.SetHelpCommandGroupID("core")
+		rootCmd.InitDefaultHelpCmd()
+
 		return rootCmd
 	}
 }
