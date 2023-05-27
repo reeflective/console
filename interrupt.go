@@ -38,11 +38,11 @@ func (m *Menu) handleInterrupt(err error) {
 		m.console.mutex.RUnlock()
 	}()
 
-	if m.console.NewlineBefore {
-		fmt.Println()
-	}
-
 	if handler := m.interruptHandlers[err]; handler != nil {
 		handler(m.console)
+
+		if m.console.NewlineBefore {
+			fmt.Println()
+		}
 	}
 }

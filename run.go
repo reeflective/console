@@ -36,6 +36,7 @@ func (c *Console) Run() (err error) {
 		c.runPreReadHooks()      // Run user-provided pre-loop hooks
 		c.ensureNoRootRunner()   // Avoid printing any help when the command line is empty
 		c.hideFilteredCommands() // Hide commands that are not available
+		c.printed = false        // All further async logs don't need "grouping adjustments"
 
 		// Block and read user input. Provides completion, syntax, hints, etc.
 		// Various types of errors might arise from here. We handle them in a
@@ -46,6 +47,11 @@ func (c *Console) Run() (err error) {
 
 			continue
 		}
+
+		// Any call to the SwitchMenu() while we were reading user
+		// input (through an interrupt handler) might have changed it,
+		// so we must be sure we use the good one.
+		menu = c.activeMenu()
 
 		// Split the line into shell words.
 		args, err := shellquote.Split(line)
@@ -63,8 +69,8 @@ func (c *Console) Run() (err error) {
 		// which may modify the input line args.
 		args = c.runLineHooks(args)
 
-		// Run all hooks and the command itself
-		c.execute(menu, args)
+		// Run all pre-run hooks and the command itself
+		c.execute(menu, args, false)
 	}
 }
 
@@ -77,16 +83,15 @@ func (m *Menu) RunCommand(args []string) (err error) {
 
 	// The menu used and reset is the active menu.
 	// Prepare its output buffer for the command.
-	m.resetCmdOutput()
+	m.resetPreRun()
 
 	// Run the command and associated helpers.
-	m.console.execute(m, args)
+	m.console.execute(m, args, !m.console.isExecuting)
 
 	// If the command changed the active menu, we need to
 	// reload the console configuration and prompt helpers.
 	// In anycase, we need to reset the commands for the menu.
 	m.console.reloadConfig()
-	m.resetCommands()
 
 	return
 }
@@ -143,7 +148,7 @@ func (c *Console) runPostRunHooks() {
 // execute - The user has entered a command input line, the arguments
 // have been processed: we synchronize a few elements of the console,
 // then pass these arguments to the command parser for execution and error handling.
-func (c *Console) execute(menu *Menu, args []string) {
+func (c *Console) execute(menu *Menu, args []string, async bool) {
 	// Find the target command: if this command is filtered, don't run it,
 	// nor any pre-run hooks. We don't care about any error here: we just
 	// want to know if the command is hidden.
@@ -157,9 +162,11 @@ func (c *Console) execute(menu *Menu, args []string) {
 	// Asynchronous messages do not mess with the prompt from now on,
 	// until end of execution. Once we are done executing the command,
 	// they can again.
-	c.mutex.RLock()
-	c.isExecuting = true
-	c.mutex.RUnlock()
+	if !async {
+		c.mutex.RLock()
+		c.isExecuting = true
+		c.mutex.RUnlock()
+	}
 
 	defer func() {
 		c.mutex.RLock()
@@ -204,6 +211,10 @@ func (c *Console) execute(menu *Menu, args []string) {
 	case signal := <-sigchan:
 		cancel()
 		menu.handleInterrupt(errors.New(signal.String()))
+	}
+
+	if c.NewlineAfter {
+		fmt.Println()
 	}
 }
 

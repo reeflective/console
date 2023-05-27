@@ -158,6 +158,9 @@ func (c *Console) SwitchMenu(menu string) {
 		for _, name := range target.historyNames {
 			c.shell.History.Add(name, target.histories[name])
 		}
+
+		// Regenerate the commands, outputs and everything related.
+		target.resetPreRun()
 	}
 }
 

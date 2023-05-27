@@ -185,6 +185,12 @@ func (m *Menu) Printf(msg string, args ...any) (n int, err error) {
 	return m.console.Printf(buf)
 }
 
+func (m *Menu) resetPreRun() {
+	m.resetCommands()                // Regenerate the commands for the menu.
+	m.console.ensureNoRootRunner()   // Avoid printing any help when the command line is empty
+	m.console.hideFilteredCommands() // Hide commands that are not available
+}
+
 func (m *Menu) resetCmdOutput() {
 	buf := strings.TrimSpace(m.out.String())
 
