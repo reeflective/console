@@ -72,7 +72,7 @@ func splitArgs(line []rune) (args []string, prefix string) {
 	// Split the line as shellwords, return them if all went fine.
 	args, remain, err := split(string(line), false)
 	if err == nil {
-		return
+		return args, remain
 	}
 
 	// If we had an error, it's because we have an unterminated quote/escape sequence.

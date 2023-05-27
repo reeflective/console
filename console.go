@@ -18,6 +18,7 @@ type Console struct {
 	menus       map[string]*Menu // Different command trees, prompt engines, etc.
 	filters     []string         // Hide commands based on their attributes and current context.
 	isExecuting bool             // Used by log functions, which need to adapt behavior (print the prompt, , etc)
+	printed     bool             // Used to adjust asynchronous messages too.
 	mutex       *sync.RWMutex    // Concurrency management.
 
 	// Execution
@@ -140,6 +141,10 @@ func (c *Console) SwitchMenu(menu string) {
 	// Only switch if the target menu was found.
 	if target, found := c.menus[menu]; found && target != nil {
 		current := c.activeMenu()
+		if current != nil && target == current {
+			return
+		}
+
 		if current != nil {
 			current.active = false
 		}
@@ -166,6 +171,19 @@ func (c *Console) TransientPrintf(msg string, args ...any) (n int, err error) {
 	if c.isExecuting {
 		return fmt.Printf(msg, args...)
 	}
+
+	// If the last message we printed asynchronously
+	// immediately precedes this new message, move up
+	// another row, so we don't waste too much space.
+	if c.printed && c.NewlineAfter {
+		fmt.Print("\x1b[1A")
+	}
+
+	if c.NewlineAfter {
+		msg += "\n"
+	}
+
+	c.printed = true
 
 	return c.shell.PrintTransientf(msg, args...)
 }
