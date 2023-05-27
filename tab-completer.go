@@ -2,10 +2,14 @@ package console
 
 import (
 	"errors"
+	"fmt"
+	"os"
 	"strings"
 
 	"github.com/reeflective/readline"
 	"github.com/rsteube/carapace"
+	"github.com/rsteube/carapace/pkg/style"
+	"github.com/rsteube/carapace/pkg/xdg"
 )
 
 func (c *Console) complete(line []rune, pos int) readline.Completions {
@@ -134,4 +138,27 @@ func (c *Console) justifyCommandComps(comps readline.Completions) readline.Compl
 	}
 
 	return comps
+}
+
+func (c *Console) defaultStyleConfig() {
+	// If carapace config file is found, just return.
+	if dir, err := xdg.UserConfigDir(); err == nil {
+		_, err := os.Stat(fmt.Sprintf("%v/carapace/styles.json", dir))
+		if err == nil {
+			println("HERE")
+			return
+		}
+	}
+
+	// Overwrite all default styles for color
+	for i := 1; i < 13; i++ {
+		styleStr := fmt.Sprintf("carapace.Highlight%d", i)
+		style.Set(styleStr, "bright-white")
+	}
+
+	// Overwrite all default styles for flags
+	style.Set("carapace.FlagArg", "bright-white")
+	style.Set("carapace.FlagMultiArg", "bright-white")
+	style.Set("carapace.FlagNoArg", "bright-white")
+	style.Set("carapace.FlagOptArg", "bright-white")
 }

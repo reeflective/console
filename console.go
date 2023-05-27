@@ -83,8 +83,10 @@ func New(app string) *Console {
 
 	// Command completion, syntax highlighting, multiline callbacks, etc.
 	console.shell.AcceptMultiline = console.acceptMultiline
-	console.shell.Completer = console.complete
 	console.shell.SyntaxHighlighter = console.highlightSyntax
+
+	console.shell.Completer = console.complete
+	console.defaultStyleConfig()
 
 	return console
 }
