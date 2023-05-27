@@ -21,7 +21,7 @@ func main() {
 
 	// By default the shell as created a single menu and
 	// made it current, so you can access it and set it up.
-	menu := app.CurrentMenu()
+	menu := app.ActiveMenu()
 
 	// All menus currently each have a distinct, in-memory history source.
 	// Replace the main (current) menu's history with one writing to our
@@ -56,5 +56,5 @@ func main() {
 
 	// Everything is ready for a tour.
 	// Run the console and take a look around.
-	app.Run()
+	app.Start()
 }

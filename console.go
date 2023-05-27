@@ -113,9 +113,8 @@ func (c *Console) NewMenu(name string) *Menu {
 	return menu
 }
 
-// CurrentMenu - Return the current console menu. Because the Context
-// is just a reference, any modifications to this menu will persist.
-func (c *Console) CurrentMenu() *Menu {
+// ActiveMenu - Return the currently used console menu.
+func (c *Console) ActiveMenu() *Menu {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 

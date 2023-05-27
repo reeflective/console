@@ -44,7 +44,7 @@ func makeClientCommands(app *console.Console) console.Commands {
 			Use:   "ticker",
 			Short: "Triggers some asynchronous notifications to the shell, demonstrating async logging",
 			Run: func(cmd *cobra.Command, args []string) {
-				menu := app.CurrentMenu()
+				menu := app.ActiveMenu()
 				timer := time.Tick(2 * time.Second)
 				messages := []string{
 					"Info:    notification 1",
@@ -115,7 +115,7 @@ func makeClientCommands(app *console.Console) console.Commands {
 			Short:              "A command which prints a few status messages, but can be interrupted with CtrlC",
 			DisableFlagParsing: true,
 			RunE: func(cmd *cobra.Command, args []string) error {
-				menu := app.CurrentMenu()
+				menu := app.ActiveMenu()
 				timer := time.Tick(2 * time.Second)
 				messages := []string{
 					"Info:    notification 1",

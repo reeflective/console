@@ -12,10 +12,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Run - Start the console application (readline loop). Blocking.
+// Start - Start the console application (readline loop). Blocking.
 // The error returned will always be an error that the console
 // application does not understand or cannot handle.
-func (c *Console) Run() (err error) {
+func (c *Console) Start() (err error) {
 	// Also, if the user specified custom histories to the
 	// current menu, they are not bound to the shell yet.
 	c.loadActiveHistories()
