@@ -92,8 +92,9 @@ func (m *Menu) AddHistorySource(name string, source readline.History) {
 	m.histories[name] = source
 }
 
-// AddHistorySourceFile adds a new source of history populated from
-// and writing to the specified "filepath" parameter.
+// AddHistorySourceFile adds a new source of history populated from and writing
+// to the specified "filepath" parameter. On the first call to this function,
+// the default in-memory history source is removed.
 func (m *Menu) AddHistorySourceFile(name string, filepath string) {
 	m.mutex.RLock()
 	defer m.mutex.RUnlock()
