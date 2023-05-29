@@ -67,9 +67,15 @@ func (c *Console) Start() (err error) {
 
 // RunCommand is a convenience function to run a command in a given menu.
 // After running, the menu commands are reset, and the prompts reloaded.
-func (m *Menu) RunCommand(args []string) (err error) {
-	if len(args) == 0 {
+func (m *Menu) RunCommand(line string) (err error) {
+	if len(line) == 0 {
 		return
+	}
+
+	// Split the line into shell words.
+	args, err := shellquote.Split(line)
+	if err != nil {
+		return fmt.Errorf("line error: %w", err)
 	}
 
 	// The menu used and reset is the active menu.
