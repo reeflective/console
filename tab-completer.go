@@ -65,7 +65,7 @@ func (c *Console) complete(line []rune, pos int) readline.Completions {
 
 func splitArgs(line []rune) (args []string, prefix string) {
 	// Split the line as shellwords, return them if all went fine.
-	args, remain, err := splitCompWords(string(line), false)
+	args, remain, err := splitCompWords(string(line))
 	if err == nil {
 		return args, remain
 	}
@@ -105,6 +105,7 @@ func sanitizeArgs(rbuffer []rune, args []string) (sanitized []string) {
 
 	// The last word should not comprise newlines.
 	last = strings.ReplaceAll(last, "\n", " ")
+	last = strings.ReplaceAll(last, "\\ ", " ")
 	sanitized = append(sanitized, last)
 
 	return sanitized
@@ -164,19 +165,19 @@ func (c *Console) defaultStyleConfig() {
 
 // split has been copied from go-shellquote and slightly modified so as to also
 // return the remainder when the parsing failed because of an unterminated quote.
-func splitCompWords(input string, hl bool) (words []string, remainder string, err error) {
+func splitCompWords(input string) (words []string, remainder string, err error) {
 	var buf bytes.Buffer
 	words = make([]string, 0)
 
 	for len(input) > 0 {
 		// skip any splitChars at the start
-		c, l := utf8.DecodeRuneInString(input)
-		if strings.ContainsRune(splitChars, c) {
-			input = input[l:]
+		char, read := utf8.DecodeRuneInString(input)
+		if strings.ContainsRune(splitChars, char) {
+			input = input[read:]
 			continue
-		} else if c == escapeChar {
+		} else if char == escapeChar {
 			// Look ahead for escaped newline so we can skip over it
-			next := input[l:]
+			next := input[read:]
 			if len(next) == 0 {
 				remainder = string(escapeChar)
 				err = errUnterminatedEscape
@@ -190,42 +191,46 @@ func splitCompWords(input string, hl bool) (words []string, remainder string, er
 		}
 
 		var word string
-		word, input, err = splitCompWord(input, &buf, hl)
+		word, input, err = splitCompWord(input, &buf)
+
 		if err != nil {
 			remainder = input
 			return
 		}
+
 		words = append(words, word)
 	}
-	return
+
+	return words, remainder, nil
 }
 
 // splitWord has been modified to return the remainder of the input (the part that has not been
 // added to the buffer) even when an error is returned.
-func splitCompWord(input string, buf *bytes.Buffer, hl bool) (word string, remainder string, err error) {
+func splitCompWord(input string, buf *bytes.Buffer) (word string, remainder string, err error) {
 	buf.Reset()
 
 raw:
 	{
 		cur := input
 		for len(cur) > 0 {
-			c, l := utf8.DecodeRuneInString(cur)
-			cur = cur[l:]
-			if c == singleChar {
-				buf.WriteString(input[0 : len(input)-len(cur)-l])
+			char, read := utf8.DecodeRuneInString(cur)
+			cur = cur[read:]
+			switch {
+			case char == singleChar:
+				buf.WriteString(input[0 : len(input)-len(cur)-read])
 				input = cur
 				goto single
-			} else if c == doubleChar {
-				buf.WriteString(input[0 : len(input)-len(cur)-l])
+			case char == doubleChar:
+				buf.WriteString(input[0 : len(input)-len(cur)-read])
 				input = cur
 				goto double
-			} else if c == escapeChar {
-				buf.WriteString(input[0 : len(input)-len(cur)-l])
-				buf.WriteRune(c)
+			case char == escapeChar:
+				buf.WriteString(input[0 : len(input)-len(cur)-read])
+				buf.WriteRune(char)
 				input = cur
 				goto escape
-			} else if strings.ContainsRune(splitChars, c) {
-				buf.WriteString(input[0 : len(input)-len(cur)-l])
+			case strings.ContainsRune(splitChars, char):
+				buf.WriteString(input[0 : len(input)-len(cur)-read])
 				return buf.String(), cur, nil
 			}
 		}
@@ -243,13 +248,12 @@ escape:
 			return "", input, errUnterminatedEscape
 		}
 		c, l := utf8.DecodeRuneInString(input)
-		if c == '\n' {
-			// a backslash-escaped newline is elided from the output entirely
-		} else {
+		if c != '\n' {
 			buf.WriteString(input[:l])
 		}
 		input = input[l:]
 	}
+
 	goto raw
 
 single:
@@ -267,22 +271,22 @@ double:
 	{
 		cur := input
 		for len(cur) > 0 {
-			c, l := utf8.DecodeRuneInString(cur)
-			cur = cur[l:]
-			if c == doubleChar {
-				buf.WriteString(input[0 : len(input)-len(cur)-l])
+			c, read := utf8.DecodeRuneInString(cur)
+			cur = cur[read:]
+			switch c {
+			case doubleChar:
+				buf.WriteString(input[0 : len(input)-len(cur)-read])
 				input = cur
 				goto raw
-			} else if c == escapeChar {
+			case escapeChar:
 				// bash only supports certain escapes in double-quoted strings
-				c2, l2 := utf8.DecodeRuneInString(cur)
+				char2, l2 := utf8.DecodeRuneInString(cur)
 				cur = cur[l2:]
-				if strings.ContainsRune(doubleEscapeChars, c2) {
-					buf.WriteString(input[0 : len(input)-len(cur)-l-l2])
-					if c2 == '\n' {
-						// newline is special, skip the backslash entirely
-					} else {
-						buf.WriteRune(c2)
+				if strings.ContainsRune(doubleEscapeChars, char2) {
+					buf.WriteString(input[0 : len(input)-len(cur)-read-l2])
+
+					if char2 != '\n' {
+						buf.WriteRune(char2)
 					}
 					input = cur
 				}
