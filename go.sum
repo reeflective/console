@@ -39,6 +39,8 @@ github.com/reeflective/readline v0.1.0-beta.0.20230521195017-0ef8513aa6c4 h1:bal
 github.com/reeflective/readline v0.1.0-beta.0.20230521195017-0ef8513aa6c4/go.mod h1:5JgnHb/ZCvp/6RUA59HEansPBxWTkyBO4hJ5LL9Fp1Y=
 github.com/reeflective/readline v0.1.0-beta.0.20230523012110-bad9da7f3303 h1:FEODc2xkY6TN+uZa49MX8ql6Jz5A5fT9WkhBHVikEKU=
 github.com/reeflective/readline v0.1.0-beta.0.20230523012110-bad9da7f3303/go.mod h1:5JgnHb/ZCvp/6RUA59HEansPBxWTkyBO4hJ5LL9Fp1Y=
+github.com/reeflective/readline v1.0.0 h1:K104UvRHWAAtoer7WM9QvKn8xxUO6gWh0j1IWewtZmE=
+github.com/reeflective/readline v1.0.0/go.mod h1:5JgnHb/ZCvp/6RUA59HEansPBxWTkyBO4hJ5LL9Fp1Y=
 github.com/rivo/uniseg v0.4.4 h1:8TfxU8dW6PdqD27gjM8MVNuicgxIjxpm4K7x4jp8sis=
 github.com/rivo/uniseg v0.4.4/go.mod h1:FN3SvrM+Zdj16jyLfmOkMNblXMcoc8DfTHruCPUcx88=
 github.com/rogpeppe/go-internal v1.6.1/go.mod h1:xXDCJY+GAPziupqXw64V24skbSoqbTEfhy4qGm1nDQc=
