@@ -92,6 +92,88 @@ func (m *Menu) RunCommand(line string) (err error) {
 	return
 }
 
+// execute - The user has entered a command input line, the arguments have been processed:
+// we synchronize a few elements of the console, then pass these arguments to the command
+// parser for execution and error handling.
+// Our main object of interest is the menu's root command, and we explicitly use this reference
+// instead of the menu itself, because if RunCommand() is asynchronously triggered while another
+// command is running, the menu's root command will be overwritten.
+func (c *Console) execute(menu *Menu, args []string, async bool) (err error) {
+	if !async {
+		c.mutex.RLock()
+		c.isExecuting = true
+		c.mutex.RUnlock()
+	}
+
+	defer func() {
+		c.mutex.RLock()
+		c.isExecuting = false
+		c.mutex.RUnlock()
+	}()
+
+	// Our root command of interest, used throughout this function.
+	cmd := menu.Command
+
+	// Find the target command: if this command is filtered, don't run it.
+	target, _, _ := cmd.Find(args)
+	if c.isFiltered(target) {
+		return
+	}
+
+	// Console-wide pre-run hooks, cannot.
+	c.runPreRunHooks()
+
+	// Assign those arguments to our parser.
+	cmd.SetArgs(args)
+
+	if c.NewlineBefore {
+		fmt.Println()
+	}
+
+	// The command execution should happen in a separate goroutine,
+	// and should notify the main goroutine when it is done.
+	cmdCtx, cancel := context.WithCancelCause(context.Background())
+
+	cmd.SetContext(cmdCtx)
+
+	// Start monitoring keyboard and OS signals.
+	sigchan := c.monitorSignals()
+
+	// And start the command execution.
+	go c.executeCommand(cmd, cancel)
+
+	// Wait for the command to finish, or for an OS signal to be caught.
+	select {
+	case <-cmdCtx.Done():
+		err = cmdCtx.Err()
+	case signal := <-sigchan:
+		cancel(errors.New(signal.String()))
+		menu.handleInterrupt(errors.New(signal.String()))
+	}
+
+	if c.NewlineAfter {
+		fmt.Println()
+	}
+
+	return err
+}
+
+// Run the command in a separate goroutine, and cancel the context when done.
+func (c *Console) executeCommand(cmd *cobra.Command, cancel context.CancelCauseFunc) {
+	if err := cmd.Execute(); err != nil {
+		cancel(err)
+		return
+	}
+
+	// And the post-run hooks in the same goroutine,
+	// because they should not be skipped even if
+	// the command is backgrounded by the user.
+	c.runPostRunHooks()
+
+	// Command successfully executed, cancel the context.
+	cancel(nil)
+}
+
 // Generally, an empty command entered should just print a new prompt,
 // unlike for classic CLI usage when the program will print its usage string.
 // We simply remove any RunE from the root command, so that nothing is
@@ -138,79 +220,6 @@ func (c *Console) runPreRunHooks() {
 func (c *Console) runPostRunHooks() {
 	for _, hook := range c.PostCmdRunHooks {
 		hook()
-	}
-}
-
-// execute - The user has entered a command input line, the arguments
-// have been processed: we synchronize a few elements of the console,
-// then pass these arguments to the command parser for execution and error handling.
-func (c *Console) execute(menu *Menu, args []string, async bool) {
-	// Find the target command: if this command is filtered, don't run it,
-	// nor any pre-run hooks. We don't care about any error here: we just
-	// want to know if the command is hidden.
-	target, _, _ := menu.Find(args)
-	if c.isFiltered(target) {
-		return
-	}
-
-	c.runPreRunHooks()
-
-	// Asynchronous messages do not mess with the prompt from now on,
-	// until end of execution. Once we are done executing the command,
-	// they can again.
-	if !async {
-		c.mutex.RLock()
-		c.isExecuting = true
-		c.mutex.RUnlock()
-	}
-
-	defer func() {
-		c.mutex.RLock()
-		c.isExecuting = false
-		c.mutex.RUnlock()
-	}()
-
-	// Assign those arguments to our parser
-	menu.SetArgs(args)
-
-	if c.NewlineBefore {
-		fmt.Println()
-	}
-
-	// The command execution should happen in a separate goroutine,
-	// and should notify the main goroutine when it is done.
-	cmdCtx, cancel := context.WithCancel(context.Background())
-
-	sigchan := c.monitorSignals()
-
-	go func() {
-		// Run the main command runner.
-		// We don't check the returned error for several reasons:
-		// - The error is generally printed by the command itself.
-		// - The error can be the command context being cancelled,
-		//   in which case we handle it in the main goroutine.
-		menu.ExecuteContext(cmdCtx)
-
-		// And the post-run hooks in the same goroutine,
-		// because they should not be skipped even if
-		// the command is backgrounded by the user.
-		c.runPostRunHooks()
-
-		// Notify the main goroutine that the command is done.
-		cancel()
-	}()
-
-	// Wait for the command to finish, or for an OS signal to be caugth.
-	// If the user presses Ctrl+C, we cancel the command context.
-	select {
-	case <-cmdCtx.Done():
-	case signal := <-sigchan:
-		cancel()
-		menu.handleInterrupt(errors.New(signal.String()))
-	}
-
-	if c.NewlineAfter {
-		fmt.Println()
 	}
 }
 
