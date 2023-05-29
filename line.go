@@ -207,7 +207,7 @@ double:
 				}
 				input = cur
 				goto raw
-			} else if c == escapeChar {
+			} else if c == escapeChar && !hl {
 				// bash only supports certain escapes in double-quoted strings
 				c2, l2 := utf8.DecodeRuneInString(cur)
 				cur = cur[l2:]

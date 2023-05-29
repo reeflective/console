@@ -18,6 +18,7 @@ type Console struct {
 	menus       map[string]*Menu // Different command trees, prompt engines, etc.
 	filters     []string         // Hide commands based on their attributes and current context.
 	isExecuting bool             // Used by log functions, which need to adapt behavior (print the prompt, , etc)
+	printed     bool             // Used to adjust asynchronous messages too.
 	mutex       *sync.RWMutex    // Concurrency management.
 
 	// Execution
@@ -35,7 +36,7 @@ type Console struct {
 	// PreReadlineHooks - All the functions in this list will be executed,
 	// in their respective orders, before the console starts reading
 	// any user input (ie, before redrawing the prompt).
-	PreReadlineHooks []func()
+	PreReadlineHooks []func() error
 
 	// PreCmdRunLineHooks - Same as PreCmdRunHooks, but will have an effect on the
 	// input line being ultimately provided to the command parser. This might
@@ -47,12 +48,12 @@ type Console struct {
 	// the target command, the console will execute every function in this list.
 	// These hooks are distinct from the cobra.PreRun() or OnInitialize hooks,
 	// and might be used in combination with them.
-	PreCmdRunHooks []func()
+	PreCmdRunHooks []func() error
 
 	// PostCmdRunHooks are run after the target cobra command has been executed.
 	// These hooks are distinct from the cobra.PreRun() or OnFinalize hooks,
 	// and might be used in combination with them.
-	PostCmdRunHooks []func()
+	PostCmdRunHooks []func() error
 }
 
 // New - Instantiates a new console application, with sane but powerful defaults.
@@ -82,8 +83,10 @@ func New(app string) *Console {
 
 	// Command completion, syntax highlighting, multiline callbacks, etc.
 	console.shell.AcceptMultiline = console.acceptMultiline
-	console.shell.Completer = console.complete
 	console.shell.SyntaxHighlighter = console.highlightSyntax
+
+	console.shell.Completer = console.complete
+	console.defaultStyleConfig()
 
 	return console
 }
@@ -112,9 +115,8 @@ func (c *Console) NewMenu(name string) *Menu {
 	return menu
 }
 
-// CurrentMenu - Return the current console menu. Because the Context
-// is just a reference, any modifications to this menu will persist.
-func (c *Console) CurrentMenu() *Menu {
+// ActiveMenu - Return the currently used console menu.
+func (c *Console) ActiveMenu() *Menu {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
@@ -140,6 +142,10 @@ func (c *Console) SwitchMenu(menu string) {
 	// Only switch if the target menu was found.
 	if target, found := c.menus[menu]; found && target != nil {
 		current := c.activeMenu()
+		if current != nil && target == current {
+			return
+		}
+
 		if current != nil {
 			current.active = false
 		}
@@ -153,6 +159,9 @@ func (c *Console) SwitchMenu(menu string) {
 		for _, name := range target.historyNames {
 			c.shell.History.Add(name, target.histories[name])
 		}
+
+		// Regenerate the commands, outputs and everything related.
+		target.resetPreRun()
 	}
 }
 
@@ -166,6 +175,19 @@ func (c *Console) TransientPrintf(msg string, args ...any) (n int, err error) {
 	if c.isExecuting {
 		return fmt.Printf(msg, args...)
 	}
+
+	// If the last message we printed asynchronously
+	// immediately precedes this new message, move up
+	// another row, so we don't waste too much space.
+	if c.printed && c.NewlineAfter {
+		fmt.Print("\x1b[1A")
+	}
+
+	if c.NewlineAfter {
+		msg += "\n"
+	}
+
+	c.printed = true
 
 	return c.shell.PrintTransientf(msg, args...)
 }
@@ -203,14 +225,6 @@ func (c *Console) setupShell() {
 	// are quite neceessary for efficient console use.
 	cfg.Set("skip-completed-text", true)
 	cfg.Set("menu-complete-display-prefix", true)
-}
-
-func (c *Console) reloadConfig() {
-	c.mutex.RLock()
-	defer c.mutex.RUnlock()
-
-	menu := c.activeMenu()
-	menu.prompt.bind(c.shell)
 }
 
 func (c *Console) activeMenu() *Menu {

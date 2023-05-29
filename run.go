@@ -12,12 +12,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Run - Start the console application (readline loop). Blocking.
+// Start - Start the console application (readline loop). Blocking.
 // The error returned will always be an error that the console
 // application does not understand or cannot handle.
-func (c *Console) Run() (err error) {
-	// Also, if the user specified custom histories to the
-	// current menu, they are not bound to the shell yet.
+func (c *Console) Start() error {
 	c.loadActiveHistories()
 
 	// Print the console logo
@@ -26,32 +24,45 @@ func (c *Console) Run() (err error) {
 	}
 
 	for {
-		// Current menu setup
-		menu := c.activeMenu() // We work with the active menu.
-		menu.resetCommands()   // Regenerate the commands for the menu.
-		menu.resetCmdOutput()  // Reset or adjust any buffered command output.
+		// Identical to printing it at the end of the loop, and
+		// leaves some space between the logo and the first prompt.
+		if c.NewlineAfter {
+			fmt.Println()
+		}
 
-		// Console-wide setup.
-		c.reloadConfig()         // Rebind the prompt helpers, and similar stuff.
-		c.runPreReadHooks()      // Run user-provided pre-loop hooks
-		c.ensureNoRootRunner()   // Avoid printing any help when the command line is empty
-		c.hideFilteredCommands() // Hide commands that are not available
+		// Always ensure we work with the active menu, with freshly
+		// generated commands, bound prompts and some other things.
+		menu := c.activeMenu()
+		menu.resetPreRun()
 
-		// Block and read user input. Provides completion, syntax, hints, etc.
-		// Various types of errors might arise from here. We handle them in a
-		// special function, where we can specify behavior for certain errors.
-		line, err := c.shell.Readline()
-		if err != nil {
-			menu.handleInterrupt(err)
+		c.printed = false
 
+		if err := c.runPreReadHooks(); err != nil {
+			fmt.Printf("Pre-read error: %s\n", err.Error())
 			continue
 		}
+
+		// Block and read user input.
+		line, err := c.shell.Readline()
+
+		if c.NewlineBefore {
+			fmt.Println()
+		}
+
+		if err != nil {
+			menu.handleInterrupt(err)
+			continue
+		}
+
+		// Any call to the SwitchMenu() while we were reading user
+		// input (through an interrupt handler) might have changed it,
+		// so we must be sure we use the good one.
+		menu = c.activeMenu()
 
 		// Split the line into shell words.
 		args, err := shellquote.Split(line)
 		if err != nil {
 			fmt.Printf("Line error: %s\n", err.Error())
-
 			continue
 		}
 
@@ -61,11 +72,122 @@ func (c *Console) Run() (err error) {
 
 		// Run user-provided pre-run line hooks,
 		// which may modify the input line args.
-		args = c.runLineHooks(args)
+		args, err = c.runLineHooks(args)
+		if err != nil {
+			fmt.Printf("Line error: %s\n", err.Error())
+			continue
+		}
 
-		// Run all hooks and the command itself
-		c.execute(args)
+		// Run all pre-run hooks and the command itself
+		// Don't check the error: if its a cobra error,
+		// the library user is responsible for setting
+		// the cobra behavior.
+		// If it's an interrupt, we take care of it.
+		c.execute(menu, args, false)
 	}
+}
+
+// RunCommand is a convenience function to run a command in a given menu.
+// After running, the menu commands are reset, and the prompts reloaded.
+func (m *Menu) RunCommand(line string) (err error) {
+	if len(line) == 0 {
+		return
+	}
+
+	// Split the line into shell words.
+	args, err := shellquote.Split(line)
+	if err != nil {
+		return fmt.Errorf("line error: %w", err)
+	}
+
+	// The menu used and reset is the active menu.
+	// Prepare its output buffer for the command.
+	m.resetPreRun()
+
+	// Run the command and associated helpers.
+	m.console.execute(m, args, !m.console.isExecuting)
+
+	return
+}
+
+// execute - The user has entered a command input line, the arguments have been processed:
+// we synchronize a few elements of the console, then pass these arguments to the command
+// parser for execution and error handling.
+// Our main object of interest is the menu's root command, and we explicitly use this reference
+// instead of the menu itself, because if RunCommand() is asynchronously triggered while another
+// command is running, the menu's root command will be overwritten.
+func (c *Console) execute(menu *Menu, args []string, async bool) (err error) {
+	if !async {
+		c.mutex.RLock()
+		c.isExecuting = true
+		c.mutex.RUnlock()
+	}
+
+	defer func() {
+		c.mutex.RLock()
+		c.isExecuting = false
+		c.mutex.RUnlock()
+	}()
+
+	// Our root command of interest, used throughout this function.
+	cmd := menu.Command
+
+	// Find the target command: if this command is filtered, don't run it.
+	target, _, _ := cmd.Find(args)
+	if c.isFiltered(target) {
+		return
+	}
+
+	// Console-wide pre-run hooks, cannot.
+	if err = c.runPreRunHooks(); err != nil {
+		fmt.Printf("Pre-run error: %s\n", err.Error())
+		return
+	}
+
+	// Assign those arguments to our parser.
+	cmd.SetArgs(args)
+
+	// The command execution should happen in a separate goroutine,
+	// and should notify the main goroutine when it is done.
+	ctx, cancel := context.WithCancelCause(context.Background())
+
+	cmd.SetContext(ctx)
+
+	// Start monitoring keyboard and OS signals.
+	sigchan := c.monitorSignals()
+
+	// And start the command execution.
+	go c.executeCommand(cmd, cancel)
+
+	// Wait for the command to finish, or for an OS signal to be caught.
+	select {
+	case <-ctx.Done():
+		err = ctx.Err()
+	case signal := <-sigchan:
+		cancel(errors.New(signal.String()))
+		menu.handleInterrupt(errors.New(signal.String()))
+	}
+
+	return err
+}
+
+// Run the command in a separate goroutine, and cancel the context when done.
+func (c *Console) executeCommand(cmd *cobra.Command, cancel context.CancelCauseFunc) {
+	if err := cmd.Execute(); err != nil {
+		cancel(err)
+		return
+	}
+
+	// And the post-run hooks in the same goroutine,
+	// because they should not be skipped even if
+	// the command is backgrounded by the user.
+	if err := c.runPostRunHooks(); err != nil {
+		cancel(err)
+		return
+	}
+
+	// Command successfully executed, cancel the context.
+	cancel(nil)
 }
 
 // Generally, an empty command entered should just print a new prompt,
@@ -88,102 +210,49 @@ func (c *Console) loadActiveHistories() {
 	}
 }
 
-func (c *Console) runPreReadHooks() {
+func (c *Console) runPreReadHooks() error {
 	for _, hook := range c.PreReadlineHooks {
-		hook()
+		if err := hook(); err != nil {
+			return err
+		}
 	}
+
+	return nil
 }
 
-func (c *Console) runLineHooks(args []string) []string {
+func (c *Console) runLineHooks(args []string) ([]string, error) {
 	processed := args
 
 	// Or modify them again
 	for _, hook := range c.PreCmdRunLineHooks {
-		processed, _ = hook(processed)
+		var err error
+
+		if processed, err = hook(processed); err != nil {
+			return nil, err
+		}
 	}
 
-	return processed
+	return processed, nil
 }
 
-func (c *Console) runPreRunHooks() {
+func (c *Console) runPreRunHooks() error {
 	for _, hook := range c.PreCmdRunHooks {
-		hook()
+		if err := hook(); err != nil {
+			return err
+		}
 	}
+
+	return nil
 }
 
-func (c *Console) runPostRunHooks() {
+func (c *Console) runPostRunHooks() error {
 	for _, hook := range c.PostCmdRunHooks {
-		hook()
-	}
-}
-
-// execute - The user has entered a command input line, the arguments
-// have been processed: we synchronize a few elements of the console,
-// then pass these arguments to the command parser for execution and error handling.
-func (c *Console) execute(args []string) {
-	menu := c.activeMenu()
-
-	// Find the target command: if this command is filtered, don't run it,
-	// nor any pre-run hooks. We don't care about any error here: we just
-	// want to know if the command is hidden.
-	target, _, _ := menu.Find(args)
-	if c.isFiltered(target) {
-		return
+		if err := hook(); err != nil {
+			return err
+		}
 	}
 
-	c.runPreRunHooks()
-
-	// Asynchronous messages do not mess with the prompt from now on,
-	// until end of execution. Once we are done executing the command,
-	// they can again.
-	c.mutex.RLock()
-	c.isExecuting = true
-	c.mutex.RUnlock()
-
-	defer func() {
-		c.mutex.RLock()
-		c.isExecuting = false
-		c.mutex.RUnlock()
-	}()
-
-	// Assign those arguments to our parser
-	menu.SetArgs(args)
-
-	if c.NewlineBefore {
-		fmt.Println()
-	}
-
-	// The command execution should happen in a separate goroutine,
-	// and should notify the main goroutine when it is done.
-	cmdCtx, cancel := context.WithCancel(context.Background())
-
-	sigchan := c.monitorSignals()
-
-	go func() {
-		// Run the main command runner.
-		// We don't check the returned error for several reasons:
-		// - The error is generally printed by the command itself.
-		// - The error can be the command context being cancelled,
-		//   in which case we handle it in the main goroutine.
-		menu.ExecuteContext(cmdCtx)
-
-		// And the post-run hooks in the same goroutine,
-		// because they should not be skipped even if
-		// the command is backgrounded by the user.
-		c.runPostRunHooks()
-
-		// Notify the main goroutine that the command is done.
-		cancel()
-	}()
-
-	// Wait for the command to finish, or for an OS signal to be caugth.
-	// If the user presses Ctrl+C, we cancel the command context.
-	select {
-	case <-cmdCtx.Done():
-	case signal := <-sigchan:
-		cancel()
-		menu.handleInterrupt(errors.New(signal.String()))
-	}
+	return nil
 }
 
 // monitorSignals - Monitor the signals that can be sent to the process

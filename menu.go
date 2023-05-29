@@ -92,8 +92,9 @@ func (m *Menu) AddHistorySource(name string, source readline.History) {
 	m.histories[name] = source
 }
 
-// AddHistorySourceFile adds a new source of history populated from
-// and writing to the specified "filepath" parameter.
+// AddHistorySourceFile adds a new source of history populated from and writing
+// to the specified "filepath" parameter. On the first call to this function,
+// the default in-memory history source is removed.
 func (m *Menu) AddHistorySourceFile(name string, filepath string) {
 	m.mutex.RLock()
 	defer m.mutex.RUnlock()
@@ -183,6 +184,23 @@ func (m *Menu) Printf(msg string, args ...any) (n int, err error) {
 	m.out.Reset()
 
 	return m.console.Printf(buf)
+}
+
+// resetPreRun is called before each new read line loop and before arbitrary RunCommand() calls.
+// This function is responsible for resetting the menu state to a clean state, regenerating the
+// menu commands, and ensuring that the correct prompt is bound to the shell.
+func (m *Menu) resetPreRun() {
+	m.console.mutex.RLock()
+	defer m.console.mutex.RUnlock()
+
+	// Menu setup
+	m.resetCommands()              // Regenerate the commands for the menu.
+	m.resetCmdOutput()             // Reset or adjust any buffered command output.
+	m.prompt.bind(m.console.shell) // Prompt binding
+
+	// Console-wide setup.
+	m.console.ensureNoRootRunner()   // Avoid printing any help when the command line is empty
+	m.console.hideFilteredCommands() // Hide commands that are not available
 }
 
 func (m *Menu) resetCmdOutput() {

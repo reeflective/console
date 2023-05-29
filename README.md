@@ -78,13 +78,14 @@ will give you a taste of the behavior and supported features. The following docu
 is also available in the [wiki](https://github.com/reeflective/console/wiki):
 
 * [Getting started](https://github.com/reeflective/console/wiki/Getting-Started) 
-* [Shell readline](https://github.com/reeflective/console/wiki/Readline-Shell)
 * [Menus](https://github.com/reeflective/console/wiki/Menus)
 * [Prompts](https://github.com/reeflective/console/wiki/Prompts)
 * [Binding commands](https://github.com/reeflective/console/wiki/Binding-Commands)
 * [Interrupt handlers](https://github.com/reeflective/console/wiki/Interrupt-Handlers)
 * [History Sources](https://github.com/reeflective/console/wiki/History-Sources)
 * [Logging](https://github.com/reeflective/console/wiki/Logging)
+* [Readline shell](https://github.com/reeflective/readline/wiki)
+* [Other utilities](https://github.com/reeflective/console/wiki/Other-Utililites)
 
 
 ## Showcase

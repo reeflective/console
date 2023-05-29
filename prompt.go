@@ -60,10 +60,6 @@ func (p *Prompt) bind(shell *readline.Shell) {
 
 		prompt := p.Primary()
 
-		if p.console.NewlineAfter && !strings.HasPrefix(prompt, "\n") {
-			return "\n" + prompt
-		}
-
 		return prompt
 	}
 

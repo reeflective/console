@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io"
 
 	"github.com/reeflective/console"
@@ -14,14 +15,31 @@ func main() {
 	// Instantiate a new app, with a single, default menu.
 	// All defaults are set, and nothing is needed to make it work.
 	app := console.New("example")
+
+	// Global Setup ------------------------------------------------- //
 	app.NewlineBefore = true
 	app.NewlineAfter = true
+
+	app.SetPrintLogo(func(_ *console.Console) {
+		fmt.Print(`
+  _____            __ _           _   _              _____                      _      
+ |  __ \          / _| |         | | (_)            / ____|                    | |     
+ | |__) |___  ___| |_| | ___  ___| |_ ___   _____  | |     ___  _ __  ___  ___ | | ___ 
+ |  _  // _ \/ _ \  _| |/ _ \/ __| __| \ \ / / _ \ | |    / _ \| '_ \/ __|/ _ \| |/ _ \
+ | | \ \  __/  __/ | | |  __/ (__| |_| |\ V /  __/ | |___| (_) | | | \__ \ (_) | |  __/
+ |_|  \_\___|\___|_| |_|\___|\___|\__|_| \_/ \___|  \_____\___/|_| |_|___/\___/|_|\___|
+
+`)
+	})
 
 	// Main Menu Setup ---------------------------------------------- //
 
 	// By default the shell as created a single menu and
 	// made it current, so you can access it and set it up.
-	menu := app.CurrentMenu()
+	menu := app.ActiveMenu()
+
+	// Set some custom prompt handlers for this menu.
+	setupPrompt(menu)
 
 	// All menus currently each have a distinct, in-memory history source.
 	// Replace the main (current) menu's history with one writing to our
@@ -35,7 +53,9 @@ func main() {
 	menu.AddInterrupt(io.EOF, exitCtrlD)
 
 	// Make a command yielder for our main menu.
-	menu.SetCommands(makeflagsCommands(app))
+	// menu.SetCommands(makeflagsCommands(app))
+	// Thanks ChatGPT for generating this for us!
+	menu.SetCommands(mainMenuCommands(app))
 
 	// Client Menu Setup -------------------------------------------- //
 
@@ -56,5 +76,5 @@ func main() {
 
 	// Everything is ready for a tour.
 	// Run the console and take a look around.
-	app.Run()
+	app.Start()
 }

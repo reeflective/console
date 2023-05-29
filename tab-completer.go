@@ -1,11 +1,17 @@
 package console
 
 import (
+	"bytes"
 	"errors"
+	"fmt"
+	"os"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/reeflective/readline"
 	"github.com/rsteube/carapace"
+	"github.com/rsteube/carapace/pkg/style"
+	"github.com/rsteube/carapace/pkg/xdg"
 )
 
 func (c *Console) complete(line []rune, pos int) readline.Completions {
@@ -15,18 +21,7 @@ func (c *Console) complete(line []rune, pos int) readline.Completions {
 	// what the right buffer (up to the cursor)
 	rbuffer := line[:pos]
 	args, prefix := splitArgs(rbuffer)
-
-	// Apply some sanitizing to the last argument.
-	args = sanitizeArgs(args)
-
-	// Like in classic system shells, we need to add an empty
-	// argument if the last character is a space: the args
-	// returned from the previous call don't account for it.
-	if strings.HasSuffix(string(rbuffer), " ") || len(args) == 0 {
-		args = append(args, "")
-	} else if strings.HasSuffix(string(rbuffer), "\n") {
-		args = append(args, "")
-	}
+	args = sanitizeArgs(rbuffer, args)
 
 	// Prepare arguments for the carapace completer
 	// (we currently need those two dummies for avoiding a panic).
@@ -70,9 +65,9 @@ func (c *Console) complete(line []rune, pos int) readline.Completions {
 
 func splitArgs(line []rune) (args []string, prefix string) {
 	// Split the line as shellwords, return them if all went fine.
-	args, remain, err := split(string(line), false)
+	args, remain, err := splitCompWords(string(line))
 	if err == nil {
-		return
+		return args, remain
 	}
 
 	// If we had an error, it's because we have an unterminated quote/escape sequence.
@@ -91,7 +86,16 @@ func splitArgs(line []rune) (args []string, prefix string) {
 	return
 }
 
-func sanitizeArgs(args []string) (sanitized []string) {
+func sanitizeArgs(rbuffer []rune, args []string) (sanitized []string) {
+	// Like in classic system shells, we need to add an empty
+	// argument if the last character is a space: the args
+	// returned from the previous call don't account for it.
+	if strings.HasSuffix(string(rbuffer), " ") || len(args) == 0 {
+		args = append(args, "")
+	} else if strings.HasSuffix(string(rbuffer), "\n") {
+		args = append(args, "")
+	}
+
 	if len(args) == 0 {
 		return
 	}
@@ -101,6 +105,7 @@ func sanitizeArgs(args []string) (sanitized []string) {
 
 	// The last word should not comprise newlines.
 	last = strings.ReplaceAll(last, "\n", " ")
+	last = strings.ReplaceAll(last, "\\ ", " ")
 	sanitized = append(sanitized, last)
 
 	return sanitized
@@ -134,4 +139,163 @@ func (c *Console) justifyCommandComps(comps readline.Completions) readline.Compl
 	}
 
 	return comps
+}
+
+func (c *Console) defaultStyleConfig() {
+	// If carapace config file is found, just return.
+	if dir, err := xdg.UserConfigDir(); err == nil {
+		_, err := os.Stat(fmt.Sprintf("%v/carapace/styles.json", dir))
+		if err == nil {
+			return
+		}
+	}
+
+	// Overwrite all default styles for color
+	for i := 1; i < 13; i++ {
+		styleStr := fmt.Sprintf("carapace.Highlight%d", i)
+		style.Set(styleStr, "bright-white")
+	}
+
+	// Overwrite all default styles for flags
+	style.Set("carapace.FlagArg", "bright-white")
+	style.Set("carapace.FlagMultiArg", "bright-white")
+	style.Set("carapace.FlagNoArg", "bright-white")
+	style.Set("carapace.FlagOptArg", "bright-white")
+}
+
+// split has been copied from go-shellquote and slightly modified so as to also
+// return the remainder when the parsing failed because of an unterminated quote.
+func splitCompWords(input string) (words []string, remainder string, err error) {
+	var buf bytes.Buffer
+	words = make([]string, 0)
+
+	for len(input) > 0 {
+		// skip any splitChars at the start
+		char, read := utf8.DecodeRuneInString(input)
+		if strings.ContainsRune(splitChars, char) {
+			input = input[read:]
+			continue
+		} else if char == escapeChar {
+			// Look ahead for escaped newline so we can skip over it
+			next := input[read:]
+			if len(next) == 0 {
+				remainder = string(escapeChar)
+				err = errUnterminatedEscape
+				return
+			}
+			c2, l2 := utf8.DecodeRuneInString(next)
+			if c2 == '\n' {
+				input = next[l2:]
+				continue
+			}
+		}
+
+		var word string
+		word, input, err = splitCompWord(input, &buf)
+
+		if err != nil {
+			remainder = input
+			return
+		}
+
+		words = append(words, word)
+	}
+
+	return words, remainder, nil
+}
+
+// splitWord has been modified to return the remainder of the input (the part that has not been
+// added to the buffer) even when an error is returned.
+func splitCompWord(input string, buf *bytes.Buffer) (word string, remainder string, err error) {
+	buf.Reset()
+
+raw:
+	{
+		cur := input
+		for len(cur) > 0 {
+			char, read := utf8.DecodeRuneInString(cur)
+			cur = cur[read:]
+			switch {
+			case char == singleChar:
+				buf.WriteString(input[0 : len(input)-len(cur)-read])
+				input = cur
+				goto single
+			case char == doubleChar:
+				buf.WriteString(input[0 : len(input)-len(cur)-read])
+				input = cur
+				goto double
+			case char == escapeChar:
+				buf.WriteString(input[0 : len(input)-len(cur)-read])
+				buf.WriteRune(char)
+				input = cur
+				goto escape
+			case strings.ContainsRune(splitChars, char):
+				buf.WriteString(input[0 : len(input)-len(cur)-read])
+				return buf.String(), cur, nil
+			}
+		}
+		if len(input) > 0 {
+			buf.WriteString(input)
+			input = ""
+		}
+		goto done
+	}
+
+escape:
+	{
+		if len(input) == 0 {
+			input = buf.String() + input
+			return "", input, errUnterminatedEscape
+		}
+		c, l := utf8.DecodeRuneInString(input)
+		if c != '\n' {
+			buf.WriteString(input[:l])
+		}
+		input = input[l:]
+	}
+
+	goto raw
+
+single:
+	{
+		i := strings.IndexRune(input, singleChar)
+		if i == -1 {
+			return "", input, errUnterminatedSingleQuote
+		}
+		buf.WriteString(input[0:i])
+		input = input[i+1:]
+		goto raw
+	}
+
+double:
+	{
+		cur := input
+		for len(cur) > 0 {
+			c, read := utf8.DecodeRuneInString(cur)
+			cur = cur[read:]
+			switch c {
+			case doubleChar:
+				buf.WriteString(input[0 : len(input)-len(cur)-read])
+				input = cur
+				goto raw
+			case escapeChar:
+				// bash only supports certain escapes in double-quoted strings
+				char2, l2 := utf8.DecodeRuneInString(cur)
+				cur = cur[l2:]
+				if strings.ContainsRune(doubleEscapeChars, char2) {
+					buf.WriteString(input[0 : len(input)-len(cur)-read-l2])
+
+					if char2 != '\n' {
+						buf.WriteRune(char2)
+					}
+					input = cur
+				}
+			}
+		}
+
+		return "", input, errUnterminatedDoubleQuote
+	}
+
+done:
+	return buf.String(), input, nil
 }

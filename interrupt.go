@@ -26,7 +26,26 @@ func (m *Menu) DelInterrupt(errs ...error) {
 }
 
 func (m *Menu) handleInterrupt(err error) {
-	if handler := m.interruptHandlers[err]; handler != nil {
-		handler(m.console)
+	m.console.mutex.RLock()
+	m.console.isExecuting = true
+	m.console.mutex.RUnlock()
+
+	defer func() {
+		m.console.mutex.RLock()
+		m.console.isExecuting = false
+		m.console.mutex.RUnlock()
+	}()
+
+	// TODO: this is not a very, very safe way of comparing
+	// errors. I'm not sure what to right now with this, but
+	// from my (unreliable) expectations and usage, I see and
+	// use things like errors.New(os.Interrupt.String()), so
+	// the string itself is likely to change in the future.
+	//
+	// But if people use their own third-party errors... nothing is guaranteed.
+	for herr, handler := range m.interruptHandlers {
+		if err.Error() == herr.Error() {
+			handler(m.console)
+		}
 	}
 }
