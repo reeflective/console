@@ -18,6 +18,7 @@ import (
 func mainMenuCommands(app *console.Console) console.Commands {
 	return func() *cobra.Command {
 		rootCmd := &cobra.Command{}
+		rootCmd.Short = shortUsage
 
 		rootCmd.AddGroup(
 			&cobra.Group{ID: "core", Title: "core"},
@@ -583,6 +584,8 @@ func mainMenuCommands(app *console.Console) console.Commands {
 
 		rootCmd.SetHelpCommandGroupID("core")
 		rootCmd.InitDefaultHelpCmd()
+		rootCmd.CompletionOptions.DisableDefaultCmd = true
+		rootCmd.DisableFlagsInUseLine = true
 
 		return rootCmd
 	}
