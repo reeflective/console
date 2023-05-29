@@ -16,8 +16,6 @@ import (
 // The error returned will always be an error that the console
 // application does not understand or cannot handle.
 func (c *Console) Start() (err error) {
-	// Also, if the user specified custom histories to the
-	// current menu, they are not bound to the shell yet.
 	c.loadActiveHistories()
 
 	// Print the console logo
@@ -26,25 +24,19 @@ func (c *Console) Start() (err error) {
 	}
 
 	for {
-		// Current menu setup
-		menu := c.activeMenu() // We work with the active menu.
-		menu.resetCommands()   // Regenerate the commands for the menu.
-		menu.resetCmdOutput()  // Reset or adjust any buffered command output.
+		// Always ensure we work with the active menu, with freshly
+		// generated commands, bound prompts and some other things.
+		menu := c.activeMenu()
+		menu.resetPreRun()
 
-		// Console-wide setup.
-		c.reloadConfig()         // Rebind the prompt helpers, and similar stuff.
-		c.runPreReadHooks()      // Run user-provided pre-loop hooks
-		c.ensureNoRootRunner()   // Avoid printing any help when the command line is empty
-		c.hideFilteredCommands() // Hide commands that are not available
-		c.printed = false        // All further async logs don't need "grouping adjustments"
+		c.printed = false
 
-		// Block and read user input. Provides completion, syntax, hints, etc.
-		// Various types of errors might arise from here. We handle them in a
-		// special function, where we can specify behavior for certain errors.
+		c.runPreReadHooks()
+
+		// Block and read user input.
 		line, err := c.shell.Readline()
 		if err != nil {
 			menu.handleInterrupt(err)
-
 			continue
 		}
 
@@ -56,8 +48,7 @@ func (c *Console) Start() (err error) {
 		// Split the line into shell words.
 		args, err := shellquote.Split(line)
 		if err != nil {
-			fmt.Printf("Line error: %s\n", err.Error())
-
+			c.handleSplitError(err)
 			continue
 		}
 
@@ -87,11 +78,6 @@ func (m *Menu) RunCommand(args []string) (err error) {
 
 	// Run the command and associated helpers.
 	m.console.execute(m, args, !m.console.isExecuting)
-
-	// If the command changed the active menu, we need to
-	// reload the console configuration and prompt helpers.
-	// In anycase, we need to reset the commands for the menu.
-	m.console.reloadConfig()
 
 	return
 }
@@ -232,4 +218,12 @@ func (c *Console) monitorSignals() <-chan os.Signal {
 	)
 
 	return sigchan
+}
+
+func (c *Console) handleSplitError(err error) {
+	fmt.Printf("Line error: %s\n", err.Error())
+
+	if c.NewlineAfter {
+		fmt.Println()
+	}
 }

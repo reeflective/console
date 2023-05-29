@@ -227,14 +227,6 @@ func (c *Console) setupShell() {
 	cfg.Set("menu-complete-display-prefix", true)
 }
 
-func (c *Console) reloadConfig() {
-	c.mutex.RLock()
-	defer c.mutex.RUnlock()
-
-	menu := c.activeMenu()
-	menu.prompt.bind(c.shell)
-}
-
 func (c *Console) activeMenu() *Menu {
 	for _, menu := range c.menus {
 		if menu.active {
