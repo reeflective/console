@@ -140,21 +140,18 @@ func (c *Console) execute(menu *Menu, args []string, async bool) (err error) {
 
 	// Console-wide pre-run hooks, cannot.
 	if err = c.runPreRunHooks(); err != nil {
+		fmt.Printf("Pre-run error: %s\n", err.Error())
 		return
 	}
 
 	// Assign those arguments to our parser.
 	cmd.SetArgs(args)
 
-	if c.NewlineBefore {
-		fmt.Println()
-	}
-
 	// The command execution should happen in a separate goroutine,
 	// and should notify the main goroutine when it is done.
-	cmdCtx, cancel := context.WithCancelCause(context.Background())
+	ctx, cancel := context.WithCancelCause(context.Background())
 
-	cmd.SetContext(cmdCtx)
+	cmd.SetContext(ctx)
 
 	// Start monitoring keyboard and OS signals.
 	sigchan := c.monitorSignals()
@@ -164,8 +161,8 @@ func (c *Console) execute(menu *Menu, args []string, async bool) (err error) {
 
 	// Wait for the command to finish, or for an OS signal to be caught.
 	select {
-	case <-cmdCtx.Done():
-		err = cmdCtx.Err()
+	case <-ctx.Done():
+		err = ctx.Err()
 	case signal := <-sigchan:
 		cancel(errors.New(signal.String()))
 		menu.handleInterrupt(errors.New(signal.String()))
@@ -272,8 +269,4 @@ func (c *Console) monitorSignals() <-chan os.Signal {
 	)
 
 	return sigchan
-}
-
-func (c *Console) printError(errType string, err error) {
-	fmt.Printf("%s: %s\n", errType, err.Error())
 }
