@@ -53,6 +53,10 @@ func (c *Console) Start() (err error) {
 		}
 
 		if len(args) == 0 {
+			if c.NewlineAfter {
+				fmt.Println()
+			}
+
 			continue
 		}
 
