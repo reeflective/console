@@ -85,6 +85,7 @@ is also available in the [wiki](https://github.com/reeflective/console/wiki):
 * [History Sources](https://github.com/reeflective/console/wiki/History-Sources)
 * [Logging](https://github.com/reeflective/console/wiki/Logging)
 * [Readline shell](https://github.com/reeflective/readline/wiki)
+* [Other utilities](https://github.com/reeflective/console/wiki/Other-Utililites)
 
 
 ## Showcase
