@@ -22,4 +22,4 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace github.com/rsteube/carapace v0.30.0 => github.com/reeflective/carapace v0.25.2-0.20230416191807-fc9b8c3aa6f6
+replace github.com/rsteube/carapace v0.30.0 => github.com/reeflective/carapace v0.25.2-0.20230528175244-867bc044ad0e
