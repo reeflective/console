@@ -36,7 +36,7 @@ type Console struct {
 	// PreReadlineHooks - All the functions in this list will be executed,
 	// in their respective orders, before the console starts reading
 	// any user input (ie, before redrawing the prompt).
-	PreReadlineHooks []func()
+	PreReadlineHooks []func() error
 
 	// PreCmdRunLineHooks - Same as PreCmdRunHooks, but will have an effect on the
 	// input line being ultimately provided to the command parser. This might
@@ -48,12 +48,12 @@ type Console struct {
 	// the target command, the console will execute every function in this list.
 	// These hooks are distinct from the cobra.PreRun() or OnInitialize hooks,
 	// and might be used in combination with them.
-	PreCmdRunHooks []func()
+	PreCmdRunHooks []func() error
 
 	// PostCmdRunHooks are run after the target cobra command has been executed.
 	// These hooks are distinct from the cobra.PreRun() or OnFinalize hooks,
 	// and might be used in combination with them.
-	PostCmdRunHooks []func()
+	PostCmdRunHooks []func() error
 }
 
 // New - Instantiates a new console application, with sane but powerful defaults.

@@ -1,7 +1,5 @@
 package console
 
-import "fmt"
-
 // AddInterrupt registers a handler to run when the console receives a given
 // interrupt error from the underlying readline shell. Mainly two interrupt
 // signals are concerned: io.EOF (returned when pressing CtrlD), and console.ErrCtrlC.
@@ -40,9 +38,5 @@ func (m *Menu) handleInterrupt(err error) {
 
 	if handler := m.interruptHandlers[err]; handler != nil {
 		handler(m.console)
-
-		if m.console.NewlineBefore {
-			fmt.Println()
-		}
 	}
 }

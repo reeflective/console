@@ -15,7 +15,7 @@ import (
 // Start - Start the console application (readline loop). Blocking.
 // The error returned will always be an error that the console
 // application does not understand or cannot handle.
-func (c *Console) Start() (err error) {
+func (c *Console) Start() error {
 	c.loadActiveHistories()
 
 	// Print the console logo
@@ -24,6 +24,12 @@ func (c *Console) Start() (err error) {
 	}
 
 	for {
+		// Identical to printing it at the end of the loop, and
+		// leaves some space between the logo and the first prompt.
+		if c.NewlineAfter {
+			fmt.Println()
+		}
+
 		// Always ensure we work with the active menu, with freshly
 		// generated commands, bound prompts and some other things.
 		menu := c.activeMenu()
@@ -31,10 +37,18 @@ func (c *Console) Start() (err error) {
 
 		c.printed = false
 
-		c.runPreReadHooks()
+		if err := c.runPreReadHooks(); err != nil {
+			fmt.Printf("Pre-read error: %s\n", err.Error())
+			continue
+		}
 
 		// Block and read user input.
 		line, err := c.shell.Readline()
+
+		if c.NewlineBefore {
+			fmt.Println()
+		}
+
 		if err != nil {
 			menu.handleInterrupt(err)
 			continue
@@ -48,23 +62,27 @@ func (c *Console) Start() (err error) {
 		// Split the line into shell words.
 		args, err := shellquote.Split(line)
 		if err != nil {
-			c.handleSplitError(err)
+			fmt.Printf("Line error: %s\n", err.Error())
 			continue
 		}
 
 		if len(args) == 0 {
-			if c.NewlineAfter {
-				fmt.Println()
-			}
-
 			continue
 		}
 
 		// Run user-provided pre-run line hooks,
 		// which may modify the input line args.
-		args = c.runLineHooks(args)
+		args, err = c.runLineHooks(args)
+		if err != nil {
+			fmt.Printf("Line error: %s\n", err.Error())
+			continue
+		}
 
 		// Run all pre-run hooks and the command itself
+		// Don't check the error: if its a cobra error,
+		// the library user is responsible for setting
+		// the cobra behavior.
+		// If it's an interrupt, we take care of it.
 		c.execute(menu, args, false)
 	}
 }
@@ -121,7 +139,9 @@ func (c *Console) execute(menu *Menu, args []string, async bool) (err error) {
 	}
 
 	// Console-wide pre-run hooks, cannot.
-	c.runPreRunHooks()
+	if err = c.runPreRunHooks(); err != nil {
+		return
+	}
 
 	// Assign those arguments to our parser.
 	cmd.SetArgs(args)
@@ -151,10 +171,6 @@ func (c *Console) execute(menu *Menu, args []string, async bool) (err error) {
 		menu.handleInterrupt(errors.New(signal.String()))
 	}
 
-	if c.NewlineAfter {
-		fmt.Println()
-	}
-
 	return err
 }
 
@@ -168,7 +184,10 @@ func (c *Console) executeCommand(cmd *cobra.Command, cancel context.CancelCauseF
 	// And the post-run hooks in the same goroutine,
 	// because they should not be skipped even if
 	// the command is backgrounded by the user.
-	c.runPostRunHooks()
+	if err := c.runPostRunHooks(); err != nil {
+		cancel(err)
+		return
+	}
 
 	// Command successfully executed, cancel the context.
 	cancel(nil)
@@ -194,33 +213,49 @@ func (c *Console) loadActiveHistories() {
 	}
 }
 
-func (c *Console) runPreReadHooks() {
+func (c *Console) runPreReadHooks() error {
 	for _, hook := range c.PreReadlineHooks {
-		hook()
+		if err := hook(); err != nil {
+			return err
+		}
 	}
+
+	return nil
 }
 
-func (c *Console) runLineHooks(args []string) []string {
+func (c *Console) runLineHooks(args []string) ([]string, error) {
 	processed := args
 
 	// Or modify them again
 	for _, hook := range c.PreCmdRunLineHooks {
-		processed, _ = hook(processed)
+		var err error
+
+		if processed, err = hook(processed); err != nil {
+			return nil, err
+		}
 	}
 
-	return processed
+	return processed, nil
 }
 
-func (c *Console) runPreRunHooks() {
+func (c *Console) runPreRunHooks() error {
 	for _, hook := range c.PreCmdRunHooks {
-		hook()
+		if err := hook(); err != nil {
+			return err
+		}
 	}
+
+	return nil
 }
 
-func (c *Console) runPostRunHooks() {
+func (c *Console) runPostRunHooks() error {
 	for _, hook := range c.PostCmdRunHooks {
-		hook()
+		if err := hook(); err != nil {
+			return err
+		}
 	}
+
+	return nil
 }
 
 // monitorSignals - Monitor the signals that can be sent to the process
@@ -239,10 +274,6 @@ func (c *Console) monitorSignals() <-chan os.Signal {
 	return sigchan
 }
 
-func (c *Console) handleSplitError(err error) {
-	fmt.Printf("Line error: %s\n", err.Error())
-
-	if c.NewlineAfter {
-		fmt.Println()
-	}
+func (c *Console) printError(errType string, err error) {
+	fmt.Printf("%s: %s\n", errType, err.Error())
 }
