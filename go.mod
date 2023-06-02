@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
-	github.com/reeflective/readline v1.0.0
+	github.com/reeflective/readline v1.0.3
 	github.com/rsteube/carapace v0.30.0
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/pflag v1.0.5
@@ -22,4 +22,4 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
 
-replace github.com/rsteube/carapace v0.30.0 => github.com/reeflective/carapace v0.25.2-0.20230528175244-867bc044ad0e
+replace github.com/rsteube/carapace v0.30.0 => github.com/reeflective/carapace v0.25.2-0.20230602202234-e8d757e458ca
