@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/reeflective/console"
+	"github.com/reeflective/console/commands/readline"
 	"github.com/rsteube/carapace"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -26,6 +27,9 @@ func mainMenuCommands(app *console.Console) console.Commands {
 			&cobra.Group{ID: "deployment", Title: "deployment"},
 			&cobra.Group{ID: "tools", Title: "tools"},
 		)
+
+		// Readline subcommands
+		rootCmd.AddCommand(readline.Commands(app.Shell()))
 
 		// And let's add a command declared in a traditional "cobra" way.
 		clientMenuCommand := &cobra.Command{

@@ -66,6 +66,7 @@ the various features below almost for free.
 - Support for an arbitrary number of history sources, per menu.
 - Support for [oh-my-posh](https://github.com/JanDeDobbeleer/oh-my-posh) prompts, per menu and with custom configuration files for each.
 - Also with oh-my-posh, write and bind application/menu-specific prompt segments.
+- Set of ready-to-use commands (`commands/` directory) for readline binds/options manipulation.
 
 
 ## Documentation
