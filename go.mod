@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
-	github.com/reeflective/readline v1.0.7
+	github.com/reeflective/readline v1.0.8
 	github.com/rsteube/carapace v0.36.3
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/pflag v1.0.5
