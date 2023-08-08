@@ -20,29 +20,25 @@ func Bind(shell *readline.Shell) *cobra.Command {
 		Short: "Display or modify readline key bindings",
 		Long: `Manipulate readline keymaps and bindings.
 
-Changing 
----------------------------
-Examples:
-    bind "\C-x\C-r": re-read-init-file          // C-x C-r to reload the inputrc file, in the default keymap.
-    bind -m vi-insert "\C-l" clear-screen       // C-l to clear-screen in vi-insert mode
-    bind -m menu-complete '\C-n' menu-complete  // C-n to cycle through choices in the completion keymap.
-
+Changing binds:
 Note that the keymap name is optional, and if omitted, the default keymap is used.
 The default keymap is 'vi' only if 'set editing-mode vi' is found in inputrc , and 
 unless the -m option is used to set a different keymap.
 Also, note that the bind [seq] [command] slightly differs from the original bash 'bind' command.
 
-Exporting 
----------------------------
+Exporting binds:
 - Since all applications always look up to the same file for a given user,
   the export command does not allow to write and modify this file itself.
 - Also, since saving the entire list of options and bindings in a different
-  file for each application would also defeat the purpose of .inputrc.
+  file for each application would also defeat the purpose of .inputrc.`,
+		Example: `Changing binds:
+    bind "\C-x\C-r": re-read-init-file          # C-x C-r to reload the inputrc file, in the default keymap.
+    bind -m vi-insert "\C-l" clear-screen       # C-l to clear-screen in vi-insert mode
+    bind -m menu-complete '\C-n' menu-complete  # C-n to cycle through choices in the completion keymap.
 
-   bind --binds-rc --lib --changed # Export all changed options/binds to stdout, applying to all apps using this lib.
-   bind  -blcf <file.inputrc>      # Combined shorthand form of first two examples.
-   bind --app OtherApp -c          # Only changed options, applying to another application than our current shell one.
-`,
+Exporting binds:
+   bind --binds-rc --lib --changed # Only changed options/binds to stdout applying to all apps using this lib
+   bind --app OtherApp -c          # Changed options, applying to an app other than our current shell one`,
 	}
 
 	// Flags
@@ -211,27 +207,37 @@ Exporting
 	flagComps := make(carapace.ActionMap)
 
 	// Flags
-	flagComps["keymap"] = carapace.ActionCallback(func(c carapace.Context) carapace.Action {
+	flagComps["keymap"] = completeKeymaps(shell, cmd)
+	flagComps["query"] = completeCommands(shell, cmd)
+	flagComps["unbind"] = completeCommands(shell, cmd)
+	flagComps["remove"] = completeBindSequences(shell, cmd)
+	flagComps["file"] = carapace.ActionFiles()
+
+	comps.FlagCompletion(flagComps)
+
+	// Positional arguments
+	comps.PositionalCompletion(
+		carapace.ActionValues().Usage("sequence"),
+		completeCommands(shell, cmd),
+	)
+
+	return cmd
+}
+
+func completeKeymaps(sh *readline.Shell, cmd *cobra.Command) carapace.Action {
+	return carapace.ActionCallback(func(c carapace.Context) carapace.Action {
 		results := make([]string, 0)
 
-		for name := range shell.Config.Binds {
+		for name := range sh.Config.Binds {
 			results = append(results, name)
 		}
 
 		return carapace.ActionValues(results...).Tag("keymaps").Usage("keymap")
 	})
+}
 
-	functionsComps := carapace.ActionCallback(func(c carapace.Context) carapace.Action {
-		results := make([]string, 0)
-
-		for name := range shell.Keymap.Commands() {
-			results = append(results, name)
-		}
-
-		return carapace.ActionValues(results...).Tag("commands").Usage("command")
-	})
-
-	bindSequenceComps := carapace.ActionCallback(func(ctx carapace.Context) carapace.Action {
+func completeBindSequences(sh *readline.Shell, cmd *cobra.Command) carapace.Action {
+	return carapace.ActionCallback(func(ctx carapace.Context) carapace.Action {
 		// Get the keymap.
 		var keymap string
 
@@ -240,11 +246,11 @@ Exporting
 		}
 
 		if keymap == "" {
-			keymap = string(shell.Keymap.Main())
+			keymap = string(sh.Keymap.Main())
 		}
 
 		// Get the binds.
-		binds := shell.Config.Binds[keymap]
+		binds := sh.Config.Binds[keymap]
 		if binds == nil {
 			return carapace.ActionValues().Usage("sequence")
 		}
@@ -267,21 +273,18 @@ Exporting
 			carapace.ActionValuesDescribed(cmdBinds...).Tag(fmt.Sprintf("non-insert binds (%s)", keymap)).Usage("sequence"),
 		).ToA()
 	})
+}
 
-	flagComps["query"] = functionsComps
-	flagComps["unbind"] = functionsComps
-	flagComps["file"] = carapace.ActionFiles()
-	flagComps["remove"] = bindSequenceComps
+func completeCommands(sh *readline.Shell, cmd *cobra.Command) carapace.Action {
+	return carapace.ActionCallback(func(c carapace.Context) carapace.Action {
+		results := make([]string, 0)
 
-	comps.FlagCompletion(flagComps)
+		for name := range sh.Keymap.Commands() {
+			results = append(results, name)
+		}
 
-	// Positional arguments
-	comps.PositionalCompletion(
-		carapace.ActionValues().Usage("sequence"),
-		functionsComps,
-	)
-
-	return cmd
+		return carapace.ActionValues(results...).Tag("commands").Usage("command")
+	})
 }
 
 func applyToKeymap(keymap string, bind func(keymap string)) {

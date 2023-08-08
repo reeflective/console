@@ -3,6 +3,7 @@ package readline
 import (
 	"errors"
 	"strconv"
+	"strings"
 
 	"github.com/reeflective/readline"
 	"github.com/rsteube/carapace"
@@ -61,11 +62,20 @@ func Set(shell *readline.Shell) *cobra.Command {
 	}
 
 	argComp := func(c carapace.Context) carapace.Action {
-		val := c.Args[len(c.Args)-1]
+		val := strings.TrimSpace(c.Args[len(c.Args)-1])
 
 		option := shell.Config.Get(val)
 		if option == nil {
-			return carapace.ActionValues()
+			return carapace.ActionMessage("No var named %v", option)
+		}
+
+		switch val {
+		case "cursor-style":
+			return carapace.ActionValues("block", "beam", "underline", "blinking-block", "blinking-underline", "blinking-beam", "default")
+		case "editing-mode":
+			return carapace.ActionValues("vi", "emacs")
+		case "keymap":
+			return completeKeymaps(shell, cmd)
 		}
 
 		switch option.(type) {
