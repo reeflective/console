@@ -6,9 +6,19 @@ import (
 	"strings"
 
 	"github.com/reeflective/readline"
+	"github.com/reeflective/readline/inputrc"
 	"github.com/rsteube/carapace"
 	"github.com/rsteube/carapace/pkg/style"
 	"github.com/spf13/cobra"
+	"golang.org/x/exp/maps"
+	"golang.org/x/exp/slices"
+)
+
+var (
+	// We here must assume that all bind changes during the lifetime
+	// of the binary are all made by a single readline application.
+	// This config only stores the vars/binds that have been changed.
+	cfgChanged = inputrc.Config{}
 )
 
 // Set returns a command named `set`, for manipulating readline global options.
@@ -46,7 +56,11 @@ func Set(shell *readline.Shell) *cobra.Command {
 			}
 
 			// Set the option.
-			return shell.Config.Set(args[0], value)
+			if err = shell.Config.Set(args[0], value); err != nil {
+				return err
+			}
+
+			return cfgChanged.Set(args[0], value)
 		},
 	}
 
@@ -96,4 +110,69 @@ func Set(shell *readline.Shell) *cobra.Command {
 	)
 
 	return cmd
+}
+
+// Returns the subset of inputrc variables that are specific
+// to this library and application/binary.
+func filterAppLibVars(sh *readline.Shell) map[string]interface{} {
+	appVars := make(map[string]interface{})
+
+	defCfg := inputrc.DefaultVars()
+	defVars := maps.Keys(defCfg)
+
+	for name, val := range sh.Config.Vars {
+		if slices.Contains(defVars, name) {
+			continue
+		}
+
+		appVars[name] = val
+	}
+
+	return appVars
+}
+
+// Filters out all configuration variables that have not been changed.
+func filterChangedVars(allVars map[string]interface{}) map[string]interface{} {
+	if allVars == nil {
+		return cfgChanged.Vars
+	}
+
+	appVars := make(map[string]interface{})
+	defVars := maps.Keys(appVars)
+
+	for name, val := range allVars {
+		if slices.Contains(defVars, name) {
+			appVars[name] = val
+		}
+	}
+
+	return appVars
+}
+
+// getChangedBinds returns the list of changed binds for a given keymap.
+func getChangedBinds(keymap string) map[string]inputrc.Bind {
+	return nil
+}
+
+// Filters out all configuration variables that have not been changed.
+func filterChangedBinds(keymap string, binds map[string]inputrc.Bind) map[string]inputrc.Bind {
+	if binds == nil {
+		return cfgChanged.Binds[keymap]
+	}
+
+	changedBinds := cfgChanged.Binds[keymap]
+	sequences := maps.Keys(changedBinds)
+
+	for name, bind := range binds {
+		if slices.Contains(sequences, name) && !bind.Macro {
+			changedBinds[name] = bind
+		}
+	}
+
+	return changedBinds
+}
+
+// getChangedBinds returns the list of changed binds for a given keymap.
+func getChangedMacros(keymap string) map[string]inputrc.Bind {
+	return nil
 }
