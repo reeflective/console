@@ -56,6 +56,7 @@ Exporting binds:
 	cmd.Flags().StringP("app", "A", "", "Optional application name (if empty/not used, the current app)")
 	cmd.Flags().BoolP("changed", "c", false, "Only export options modified since app start: maybe not needed, since no use for it")
 	cmd.Flags().BoolP("lib", "L", false, "Like 'app', but export options/binds for all apps using this specific library")
+	cmd.Flags().BoolP("self-insert", "I", false, "If exporting bind sequences, also include the sequences mapped to self-insert")
 
 	// Run implementation
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
@@ -64,6 +65,10 @@ Exporting binds:
 		if keymap == "" {
 			keymap = string(shell.Keymap.Main())
 		}
+
+		var name string
+		var reeflective = "reeflective"
+		var buf = &cfgBuilder{buf: &strings.Builder{}}
 
 		// 1 - SIMPLE QUERIES ------------------------------------------------
 
@@ -81,7 +86,8 @@ Exporting binds:
 
 		// 2 - Query binds for function
 		if cmd.Flags().Changed("query") {
-			bindsQuery(shell, cmd, keymap)
+			listBinds(shell, buf, cmd, keymap)
+			fmt.Fprintf(cmd.OutOrStdout(), buf.buf.String())
 			return nil
 		}
 
@@ -113,11 +119,6 @@ Exporting binds:
 
 		// 2 - COMPLEX QUERIES ------------------------------------------------
 
-		var name string
-		var reeflective = "reeflective"
-
-		var buf = &cfgBuilder{buf: &strings.Builder{}}
-
 		// First prepare the branching strings for any
 		// needed conditionals (App, Lib, keymap, etc)
 		changed := cmd.Flags().Changed("changed")
@@ -142,7 +143,16 @@ Exporting binds:
 
 		// Sequences to function names
 		if cmd.Flags().Changed("binds") {
+			listBinds(shell, buf, cmd, keymap)
 		} else if cmd.Flags().Changed("binds-rc") {
+			listBindsRC(shell, buf, cmd, keymap)
+		}
+
+		// Macros
+		if cmd.Flags().Changed("macros") {
+			listMacros(shell, buf, cmd, keymap)
+		} else if cmd.Flags().Changed("macros-rc") {
+			listMacrosRC(shell, buf, cmd, keymap)
 		}
 
 		// if cmd.Flags().Changed("binds") {
@@ -322,34 +332,4 @@ func removeCommands(sh *readline.Shell, cmd *cobra.Command, keymap string) {
 	}
 
 	applyToKeymap(keymap, removeBind)
-}
-
-// manages display of .inputrc-compliant listings/snippets.
-type cfgBuilder struct {
-	buf   *strings.Builder
-	names []string
-}
-
-// Write writes a single inputrc line with the appropriate contextual indent.
-func (cfg *cfgBuilder) Write(data []byte) (int, error) {
-	indent := strings.Repeat(" ", 4*len(cfg.names))
-
-	iLen, _ := cfg.buf.Write([]byte(indent))
-	bLen, err := cfg.buf.Write(data)
-
-	return iLen + bLen, err
-}
-
-func (cfg *cfgBuilder) newCond(name string) {
-	cfg.Write([]byte(fmt.Sprintf("$if %s\n", name)))
-	cfg.names = append(cfg.names, name)
-}
-
-func (cfg *cfgBuilder) endCond() {
-	if len(cfg.names) == 0 {
-		return
-	}
-
-	cfg.names = cfg.names[:len(cfg.names)-1]
-	cfg.Write([]byte("$endif"))
 }
