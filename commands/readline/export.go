@@ -34,23 +34,23 @@ const (
 )
 
 // listVars prints the readline global option variables in human-readable format.
-func listVars(sh *readline.Shell, buf *cfgBuilder, cmd *cobra.Command) {
+func listVars(shell *readline.Shell, buf *cfgBuilder, cmd *cobra.Command) {
 	var vars map[string]interface{}
 
 	// Apply other filters to our current list of vars.
 	if cmd.Flags().Changed("changed") {
 		vars = cfgChanged.Vars
 	} else {
-		vars = sh.Config.Vars
+		vars = shell.Config.Vars
 	}
 
 	if len(vars) == 0 {
 		return
 	}
 
-	var variables = make([]string, len(sh.Config.Vars))
+	var variables = make([]string, len(shell.Config.Vars))
 
-	for variable := range sh.Config.Vars {
+	for variable := range shell.Config.Vars {
 		variables = append(variables, variable)
 	}
 
@@ -61,7 +61,7 @@ func listVars(sh *readline.Shell, buf *cfgBuilder, cmd *cobra.Command) {
 	fmt.Fprintln(buf)
 
 	for _, variable := range variables {
-		value := sh.Config.Vars[variable]
+		value := shell.Config.Vars[variable]
 		if value == nil || variable == "" {
 			continue
 		}
@@ -72,15 +72,14 @@ func listVars(sh *readline.Shell, buf *cfgBuilder, cmd *cobra.Command) {
 
 // listVarsRC returns the readline global options, split according to which are
 // supported by which library, and output in .inputrc compliant format.
-func listVarsRC(sh *readline.Shell, buf *cfgBuilder, cmd *cobra.Command) {
-	// Apply other filters to our current list of vars.
+func listVarsRC(shell *readline.Shell, buf *cfgBuilder, cmd *cobra.Command) {
 	var vars map[string]interface{}
 
 	// Apply other filters to our current list of vars.
 	if cmd.Flags().Changed("changed") {
 		vars = cfgChanged.Vars
 	} else {
-		vars = sh.Config.Vars
+		vars = shell.Config.Vars
 	}
 
 	if len(vars) == 0 {
@@ -100,7 +99,7 @@ func listVarsRC(sh *readline.Shell, buf *cfgBuilder, cmd *cobra.Command) {
 		fmt.Fprintln(buf, "# General/legacy Options (generated from reeflective/readline)")
 
 		for _, variable := range legacy {
-			value := sh.Config.Vars[variable]
+			value := shell.Config.Vars[variable]
 			var printVal string
 
 			if on, ok := value.(bool); ok {
@@ -131,7 +130,7 @@ func listVarsRC(sh *readline.Shell, buf *cfgBuilder, cmd *cobra.Command) {
 		buf.newCond("reeflective")
 
 		for _, variable := range reef {
-			value := sh.Config.Vars[variable]
+			value := shell.Config.Vars[variable]
 			var printVal string
 
 			if on, ok := value.(bool); ok {
@@ -161,7 +160,7 @@ func listVarsRC(sh *readline.Shell, buf *cfgBuilder, cmd *cobra.Command) {
 	sort.Strings(all)
 
 	for _, variable := range all {
-		value := sh.Config.Vars[variable]
+		value := shell.Config.Vars[variable]
 		var printVal string
 
 		if on, ok := value.(bool); ok {
@@ -180,19 +179,19 @@ func listVarsRC(sh *readline.Shell, buf *cfgBuilder, cmd *cobra.Command) {
 
 // listBinds prints the bind sequences for a given keymap,
 // according to command filter flags, in human-readable format.
-func listBinds(sh *readline.Shell, buf *cfgBuilder, cmd *cobra.Command, keymap string) {
+func listBinds(shell *readline.Shell, buf *cfgBuilder, cmd *cobra.Command, keymap string) {
 	var binds map[string]inputrc.Bind
 
 	// Apply other filters to our current list of vars.
 	if cmd.Flags().Changed("changed") {
 		binds = cfgChanged.Binds[keymap]
 	} else {
-		binds = sh.Config.Binds[keymap]
+		binds = shell.Config.Binds[keymap]
 	}
 
 	// Get all the commands, used to sort the displays.
-	var commands = make([]string, len(sh.Keymap.Commands()))
-	for command := range sh.Keymap.Commands() {
+	var commands = make([]string, len(shell.Keymap.Commands()))
+	for command := range shell.Keymap.Commands() {
 		commands = append(commands, command)
 	}
 
@@ -260,7 +259,7 @@ func listBinds(sh *readline.Shell, buf *cfgBuilder, cmd *cobra.Command, keymap s
 
 // listBindsRC prints the bind sequences for a given keymap,
 // according to command filter flags, in .inputrc compliant format.
-func listBindsRC(sh *readline.Shell, buf *cfgBuilder, cmd *cobra.Command, keymap string) {
+func listBindsRC(shell *readline.Shell, buf *cfgBuilder, cmd *cobra.Command, keymap string) {
 	var binds map[string]inputrc.Bind
 	selfInsert, _ := cmd.Flags().GetBool("self-insert")
 
@@ -268,7 +267,7 @@ func listBindsRC(sh *readline.Shell, buf *cfgBuilder, cmd *cobra.Command, keymap
 	if cmd.Flags().Changed("changed") {
 		binds = cfgChanged.Binds[keymap]
 	} else {
-		binds = sh.Config.Binds[keymap]
+		binds = shell.Config.Binds[keymap]
 	}
 
 	if len(binds) == 0 {
@@ -276,8 +275,8 @@ func listBindsRC(sh *readline.Shell, buf *cfgBuilder, cmd *cobra.Command, keymap
 	}
 
 	// Get all the commands, used to sort the displays.
-	var commands = make([]string, len(sh.Keymap.Commands()))
-	for command := range sh.Keymap.Commands() {
+	var commands = make([]string, len(shell.Keymap.Commands()))
+	for command := range shell.Keymap.Commands() {
 		commands = append(commands, command)
 	}
 
@@ -319,14 +318,14 @@ func listBindsRC(sh *readline.Shell, buf *cfgBuilder, cmd *cobra.Command, keymap
 }
 
 // listMacros prints the recorded/existing macros for a given keymap, in human-readable format.
-func listMacros(sh *readline.Shell, buf *cfgBuilder, cmd *cobra.Command, keymap string) {
+func listMacros(shell *readline.Shell, buf *cfgBuilder, cmd *cobra.Command, keymap string) {
 	var binds map[string]inputrc.Bind
 
 	// Apply other filters to our current list of vars.
 	if cmd.Flags().Changed("changed") {
 		binds = cfgChanged.Binds[keymap]
 	} else {
-		binds = sh.Config.Binds[keymap]
+		binds = shell.Config.Binds[keymap]
 	}
 
 	var macroBinds []string
@@ -354,14 +353,14 @@ func listMacros(sh *readline.Shell, buf *cfgBuilder, cmd *cobra.Command, keymap 
 }
 
 // listMacros prints the recorded/existing macros for a given keymap, in .inputrc compliant format.
-func listMacrosRC(sh *readline.Shell, buf *cfgBuilder, cmd *cobra.Command, keymap string) {
+func listMacrosRC(shell *readline.Shell, buf *cfgBuilder, cmd *cobra.Command, keymap string) {
 	var binds map[string]inputrc.Bind
 
 	// Apply other filters to our current list of vars.
 	if cmd.Flags().Changed("changed") {
 		binds = cfgChanged.Binds[keymap]
 	} else {
-		binds = sh.Config.Binds[keymap]
+		binds = shell.Config.Binds[keymap]
 	}
 
 	var macroBinds []string

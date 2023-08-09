@@ -97,8 +97,8 @@ func Set(shell *readline.Shell) *cobra.Command {
 			return carapace.ActionValues("on", "off", "true", "false").StyleF(style.ForKeyword)
 		case int:
 			return carapace.ActionValues().Usage("option value (int)")
-		default:
-			carapace.ActionValues().Usage("option value (string)")
+		case string:
+			return carapace.ActionValues().Usage("option value (string)")
 		}
 
 		return carapace.ActionValues().Usage("option value")
