@@ -58,6 +58,23 @@ Exporting binds:
 	cmd.Flags().BoolP("lib", "L", false, "Like 'app', but export options/binds for all apps using this specific library")
 	cmd.Flags().BoolP("self-insert", "I", false, "If exporting bind sequences, also include the sequences mapped to self-insert")
 
+	// Completions
+	comps := carapace.Gen(cmd)
+	flagComps := make(carapace.ActionMap)
+
+	flagComps["keymap"] = completeKeymaps(shell, cmd)
+	flagComps["query"] = completeCommands(shell, cmd)
+	flagComps["unbind"] = completeCommands(shell, cmd)
+	flagComps["remove"] = completeBindSequences(shell, cmd)
+	flagComps["file"] = carapace.ActionFiles()
+
+	comps.FlagCompletion(flagComps)
+
+	comps.PositionalCompletion(
+		carapace.ActionValues().Usage("key sequence"),
+		completeCommands(shell, cmd),
+	)
+
 	// Run implementation
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
 		// Set keymap of interest
@@ -69,6 +86,14 @@ Exporting binds:
 		var name string
 		var reeflective = "reeflective"
 		var buf = &cfgBuilder{buf: &strings.Builder{}}
+
+		// First prepare the branching strings for any
+		// needed conditionals (App, Lib, keymap, etc)
+		changed := cmd.Flags().Changed("changed")
+		rm := cmd.Flags().Changed("remove")
+		unbind := cmd.Flags().Changed("unbind")
+		app := cmd.Flags().Changed("app")
+		lib := cmd.Flags().Changed("lib")
 
 		// 1 - SIMPLE QUERIES ------------------------------------------------
 
@@ -87,7 +112,7 @@ Exporting binds:
 		// 2 - Query binds for function
 		if cmd.Flags().Changed("query") {
 			listBinds(shell, buf, cmd, keymap)
-			fmt.Fprintf(cmd.OutOrStdout(), buf.buf.String())
+			fmt.Fprint(cmd.OutOrStdout(), buf.buf.String())
 			return nil
 		}
 
@@ -107,23 +132,15 @@ Exporting binds:
 		}
 
 		// Remove anything we might have been asked to.
-		if cmd.Flags().Changed("unbind") {
-
+		if unbind {
 			unbindKeys(shell, cmd, keymap)
 		}
 
-		if cmd.Flags().Changed("remove") {
-
+		if rm {
 			removeCommands(shell, cmd, keymap)
 		}
 
 		// 2 - COMPLEX QUERIES ------------------------------------------------
-
-		// First prepare the branching strings for any
-		// needed conditionals (App, Lib, keymap, etc)
-		changed := cmd.Flags().Changed("changed")
-		app := cmd.Flags().Changed("app")
-		lib := cmd.Flags().Changed("lib")
 
 		// Write App/Lib headers for
 		if app {
@@ -155,37 +172,6 @@ Exporting binds:
 			listMacrosRC(shell, buf, cmd, keymap)
 		}
 
-		// if cmd.Flags().Changed("binds") {
-		// 	fmt.Println()
-		// 	fmt.Printf("=== Binds (%s)===\n", shell.Keymap.Main())
-		// 	fmt.Println()
-		//
-		// 	shell.Keymap.PrintBinds(keymap, false)
-		//
-		// 	// Close any App/Lib conditional
-		// 	if app || lib {
-		// 		fmt.Fprintln(cmd.OutOrStdout(), "$endif")
-		// 	}
-		//
-		// 	return nil
-		// }
-		//
-		// if cmd.Flags().Changed("binds-rc") {
-		//
-		// 	bindsQueryRC(shell, cmd, keymap, indent)
-		// }
-		//
-		// // Macros
-		// if cmd.Flags().Changed("macros") {
-		//
-		// 	macrosQuery(shell, cmd, keymap)
-		// }
-		//
-		// if cmd.Flags().Changed("macros-rc") {
-		//
-		// 	macrosQueryRC(shell, cmd, keymap, indent)
-		// }
-
 		// Close any App/Lib conditional
 		buf.endCond()
 
@@ -194,9 +180,11 @@ Exporting binds:
 		if buf.buf.Len() > 0 {
 			fmt.Fprintln(cmd.OutOrStdout(), buf.buf.String())
 			return nil
-		} else if app || lib || changed {
+		} else if app || lib || changed || rm || unbind {
 			return nil
 		}
+
+		// 3 - CREATE NEw BINDS -----------------------------------------------
 
 		// Bind actions.
 		// Some keymaps are aliases of others, so use either
@@ -236,25 +224,6 @@ Exporting binds:
 
 		return nil
 	}
-
-	// *** Completions ***
-	comps := carapace.Gen(cmd)
-	flagComps := make(carapace.ActionMap)
-
-	// Flags
-	flagComps["keymap"] = completeKeymaps(shell, cmd)
-	flagComps["query"] = completeCommands(shell, cmd)
-	flagComps["unbind"] = completeCommands(shell, cmd)
-	flagComps["remove"] = completeBindSequences(shell, cmd)
-	flagComps["file"] = carapace.ActionFiles()
-
-	comps.FlagCompletion(flagComps)
-
-	// Positional arguments
-	comps.PositionalCompletion(
-		carapace.ActionValues().Usage("sequence"),
-		completeCommands(shell, cmd),
-	)
 
 	return cmd
 }
