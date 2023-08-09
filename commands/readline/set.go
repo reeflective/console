@@ -114,14 +114,33 @@ func Set(shell *readline.Shell) *cobra.Command {
 
 // Returns the subset of inputrc variables that are specific
 // to this library and application/binary.
-func filterAppLibVars(sh *readline.Shell) map[string]interface{} {
+func filterAppLibVars(cfgVars map[string]interface{}) map[string]interface{} {
 	appVars := make(map[string]interface{})
 
 	defCfg := inputrc.DefaultVars()
 	defVars := maps.Keys(defCfg)
 
-	for name, val := range sh.Config.Vars {
+	for name, val := range cfgVars {
 		if slices.Contains(defVars, name) {
+			continue
+		}
+
+		appVars[name] = val
+	}
+
+	return appVars
+}
+
+// Returns the subset of inputrc variables that are specific
+// to this library and application/binary.
+func filterLegacyVars(cfgVars map[string]interface{}) map[string]interface{} {
+	appVars := make(map[string]interface{})
+
+	defCfg := inputrc.DefaultVars()
+	defVars := maps.Keys(defCfg)
+
+	for name, val := range cfgVars {
+		if !slices.Contains(defVars, name) {
 			continue
 		}
 
@@ -147,32 +166,4 @@ func filterChangedVars(allVars map[string]interface{}) map[string]interface{} {
 	}
 
 	return appVars
-}
-
-// getChangedBinds returns the list of changed binds for a given keymap.
-func getChangedBinds(keymap string) map[string]inputrc.Bind {
-	return nil
-}
-
-// Filters out all configuration variables that have not been changed.
-func filterChangedBinds(keymap string, binds map[string]inputrc.Bind) map[string]inputrc.Bind {
-	if binds == nil {
-		return cfgChanged.Binds[keymap]
-	}
-
-	changedBinds := cfgChanged.Binds[keymap]
-	sequences := maps.Keys(changedBinds)
-
-	for name, bind := range binds {
-		if slices.Contains(sequences, name) && !bind.Macro {
-			changedBinds[name] = bind
-		}
-	}
-
-	return changedBinds
-}
-
-// getChangedBinds returns the list of changed binds for a given keymap.
-func getChangedMacros(keymap string) map[string]inputrc.Bind {
-	return nil
 }
