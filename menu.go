@@ -197,64 +197,6 @@ func (m *Menu) SetErrFilteredCommandTemplate(s string) {
 	m.errFilteredTemplate = s
 }
 
-func (m *Menu) errorFilteredCommandTemplate(filters []string) string {
-	if m.errFilteredTemplate != "" {
-		return m.errFilteredTemplate
-	}
-
-	return `Command {{.Name}} is unavailable, filtered by:
-{{range $filters}}
-    {{.}} 
-{{end}}
-    `
-}
-
-// tmpl executes the given template text on data, writing the result to w.
-func tmpl(w io.Writer, text string, data interface{}) error {
-	t := template.New("top")
-	t.Funcs(templateFuncs)
-	template.Must(t.Parse(text))
-	return t.Execute(w, data)
-}
-
-var templateFuncs = template.FuncMap{
-	"trim": strings.TrimSpace,
-	// "trimRightSpace":          trimRightSpace,
-	// "trimTrailingWhitespaces": trimRightSpace,
-	// "appendIfNotPresent":      appendIfNotPresent,
-	// "rpad":                    rpad,
-	// "gt":                      Gt,
-	// "eq":                      Eq,
-}
-
-// AddTemplateFunc adds a template function that's available to Usage and Help
-// template generation.
-func AddTemplateFunc(name string, tmplFunc interface{}) {
-	templateFuncs[name] = tmplFunc
-}
-
-// AddTemplateFuncs adds multiple template functions that are available to Usage and
-// Help template generation.
-func AddTemplateFuncs(tmplFuncs template.FuncMap) {
-	for k, v := range tmplFuncs {
-		templateFuncs[k] = v
-	}
-}
-
-func (m *Menu) reset() {
-	if m.cmds != nil {
-		m.Command = m.cmds()
-	}
-
-	if m.Command == nil {
-		m.Command = &cobra.Command{
-			Annotations: make(map[string]string),
-		}
-	}
-
-	m.SilenceUsage = true
-}
-
 // resetPreRun is called before each new read line loop and before arbitrary RunCommand() calls.
 // This function is responsible for resetting the menu state to a clean state, regenerating the
 // menu commands, and ensuring that the correct prompt is bound to the shell.
@@ -303,4 +245,34 @@ func (m *Menu) defaultHistoryName() string {
 	}
 
 	return fmt.Sprintf("local history%s", name)
+}
+
+func (m *Menu) errorFilteredCommandTemplate(filters []string) string {
+	if m.errFilteredTemplate != "" {
+		return m.errFilteredTemplate
+	}
+
+	return `Command {{.Name}} is unavailable, filtered by:
+{{range $filters}}
+    {{.}} 
+{{end}}
+    `
+}
+
+// tmpl executes the given template text on data, writing the result to w.
+func tmpl(w io.Writer, text string, data interface{}) error {
+	t := template.New("top")
+	t.Funcs(templateFuncs)
+	template.Must(t.Parse(text))
+	return t.Execute(w, data)
+}
+
+var templateFuncs = template.FuncMap{
+	"trim": strings.TrimSpace,
+	// "trimRightSpace":          trimRightSpace,
+	// "trimTrailingWhitespaces": trimRightSpace,
+	// "appendIfNotPresent":      appendIfNotPresent,
+	// "rpad":                    rpad,
+	// "gt":                      Gt,
+	// "eq":                      Eq,
 }
