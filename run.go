@@ -251,12 +251,6 @@ func (c *Console) loadActiveHistories() {
 	}
 }
 
-func (c *Console) runAll(hooks []func()) {
-	for _, hook := range hooks {
-		hook()
-	}
-}
-
 func (c *Console) runAllE(hooks []func() error) error {
 	for _, hook := range hooks {
 		if err := hook(); err != nil {
