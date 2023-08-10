@@ -191,6 +191,29 @@ func (m *Menu) Printf(msg string, args ...any) (n int, err error) {
 	return m.console.Printf(buf)
 }
 
+func (m *Menu) CheckCommandFiltered(cmd *cobra.Command) (bool, []string) {
+	if cmd.Annotations == nil {
+		return false, nil
+	}
+
+	m.console.mutex.Lock()
+	defer m.console.mutex.Unlock()
+
+	// Get the filters on the command
+	filterStr := cmd.Annotations[CommandFilterKey]
+	var filters []string
+
+	for _, cmdFilter := range strings.Split(filterStr, ",") {
+		for _, filter := range m.console.filters {
+			if cmdFilter != "" && cmdFilter == filter {
+				filters = append(filters, cmdFilter)
+			}
+		}
+	}
+
+	return len(filters) > 0, filters
+}
+
 // SetErrFilteredCommandTemplate sets the error template to be used
 // when a called command can't be executed because it's mark filtered.
 func (m *Menu) SetErrFilteredCommandTemplate(s string) {
@@ -201,8 +224,8 @@ func (m *Menu) SetErrFilteredCommandTemplate(s string) {
 // This function is responsible for resetting the menu state to a clean state, regenerating the
 // menu commands, and ensuring that the correct prompt is bound to the shell.
 func (m *Menu) resetPreRun() {
-	m.console.mutex.Lock()
-	defer m.console.mutex.Unlock()
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
 
 	// Commands
 	if m.cmds != nil {
@@ -216,11 +239,26 @@ func (m *Menu) resetPreRun() {
 	}
 
 	// Hide commands that are not available
-	m.console.hideFilteredCommands(m.Command)
+	m.hideFilteredCommands(m.Command)
 
 	// Menu setup
 	m.resetCmdOutput()             // Reset or adjust any buffered command output.
 	m.prompt.bind(m.console.shell) // Prompt binding
+}
+
+// hide commands that are filtered so that they are not
+// shown in the help strings or proposed as completions.
+func (m *Menu) hideFilteredCommands(root *cobra.Command) {
+	for _, cmd := range root.Commands() {
+		// Don't override commands if they are already hidden
+		if cmd.Hidden {
+			continue
+		}
+
+		if filtered, _ := m.CheckCommandFiltered(cmd); filtered {
+			cmd.Hidden = true
+		}
+	}
 }
 
 func (m *Menu) resetCmdOutput() {

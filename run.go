@@ -171,7 +171,7 @@ func (c *Console) execute(menu *Menu, args []string, async bool) (err error) {
 	// Find the target command: if this command is filtered, don't run it.
 	target, _, _ := cmd.Find(args)
 
-	if filtered, filters := c.isFiltered(target); filtered {
+	if filtered, filters := menu.CheckCommandFiltered(target); filtered {
 		err := tmpl(cmd.OutOrStdout(), menu.errorFilteredCommandTemplate(filters), c)
 		if err != nil {
 			cmd.PrintErrln(err)
@@ -234,13 +234,13 @@ func (c *Console) executeCommand(cmd *cobra.Command, cancel context.CancelCauseF
 // unlike for classic CLI usage when the program will print its usage string.
 // We simply remove any RunE from the root command, so that nothing is
 // printed/executed by default. Pre/Post runs are still used if any.
-// func (c *Console) ensureNoRootRunner() {
-// 	if c.activeMenu().Command != nil {
-// 		c.activeMenu().RunE = func(cmd *cobra.Command, args []string) error {
-// 			return nil
-// 		}
-// 	}
-// }
+func (c *Console) ensureNoRootRunner() {
+	if c.activeMenu().Command != nil {
+		c.activeMenu().RunE = func(cmd *cobra.Command, args []string) error {
+			return nil
+		}
+	}
+}
 
 func (c *Console) loadActiveHistories() {
 	c.shell.History.Delete()
