@@ -171,12 +171,8 @@ func (c *Console) execute(menu *Menu, args []string, async bool) (err error) {
 	// Find the target command: if this command is filtered, don't run it.
 	target, _, _ := cmd.Find(args)
 
-	if filtered, filters := menu.CheckCommandFiltered(target); filtered {
-		err := tmpl(cmd.OutOrStdout(), menu.errorFilteredCommandTemplate(filters), c)
-		if err != nil {
-			cmd.PrintErrln(err)
-		}
-		return err
+	if filters := menu.CheckCommandFiltered(target); len(filters) > 0 {
+		return menu.displayFilteredError(target, filters)
 	}
 
 	// Console-wide pre-run hooks, cannot.

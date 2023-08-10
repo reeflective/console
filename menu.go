@@ -191,9 +191,9 @@ func (m *Menu) Printf(msg string, args ...any) (n int, err error) {
 	return m.console.Printf(buf)
 }
 
-func (m *Menu) CheckCommandFiltered(cmd *cobra.Command) (bool, []string) {
+func (m *Menu) CheckCommandFiltered(cmd *cobra.Command) []string {
 	if cmd.Annotations == nil {
-		return false, nil
+		return nil
 	}
 
 	m.console.mutex.Lock()
@@ -211,7 +211,7 @@ func (m *Menu) CheckCommandFiltered(cmd *cobra.Command) (bool, []string) {
 		}
 	}
 
-	return len(filters) > 0, filters
+	return filters
 }
 
 // SetErrFilteredCommandTemplate sets the error template to be used
@@ -255,7 +255,7 @@ func (m *Menu) hideFilteredCommands(root *cobra.Command) {
 			continue
 		}
 
-		if filtered, _ := m.CheckCommandFiltered(cmd); filtered {
+		if filters := m.CheckCommandFiltered(cmd); len(filters) > 0 {
 			cmd.Hidden = true
 		}
 	}
@@ -285,16 +285,26 @@ func (m *Menu) defaultHistoryName() string {
 	return fmt.Sprintf("local history%s", name)
 }
 
+func (m *Menu) displayFilteredError(target *cobra.Command, filters []string) error {
+	err := tmpl(m.OutOrStdout(), m.errorFilteredCommandTemplate(filters), map[string]interface{}{
+		"menu":    m,
+		"cmd":     target,
+		"filters": filters,
+	})
+	if err != nil {
+		m.PrintErrln(err)
+	}
+	return err
+}
+
 func (m *Menu) errorFilteredCommandTemplate(filters []string) string {
 	if m.errFilteredTemplate != "" {
 		return m.errFilteredTemplate
 	}
 
-	return `Command {{.Name}} is unavailable, filtered by:
-{{range $filters}}
-    {{.}} 
-{{end}}
-    `
+	return `Command {{.cmd.Name}} is only available for: {{range .filters }}
+    - {{.}} 
+{{end}}`
 }
 
 // tmpl executes the given template text on data, writing the result to w.
@@ -307,10 +317,4 @@ func tmpl(w io.Writer, text string, data interface{}) error {
 
 var templateFuncs = template.FuncMap{
 	"trim": strings.TrimSpace,
-	// "trimRightSpace":          trimRightSpace,
-	// "trimTrailingWhitespaces": trimRightSpace,
-	// "appendIfNotPresent":      appendIfNotPresent,
-	// "rpad":                    rpad,
-	// "gt":                      Gt,
-	// "eq":                      Eq,
 }
