@@ -322,8 +322,7 @@ func (m *Menu) errorFilteredCommandTemplate(filters []string) string {
 	}
 
 	return `Command {{.cmd.Name}} is only available for: {{range .filters }}
-    - {{.}} 
-{{end}}`
+    - {{.}} {{end}}`
 }
 
 // tmpl executes the given template text on data, writing the result to w.
