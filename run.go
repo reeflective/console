@@ -83,7 +83,9 @@ func (c *Console) Start() error {
 		// the library user is responsible for setting
 		// the cobra behavior.
 		// If it's an interrupt, we take care of it.
-		c.execute(menu, args, false)
+		if err := c.execute(menu, args, false); err != nil {
+			fmt.Println(err)
+		}
 	}
 }
 
@@ -171,8 +173,8 @@ func (c *Console) execute(menu *Menu, args []string, async bool) (err error) {
 	// Find the target command: if this command is filtered, don't run it.
 	target, _, _ := cmd.Find(args)
 
-	if filters := menu.CheckCommandFiltered(target); len(filters) > 0 {
-		return menu.displayFilteredError(target, filters)
+	if err := menu.ErrUnavailableCommand(target); err != nil {
+		return err
 	}
 
 	// Console-wide pre-run hooks, cannot.

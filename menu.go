@@ -2,6 +2,7 @@ package console
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -191,7 +192,37 @@ func (m *Menu) Printf(msg string, args ...any) (n int, err error) {
 	return m.console.Printf(buf)
 }
 
-func (m *Menu) CheckCommandFiltered(cmd *cobra.Command) []string {
+// ErrUnavailableCommand checks if a target command is marked as filtered as per the console
+// application registered/and or active filters (added with console.Hide/ShowCommand()), and
+// if yes, returns a template-formatted error message showing the list of incompatible filters.
+func (m *Menu) ErrUnavailableCommand(target *cobra.Command) error {
+	if target == nil {
+		return nil
+	}
+
+	filters := m.ActiveFiltersFor(target)
+	if len(filters) == 0 {
+		return nil
+	}
+
+	var bufErr strings.Builder
+
+	err := tmpl(&bufErr, m.errorFilteredCommandTemplate(filters), map[string]interface{}{
+		"menu":    m,
+		"cmd":     target,
+		"filters": filters,
+	})
+
+	if err != nil {
+		return err
+	}
+
+	return errors.New(bufErr.String())
+}
+
+// ActiveFiltersFor returns all the active menu filters that a given command
+// does not declare as compliant with (added with console.Hide/ShowCommand()).
+func (m *Menu) ActiveFiltersFor(cmd *cobra.Command) []string {
 	if cmd.Annotations == nil {
 		return nil
 	}
@@ -255,7 +286,7 @@ func (m *Menu) hideFilteredCommands(root *cobra.Command) {
 			continue
 		}
 
-		if filters := m.CheckCommandFiltered(cmd); len(filters) > 0 {
+		if filters := m.ActiveFiltersFor(cmd); len(filters) > 0 {
 			cmd.Hidden = true
 		}
 	}
@@ -283,18 +314,6 @@ func (m *Menu) defaultHistoryName() string {
 	}
 
 	return fmt.Sprintf("local history%s", name)
-}
-
-func (m *Menu) displayFilteredError(target *cobra.Command, filters []string) error {
-	err := tmpl(m.OutOrStdout(), m.errorFilteredCommandTemplate(filters), map[string]interface{}{
-		"menu":    m,
-		"cmd":     target,
-		"filters": filters,
-	})
-	if err != nil {
-		m.PrintErrln(err)
-	}
-	return err
 }
 
 func (m *Menu) errorFilteredCommandTemplate(filters []string) string {
