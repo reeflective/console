@@ -116,7 +116,7 @@ func (c *Console) ExecuteOnce() error {
 	// which may modify the input line args.
 	args, err := c.runLineHooks(os.Args)
 	if err != nil {
-		return fmt.Errorf("line error: %s\n", err.Error())
+		return fmt.Errorf("line error: %s", err.Error())
 	}
 
 	// Run all pre-run hooks and the command itself
@@ -229,18 +229,6 @@ func (c *Console) executeCommand(cmd *cobra.Command, cancel context.CancelCauseF
 
 	// Command successfully executed, cancel the context.
 	cancel(nil)
-}
-
-// Generally, an empty command entered should just print a new prompt,
-// unlike for classic CLI usage when the program will print its usage string.
-// We simply remove any RunE from the root command, so that nothing is
-// printed/executed by default. Pre/Post runs are still used if any.
-func (c *Console) ensureNoRootRunner() {
-	if c.activeMenu().Command != nil {
-		c.activeMenu().RunE = func(cmd *cobra.Command, args []string) error {
-			return nil
-		}
-	}
 }
 
 func (c *Console) loadActiveHistories() {
