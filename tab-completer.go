@@ -28,6 +28,9 @@ func (c *Console) complete(line []rune, pos int) readline.Completions {
 	// (we currently need those two dummies for avoiding a panic).
 	args = append([]string{"examples", "_carapace"}, args...)
 
+	// Regenerate a new instance of the commands.
+	// menu.hideFilteredCommands(cmd)
+
 	// Call the completer with our current command context.
 	values, meta := carapace.Complete(menu.Command, args, c.completeCommands(menu))
 
@@ -118,8 +121,13 @@ func sanitizeArgs(rbuffer []rune, args []string) (sanitized []string) {
 // Regenerate commands and apply any filters.
 func (c *Console) completeCommands(menu *Menu) func() {
 	commands := func() {
-		menu.ResetCommands()
-		c.hideFilteredCommands()
+		cmd := menu.Command
+		if menu.cmds != nil {
+			cmd = menu.cmds()
+		}
+
+		menu.resetPreRun()
+		menu.hideFilteredCommands(cmd)
 	}
 
 	return commands
