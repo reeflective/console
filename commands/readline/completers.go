@@ -21,10 +21,11 @@ package readline
 import (
 	"fmt"
 
-	"github.com/reeflective/readline"
-	"github.com/reeflective/readline/inputrc"
 	"github.com/rsteube/carapace"
 	"github.com/spf13/cobra"
+
+	"github.com/reeflective/readline"
+	"github.com/reeflective/readline/inputrc"
 )
 
 func completeKeymaps(sh *readline.Shell, _ *cobra.Command) carapace.Action {
