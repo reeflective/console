@@ -3,8 +3,10 @@ package console
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"strings"
 	"sync"
+	"text/template"
 
 	"github.com/reeflective/readline"
 	"github.com/spf13/cobra"
@@ -34,6 +36,9 @@ type Menu struct {
 
 	// Command spawner
 	cmds Commands
+
+	// An error template to use to produce errors when a command is unavailable.
+	errFilteredTemplate string
 
 	// History sources peculiar to this menu.
 	historyNames []string
@@ -186,21 +191,94 @@ func (m *Menu) Printf(msg string, args ...any) (n int, err error) {
 	return m.console.Printf(buf)
 }
 
+// SetErrFilteredCommandTemplate sets the error template to be used
+// when a called command can't be executed because it's mark filtered.
+func (m *Menu) SetErrFilteredCommandTemplate(s string) {
+	m.errFilteredTemplate = s
+}
+
+func (m *Menu) errorFilteredCommandTemplate(filters []string) string {
+	if m.errFilteredTemplate != "" {
+		return m.errFilteredTemplate
+	}
+
+	return `Command {{.Name}} is unavailable, filtered by:
+{{range $filters}}
+    {{.}} 
+{{end}}
+    `
+}
+
+// tmpl executes the given template text on data, writing the result to w.
+func tmpl(w io.Writer, text string, data interface{}) error {
+	t := template.New("top")
+	t.Funcs(templateFuncs)
+	template.Must(t.Parse(text))
+	return t.Execute(w, data)
+}
+
+var templateFuncs = template.FuncMap{
+	"trim": strings.TrimSpace,
+	// "trimRightSpace":          trimRightSpace,
+	// "trimTrailingWhitespaces": trimRightSpace,
+	// "appendIfNotPresent":      appendIfNotPresent,
+	// "rpad":                    rpad,
+	// "gt":                      Gt,
+	// "eq":                      Eq,
+}
+
+// AddTemplateFunc adds a template function that's available to Usage and Help
+// template generation.
+func AddTemplateFunc(name string, tmplFunc interface{}) {
+	templateFuncs[name] = tmplFunc
+}
+
+// AddTemplateFuncs adds multiple template functions that are available to Usage and
+// Help template generation.
+func AddTemplateFuncs(tmplFuncs template.FuncMap) {
+	for k, v := range tmplFuncs {
+		templateFuncs[k] = v
+	}
+}
+
+func (m *Menu) reset() {
+	if m.cmds != nil {
+		m.Command = m.cmds()
+	}
+
+	if m.Command == nil {
+		m.Command = &cobra.Command{
+			Annotations: make(map[string]string),
+		}
+	}
+
+	m.SilenceUsage = true
+}
+
 // resetPreRun is called before each new read line loop and before arbitrary RunCommand() calls.
 // This function is responsible for resetting the menu state to a clean state, regenerating the
 // menu commands, and ensuring that the correct prompt is bound to the shell.
 func (m *Menu) resetPreRun() {
-	m.console.mutex.RLock()
-	defer m.console.mutex.RUnlock()
+	m.console.mutex.Lock()
+	defer m.console.mutex.Unlock()
+
+	// Commands
+	if m.cmds != nil {
+		m.Command = m.cmds()
+	}
+
+	if m.Command == nil {
+		m.Command = &cobra.Command{
+			Annotations: make(map[string]string),
+		}
+	}
+
+	// Hide commands that are not available
+	m.console.hideFilteredCommands(m.Command)
 
 	// Menu setup
-	m.ResetCommands()              // Regenerate the commands for the menu.
 	m.resetCmdOutput()             // Reset or adjust any buffered command output.
 	m.prompt.bind(m.console.shell) // Prompt binding
-
-	// Console-wide setup.
-	m.console.ensureNoRootRunner()   // Avoid printing any help when the command line is empty
-	m.console.hideFilteredCommands() // Hide commands that are not available
 }
 
 func (m *Menu) resetCmdOutput() {
@@ -215,20 +293,6 @@ func (m *Menu) resetCmdOutput() {
 	// Add two newlines to the end of the buffer, so that the
 	// next command will be printed slightly below the current one.
 	m.out.WriteString("\n")
-}
-
-func (m *Menu) Reset() {
-	if m.cmds != nil {
-		m.Command = m.cmds()
-	}
-
-	if m.Command == nil {
-		m.Command = &cobra.Command{
-			Annotations: make(map[string]string),
-		}
-	}
-
-	m.SilenceUsage = true
 }
 
 func (m *Menu) defaultHistoryName() string {

@@ -37,7 +37,7 @@ func (c *Console) Start() error {
 
 		c.printed = false
 
-		if err := c.runPreReadHooks(); err != nil {
+		if err := c.runAllE(c.PreReadlineHooks); err != nil {
 			fmt.Printf("Pre-read error: %s\n", err.Error())
 			continue
 		}
@@ -87,18 +87,17 @@ func (c *Console) Start() error {
 	}
 }
 
-// Execute is a mimic of the classic one-time cobra command execution.
-// This call is thus blocking during the entire parsing/execution process
-// of a command-line, but will not happen in the closed-loop console, nor
-// will start it (unless the target command does it by itself).
+// ExecuteOnce is a wrapper around the classic one-time cobra command execution.
+// This call is thus blocking during the entire parsing and execution process
+// of a command-line.
 //
 // This function should be useful if you have trees of commands that can
 // be executed both in closed-loop applications or in a one-off exec style.
-// Normally, most command should, if your command behavior/API has no magic.
-// This function also does not print any logo.
+// Normally, most commands should, if your command behavior/API has no magic.
 //
 // The command line (os.Args) is matched against the currently active menu.
 // Be sure to set and verify this menu before calling this function.
+// This function also does not print any application logo.
 func (c *Console) ExecuteOnce() error {
 	// Always ensure we work with the active menu, with freshly
 	// generated commands, bound prompts and some other things.
@@ -115,7 +114,7 @@ func (c *Console) ExecuteOnce() error {
 	// which may modify the input line args.
 	args, err := c.runLineHooks(os.Args)
 	if err != nil {
-		return fmt.Errorf("Line error: %s\n", err.Error())
+		return fmt.Errorf("line error: %s\n", err.Error())
 	}
 
 	// Run all pre-run hooks and the command itself
@@ -144,9 +143,7 @@ func (m *Menu) RunCommand(line string) (err error) {
 	m.resetPreRun()
 
 	// Run the command and associated helpers.
-	m.console.execute(m, args, !m.console.isExecuting)
-
-	return
+	return m.console.execute(m, args, !m.console.isExecuting)
 }
 
 // execute - The user has entered a command input line, the arguments have been processed:
@@ -173,12 +170,17 @@ func (c *Console) execute(menu *Menu, args []string, async bool) (err error) {
 
 	// Find the target command: if this command is filtered, don't run it.
 	target, _, _ := cmd.Find(args)
-	if c.isFiltered(target) {
-		return nil
+
+	if filtered, filters := c.isFiltered(target); filtered {
+		err := tmpl(cmd.OutOrStdout(), menu.errorFilteredCommandTemplate(filters), c)
+		if err != nil {
+			cmd.PrintErrln(err)
+		}
+		return err
 	}
 
 	// Console-wide pre-run hooks, cannot.
-	if err = c.runPreRunHooks(); err != nil {
+	if err = c.runAllE(c.PreCmdRunHooks); err != nil {
 		return fmt.Errorf("pre-run error: %s", err.Error())
 	}
 
@@ -219,7 +221,7 @@ func (c *Console) executeCommand(cmd *cobra.Command, cancel context.CancelCauseF
 	// And the post-run hooks in the same goroutine,
 	// because they should not be skipped even if
 	// the command is backgrounded by the user.
-	if err := c.runPostRunHooks(); err != nil {
+	if err := c.runAllE(c.PostCmdRunHooks); err != nil {
 		cancel(err)
 		return
 	}
@@ -232,13 +234,13 @@ func (c *Console) executeCommand(cmd *cobra.Command, cancel context.CancelCauseF
 // unlike for classic CLI usage when the program will print its usage string.
 // We simply remove any RunE from the root command, so that nothing is
 // printed/executed by default. Pre/Post runs are still used if any.
-func (c *Console) ensureNoRootRunner() {
-	if c.activeMenu().Command != nil {
-		c.activeMenu().RunE = func(cmd *cobra.Command, args []string) error {
-			return nil
-		}
-	}
-}
+// func (c *Console) ensureNoRootRunner() {
+// 	if c.activeMenu().Command != nil {
+// 		c.activeMenu().RunE = func(cmd *cobra.Command, args []string) error {
+// 			return nil
+// 		}
+// 	}
+// }
 
 func (c *Console) loadActiveHistories() {
 	c.shell.History.Delete()
@@ -248,8 +250,14 @@ func (c *Console) loadActiveHistories() {
 	}
 }
 
-func (c *Console) runPreReadHooks() error {
-	for _, hook := range c.PreReadlineHooks {
+func (c *Console) runAll(hooks []func()) {
+	for _, hook := range hooks {
+		hook()
+	}
+}
+
+func (c *Console) runAllE(hooks []func() error) error {
+	for _, hook := range hooks {
 		if err := hook(); err != nil {
 			return err
 		}
@@ -271,26 +279,6 @@ func (c *Console) runLineHooks(args []string) ([]string, error) {
 	}
 
 	return processed, nil
-}
-
-func (c *Console) runPreRunHooks() error {
-	for _, hook := range c.PreCmdRunHooks {
-		if err := hook(); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (c *Console) runPostRunHooks() error {
-	for _, hook := range c.PostCmdRunHooks {
-		if err := hook(); err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 // monitorSignals - Monitor the signals that can be sent to the process

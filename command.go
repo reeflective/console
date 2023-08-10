@@ -76,36 +76,36 @@ next:
 	c.filters = updated
 }
 
-func (c *Console) isFiltered(cmd *cobra.Command) bool {
+func (c *Console) isFiltered(cmd *cobra.Command) (bool, []string) {
 	if cmd.Annotations == nil {
-		return false
+		return false, nil
 	}
 
 	// Get the filters on the command
 	filterStr := cmd.Annotations[CommandFilterKey]
-	filters := strings.Split(filterStr, ",")
+	var filters []string
 
-	for _, cmdFilter := range filters {
+	for _, cmdFilter := range strings.Split(filterStr, ",") {
 		for _, filter := range c.filters {
 			if cmdFilter != "" && cmdFilter == filter {
-				return true
+				filters = append(filters, cmdFilter)
 			}
 		}
 	}
 
-	return false
+	return len(filters) > 0, filters
 }
 
 // hide commands that are filtered so that they are not
 // shown in the help strings or proposed as completions.
-func (c *Console) hideFilteredCommands() {
-	for _, cmd := range c.activeMenu().Commands() {
+func (c *Console) hideFilteredCommands(root *cobra.Command) {
+	for _, cmd := range root.Commands() {
 		// Don't override commands if they are already hidden
 		if cmd.Hidden {
 			continue
 		}
 
-		if c.isFiltered(cmd) {
+		if filtered, _ := c.isFiltered(cmd); filtered {
 			cmd.Hidden = true
 		}
 	}
