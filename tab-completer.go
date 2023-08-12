@@ -28,9 +28,6 @@ func (c *Console) complete(line []rune, pos int) readline.Completions {
 	// (we currently need those two dummies for avoiding a panic).
 	args = append([]string{"examples", "_carapace"}, args...)
 
-	// Regenerate a new instance of the commands.
-	// menu.hideFilteredCommands(cmd)
-
 	// Call the completer with our current command context.
 	values, meta := carapace.Complete(menu.Command, args, c.completeCommands(menu))
 
@@ -56,6 +53,11 @@ func (c *Console) complete(line []rune, pos int) readline.Completions {
 	// Suffix matchers for the completions if any.
 	if meta.Nospace.String() != "" {
 		comps = comps.NoSpace([]rune(meta.Nospace.String())...)
+	}
+
+	// Other status/error messages
+	for _, msg := range meta.Messages.Get() {
+		comps = comps.Merge(readline.CompleteMessage(msg))
 	}
 
 	// If we have a quote/escape sequence unaccounted
