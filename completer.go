@@ -203,12 +203,6 @@ func adjustQuotedPrefix(remain string, err error) (arg, comp, line string) {
 	return arg, comp, line
 }
 
-var replacer = strings.NewReplacer(
-	"\n", ` `,
-	"\t", ` `,
-	"\\ ", " ", // User-escaped spaces in words.
-)
-
 // sanitizeArg unescapes a restrained set of characters.
 func sanitizeArgs(args []string) (sanitized []string) {
 	for _, arg := range args {
@@ -376,3 +370,9 @@ var re = regexp.MustCompile(ansi)
 func strip(str string) string {
 	return re.ReplaceAllString(str, "")
 }
+
+var replacer = strings.NewReplacer(
+	"\n", ` `,
+	"\t", ` `,
+	"\\ ", " ", // User-escaped spaces in words.
+)

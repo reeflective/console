@@ -73,6 +73,7 @@ func completeBindSequences(sh *readline.Shell, cmd *cobra.Command) carapace.Acti
 			}
 		}
 
+		// Build the list of bind sequences bompletions
 		completions := carapace.Batch(
 			carapace.ActionValues(insertBinds...).Tag(fmt.Sprintf("self-insert binds (%s)", keymap)).Usage("sequence"),
 			carapace.ActionValuesDescribed(cmdBinds...).Tag(fmt.Sprintf("non-insert binds (%s)", keymap)).Usage("sequence"),
@@ -82,7 +83,7 @@ func completeBindSequences(sh *readline.Shell, cmd *cobra.Command) carapace.Acti
 		// Look for the current argument and check whether or not it's quoted.
 		// If yes, only include quotes at the end of the inserted value.
 		// If no quotes, include them in both.
-		if strings.HasPrefix(ctx.Value, "\"") {
+		if strings.HasPrefix(ctx.Value, "\"") || ctx.Value == "" {
 			completions = completions.Prefix("\"")
 		}
 
