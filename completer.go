@@ -189,13 +189,14 @@ func mustComplete(line []rune, args []string, remain string, err error) (bool, [
 func adjustQuotedPrefix(remain string, err error) (arg, comp, line string) {
 	arg = remain
 
-	if errors.Is(err, errUnterminatedDoubleQuote) {
+	switch {
+	case errors.Is(err, errUnterminatedDoubleQuote):
 		comp = "\""
 		line = comp + arg
-	} else if errors.Is(err, errUnterminatedSingleQuote) {
+	case errors.Is(err, errUnterminatedSingleQuote):
 		comp = "'"
 		line = comp + arg
-	} else if errors.Is(err, errUnterminatedEscape) {
+	case errors.Is(err, errUnterminatedEscape):
 		arg = strings.ReplaceAll(arg, "\\", "")
 	}
 
