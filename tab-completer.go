@@ -34,14 +34,13 @@ func (c *Console) complete(line []rune, pos int) readline.Completions {
 	raw := make([]readline.Completion, len(values))
 
 	for idx, val := range values {
-		value := readline.Completion{
-			Value:       val.Value,
+		raw[idx] = readline.Completion{
+			Value:       unescapeValue(prefixComp, prefixLine, val.Value),
 			Display:     val.Display,
 			Description: val.Description,
 			Style:       val.Style,
 			Tag:         val.Tag,
 		}
-		raw[idx] = value
 	}
 
 	// Assign both completions and command/flags/args usage strings.
@@ -141,72 +140,95 @@ func splitArgs(line []rune, pos int) (args []string, prefixComp, prefixLine stri
 	// in line is a space).
 	// In some of those cases we append a single dummy argument
 	// for the completer to understand we want a new word comp.
-	mustComplete, args := mustComplete(line, args, remain, err)
+	mustComplete, args, remain := mustComplete(line, args, remain, err)
 	if mustComplete {
-		return sanitizeArgs(args), remain, remain
+		return sanitizeArgs(args), "", remain
 	}
-
-	// The remainder is everything following the open charater.
-	// Pass it as is to the carapace completion engine.
-	args = append(args, remain)
 
 	// But the completion candidates themselves might need slightly
 	// different prefixes, for an optimal completion experience.
-	prefixComp, prefixLine = adjustQuotedPrefix(remain, err)
+	arg, prefixComp, prefixLine := adjustQuotedPrefix(remain, err)
+
+	// The remainder is everything following the open charater.
+	// Pass it as is to the carapace completion engine.
+	args = append(args, arg)
 
 	return sanitizeArgs(args), prefixComp, prefixLine
 }
 
-func mustComplete(line []rune, args []string, remain string, err error) (bool, []string) {
+func mustComplete(line []rune, args []string, remain string, err error) (bool, []string, string) {
 	dummyArg := ""
 
 	// Empty command line, complete the root command.
-	if len(args) == 0 {
-		return true, append(args, dummyArg)
+	if len(args) == 0 || len(line) == 0 {
+		return true, append(args, dummyArg), remain
 	}
 
 	// If we have an error, we must handle it later.
 	if err != nil {
-		return false, args
+		return false, args, remain
 	}
 
-	// If the cursor is currentl on a space (as it is in most cases at the end
-	// of the line), we add our dummy argument for the completer to propose next.
-	if remain == "" && len(line) > 0 && unicode.IsSpace(line[len(line)-1]) {
-		return true, append(args, dummyArg)
+	lastChar := line[len(line)-1]
+
+	// No remain and a trailing space means we want to complete
+	// for the next word, except when this last space was escaped.
+	if remain == "" && unicode.IsSpace(lastChar) {
+		if strings.HasSuffix(string(line), "\\ ") {
+			return true, args, args[len(args)-1]
+		}
+
+		return true, append(args, dummyArg), remain
 	}
 
 	// Else there is a character under the cursor, which means we are
 	// in the middle/at the end of a posentially completed word.
-	return true, args
+	return true, args, remain
 }
 
-func adjustQuotedPrefix(remain string, err error) (comp, line string) {
+func adjustQuotedPrefix(remain string, err error) (arg, comp, line string) {
+	arg = remain
+
 	if errors.Is(err, errUnterminatedDoubleQuote) {
 		comp = "\""
+		line = comp + arg
 	} else if errors.Is(err, errUnterminatedSingleQuote) {
 		comp = "'"
+		line = comp + arg
+	} else if errors.Is(err, errUnterminatedEscape) {
+		arg = strings.ReplaceAll(arg, "\\", "")
 	}
 
-	line = comp + remain
-
-	return
+	return arg, comp, line
 }
+
+var replacer = strings.NewReplacer(
+	"\n", ` `,
+	"\t", ` `,
+	"\\ ", " ", // User-escaped spaces in words.
+)
 
 // sanitizeArg unescapes a restrained set of characters.
 func sanitizeArgs(args []string) (sanitized []string) {
-	replacer := strings.NewReplacer(
-		"\n", ` `,
-		"\t", ` `,
-		"\\ ", " ", // User-escaped spaces in words.
-	)
-
 	for _, arg := range args {
 		arg = replacer.Replace(arg)
 		sanitized = append(sanitized, arg)
 	}
 
 	return sanitized
+}
+
+// when the completer has returned us some completions, we sometimes
+// needed to post-process them a little before passing them to our shell.
+func unescapeValue(prefixComp, prefixLine, val string) string {
+	quoted := strings.HasPrefix(prefixLine, "\"") ||
+		strings.HasPrefix(prefixLine, "'")
+
+	if quoted {
+		val = strings.ReplaceAll(val, "\\ ", " ")
+	}
+
+	return val
 }
 
 // split has been copied from go-shellquote and slightly modified so as to also
