@@ -2,8 +2,6 @@ module github.com/reeflective/console
 
 go 1.21
 
-toolchain go1.21.0
-
 require (
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/reeflective/readline v1.0.9
