@@ -15,12 +15,10 @@ import (
 	"github.com/reeflective/readline/inputrc"
 )
 
-var (
-	// We here must assume that all bind changes during the lifetime
-	// of the binary are all made by a single readline application.
-	// This config only stores the vars/binds that have been changed.
-	cfgChanged = inputrc.NewConfig()
-)
+// We here must assume that all bind changes during the lifetime
+// of the binary are all made by a single readline application.
+// This config only stores the vars/binds that have been changed.
+var cfgChanged = inputrc.NewConfig()
 
 // Set returns a command named `set`, for manipulating readline global options.
 func Set(shell *readline.Shell) *cobra.Command {

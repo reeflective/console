@@ -215,7 +215,6 @@ func (m *Menu) CheckIsAvailable(cmd *cobra.Command) error {
 		"cmd":     cmd,
 		"filters": filters,
 	})
-
 	if err != nil {
 		return err
 	}
@@ -245,7 +244,12 @@ func (m *Menu) ActiveFiltersFor(cmd *cobra.Command) []string {
 		}
 	}
 
-	return filters
+	if len(filters) > 0 {
+		return filters
+	}
+
+	// Any parent that is hidden make its whole subtree hidden also.
+	return m.ActiveFiltersFor(cmd.Parent())
 }
 
 // SetErrFilteredCommandTemplate sets the error template to be used
