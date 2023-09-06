@@ -146,7 +146,7 @@ func (c *Console) execute(menu *Menu, args []string, async bool) (err error) {
 	// Find the target command: if this command is filtered, don't run it.
 	target, _, _ := cmd.Find(args)
 
-	if err := menu.CheckIsAvailable(target); err != nil {
+	if err = menu.CheckIsAvailable(target); err != nil {
 		return err
 	}
 
