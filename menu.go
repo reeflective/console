@@ -226,6 +226,10 @@ func (m *Menu) CheckIsAvailable(cmd *cobra.Command) error {
 // does not declare as compliant with (added with console.Hide/ShowCommand()).
 func (m *Menu) ActiveFiltersFor(cmd *cobra.Command) []string {
 	if cmd.Annotations == nil {
+		if cmd.HasParent() {
+			return m.ActiveFiltersFor(cmd.Parent())
+		}
+
 		return nil
 	}
 
@@ -244,7 +248,7 @@ func (m *Menu) ActiveFiltersFor(cmd *cobra.Command) []string {
 		}
 	}
 
-	if len(filters) > 0 {
+	if len(filters) > 0 || !cmd.HasParent() {
 		return filters
 	}
 
