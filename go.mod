@@ -1,4 +1,4 @@
-module github.com/pygrum/console
+module github.com/reeflective/console
 
 go 1.21
 
