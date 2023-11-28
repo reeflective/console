@@ -5,7 +5,7 @@ go 1.21
 require (
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
 	github.com/reeflective/readline v1.0.9
-	github.com/rsteube/carapace v0.43.0
+	github.com/rsteube/carapace v0.43.3
 	github.com/spf13/cobra v1.7.0
 	github.com/spf13/pflag v1.0.5
 	golang.org/x/exp v0.0.0-20220909182711-5c715a9e8561
@@ -23,4 +23,4 @@ require (
 	mvdan.cc/sh/v3 v3.7.0 // indirect
 )
 
-replace github.com/rsteube/carapace v0.43.0 => github.com/reeflective/carapace v0.25.2-0.20230816093630-a30f5184fa0d
+replace github.com/rsteube/carapace v0.43.3 => github.com/reeflective/carapace v0.25.2-0.20230816093630-a30f5184fa0d
