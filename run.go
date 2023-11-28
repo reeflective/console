@@ -59,10 +59,10 @@ func (c *Console) Start() error {
 		// so we must be sure we use the good one.
 		menu = c.activeMenu()
 
-		// Split the line into shell words.
-		args, err := shellquote.Split(line)
+		// Parse the line with bash-syntax, removing comments.
+		args, err := c.parse(line)
 		if err != nil {
-			fmt.Printf("Line error: %s\n", err.Error())
+			fmt.Printf("Parsing error: %s\n", err.Error())
 			continue
 		}
 
