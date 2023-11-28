@@ -215,7 +215,6 @@ func (m *Menu) CheckIsAvailable(cmd *cobra.Command) error {
 		"cmd":     cmd,
 		"filters": filters,
 	})
-
 	if err != nil {
 		return err
 	}
