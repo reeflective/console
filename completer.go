@@ -50,8 +50,9 @@ func (c *Console) complete(line []rune, pos int) readline.Completions {
 	comps = c.justifyCommandComps(comps)
 
 	// Suffix matchers for the completions if any.
-	if meta.Nospace.String() != "" {
-		comps = comps.NoSpace([]rune(meta.Nospace.String())...)
+	suffixes, err := meta.Nospace.MarshalJSON()
+	if len(suffixes) > 0 && err == nil {
+		comps = comps.NoSpace([]rune(string(suffixes))...)
 	}
 
 	// Other status/error messages
