@@ -9,8 +9,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/reeflective/console"
 	"github.com/spf13/cobra"
+
+	"github.com/reeflective/console"
 )
 
 // In here we create some menus which hold different command trees.
