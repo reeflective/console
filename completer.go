@@ -199,7 +199,7 @@ func adjustQuotedPrefix(remain string, err error) (arg, comp, line string) {
 		comp = "'"
 		line = comp + arg
 	case errors.Is(err, errUnterminatedEscape):
-		arg = strings.ReplaceAll(arg, "\\", "")
+		// arg = strings.ReplaceAll(arg, "\\", "")
 	}
 
 	return arg, comp, line
