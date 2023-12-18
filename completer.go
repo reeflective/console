@@ -10,6 +10,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
+        "github.com/rsteube/carapace"
 	"github.com/rsteube/carapace/pkg/style"
 	completer "github.com/rsteube/carapace/pkg/x"
 	"github.com/rsteube/carapace/pkg/xdg"
