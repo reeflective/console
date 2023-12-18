@@ -20,6 +20,10 @@ import (
 func (c *Console) complete(line []rune, pos int) readline.Completions {
 	menu := c.activeMenu()
 
+	// Ensure the carapace library is called so that the function
+	// completer.Complete() variable is correctly initialized before use.
+	carapace.Gen(menu.Command)
+
 	// Split the line as shell words, only using
 	// what the right buffer (up to the cursor)
 	args, prefixComp, prefixLine := splitArgs(line, pos)
