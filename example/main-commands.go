@@ -6,11 +6,12 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/reeflective/console"
-	"github.com/reeflective/console/commands/readline"
 	"github.com/rsteube/carapace"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
+
+	"github.com/reeflective/console"
+	"github.com/reeflective/console/commands/readline"
 )
 
 // mainMenuCommands - Create the commands for the main menu.

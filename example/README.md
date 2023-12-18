@@ -10,12 +10,15 @@ This directory contains an example console application containing:
 ## Installing
 Assuming that you have a working Go toolchain:
 ```bash
-# Clone the repository and go to example directory
-git clone https://github.com/reeflective/console && cd console/example
-
-# Build and run the console
-go build . && ./example
+go install github.com/reeflective/console/example
 ```
+<!-- ```bash -->
+<!-- # Clone the repository and go to example directory -->
+<!-- git clone https://github.com/reeflective/console && cd console/example -->
+<!---->
+<!-- # Build and run the console -->
+<!-- go build . && ./example -->
+<!-- ``` -->
 
 ## Directories and files
 The files/directories below are listed in the order in which a user would want to 
