@@ -1,5 +1,12 @@
 package console
 
+import (
+	"errors"
+	"os"
+)
+
+var ErrCtrlC = errors.New(os.Interrupt.String())
+
 // AddInterrupt registers a handler to run when the console receives a given
 // interrupt error from the underlying readline shell. Mainly two interrupt
 // signals are concerned: io.EOF (returned when pressing CtrlD), and console.ErrCtrlC.
