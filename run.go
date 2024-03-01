@@ -174,12 +174,15 @@ func (c *Console) execute(ctx context.Context, menu *Menu, args []string, async 
 	// Wait for the command to finish, or for an OS signal to be caught.
 	select {
 	case <-ctx.Done():
-		if !errors.Is(ctx.Err(), context.Canceled) {
-			err = ctx.Err()
+		cause := context.Cause(ctx)
+
+		if !errors.Is(cause, context.Canceled) {
+			return cause
 		}
 
 	case signal := <-sigchan:
 		cancel(errors.New(signal.String()))
+
 		menu.handleInterrupt(errors.New(signal.String()))
 	}
 
