@@ -38,7 +38,8 @@ func (c *Console) Start(ctx context.Context) error {
 		c.printed = false
 
 		if err := c.runAllE(c.PreReadlineHooks); err != nil {
-			fmt.Printf("Pre-read error: %s\n", err.Error())
+			fmt.Fprintf(menu.ErrOrStderr(), "Pre-read error: %s\n", err.Error())
+
 			continue
 		}
 
@@ -62,7 +63,7 @@ func (c *Console) Start(ctx context.Context) error {
 		// Parse the line with bash-syntax, removing comments.
 		args, err := c.parse(line)
 		if err != nil {
-			fmt.Printf("Parsing error: %s\n", err.Error())
+			fmt.Fprintf(menu.ErrOrStderr(), "Parsing error: %s\n", err.Error())
 			continue
 		}
 
@@ -74,7 +75,7 @@ func (c *Console) Start(ctx context.Context) error {
 		// which may modify the input line args.
 		args, err = c.runLineHooks(args)
 		if err != nil {
-			fmt.Printf("Line error: %s\n", err.Error())
+			fmt.Fprintf(menu.ErrOrStderr(), "Line error: %s\n", err.Error())
 			continue
 		}
 
