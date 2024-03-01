@@ -147,12 +147,12 @@ func (c *Console) execute(ctx context.Context, menu *Menu, args []string, async 
 	// Find the target command: if this command is filtered, don't run it.
 	target, _, _ := cmd.Find(args)
 
-	if err = menu.CheckIsAvailable(target); err != nil {
+	if err := menu.CheckIsAvailable(target); err != nil {
 		return err
 	}
 
 	// Console-wide pre-run hooks, cannot.
-	if err = c.runAllE(c.PreCmdRunHooks); err != nil {
+	if err := c.runAllE(c.PreCmdRunHooks); err != nil {
 		return fmt.Errorf("pre-run error: %s", err.Error())
 	}
 
@@ -183,7 +183,7 @@ func (c *Console) execute(ctx context.Context, menu *Menu, args []string, async 
 		menu.handleInterrupt(errors.New(signal.String()))
 	}
 
-	return err
+	return nil
 }
 
 // Run the command in a separate goroutine, and cancel the context when done.
