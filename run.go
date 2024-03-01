@@ -193,6 +193,7 @@ func (c *Console) execute(ctx context.Context, menu *Menu, args []string, async 
 func (c *Console) executeCommand(cmd *cobra.Command, cancel context.CancelCauseFunc) {
 	if err := cmd.Execute(); err != nil {
 		cancel(err)
+
 		return
 	}
 
