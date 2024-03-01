@@ -109,16 +109,9 @@ func (m *Menu) AddHistorySource(name string, source readline.History) {
 // to the specified "filepath" parameter. On the first call to this function,
 // the default in-memory history source is removed.
 func (m *Menu) AddHistorySourceFile(name string, filepath string) {
-	m.mutex.RLock()
-	defer m.mutex.RUnlock()
+	history, _ := readline.NewHistoryFromFile(filepath)
 
-	if len(m.histories) == 1 && m.historyNames[0] == m.defaultHistoryName() {
-		delete(m.histories, m.defaultHistoryName())
-		m.historyNames = make([]string, 0)
-	}
-
-	m.historyNames = append(m.historyNames, name)
-	m.histories[name], _ = readline.NewHistoryFromFile(filepath)
+	m.AddHistorySource(name, history)
 }
 
 // DeleteHistorySource removes a history source from the menu.
