@@ -38,7 +38,7 @@ func (c *Console) Start(ctx context.Context) error {
 		c.printed = false
 
 		if err := c.runAllE(c.PreReadlineHooks); err != nil {
-			fmt.Fprintf(menu.ErrOrStderr(), "Pre-read error: %s\n", err.Error())
+			menu.ErrorHandler(PreReadError{newError(err, "Pre-read error")})
 
 			continue
 		}
@@ -63,7 +63,7 @@ func (c *Console) Start(ctx context.Context) error {
 		// Parse the line with bash-syntax, removing comments.
 		args, err := c.parse(line)
 		if err != nil {
-			fmt.Fprintf(menu.ErrOrStderr(), "Parsing error: %s\n", err.Error())
+			menu.ErrorHandler(ParseError{newError(err, "Parsing error")})
 			continue
 		}
 
@@ -75,7 +75,7 @@ func (c *Console) Start(ctx context.Context) error {
 		// which may modify the input line args.
 		args, err = c.runLineHooks(args)
 		if err != nil {
-			fmt.Fprintf(menu.ErrOrStderr(), "Line error: %s\n", err.Error())
+			menu.ErrorHandler(LineHookError{newError(err, "Line error")})
 			continue
 		}
 
@@ -85,7 +85,7 @@ func (c *Console) Start(ctx context.Context) error {
 		// the cobra behavior.
 		// If it's an interrupt, we take care of it.
 		if err := c.execute(ctx, menu, args, false); err != nil {
-			fmt.Fprintf(menu.ErrOrStderr(), "%s\n", err)
+			menu.ErrorHandler(ExecutionError{newError(err, "")})
 		}
 	}
 }
