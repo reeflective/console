@@ -10,6 +10,7 @@ import (
 
 	"github.com/kballard/go-shellquote"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 // Start - Start the console application (readline loop). Blocking.
@@ -150,6 +151,39 @@ func (c *Console) execute(ctx context.Context, menu *Menu, args []string, async 
 	if err := menu.CheckIsAvailable(target); err != nil {
 		return err
 	}
+
+	// Reset all flags to their default values.
+	//
+	// Slice flags accumulate per execution (and do not reset),
+	// so we must reset them manually.
+	//
+	// Example:
+	//
+	//  Given cmd.Flags().StringSlice("comment", nil, "")
+	//  If you run a command with --comment "a" --comment "b" you will get
+	//  the expected [a, b] slice.
+	//
+	//  If you run a command again with no --comment flags, you will get
+	//  [a, b] again instead of an empty slice.
+	//
+	//  If you run the command again with --comment "c" --comment "d" flags,
+	//  you will get [a, b, c, d] instead of just [c, d].
+	target.Flags().VisitAll(func(flag *pflag.Flag) {
+		flag.Changed = false
+		switch value := flag.Value.(type) {
+		case pflag.SliceValue:
+			var res []string
+
+			if len(flag.DefValue) > 0 && flag.DefValue != "[]" {
+				res = append(res, flag.DefValue)
+			}
+
+			value.Replace(res)
+
+		default:
+			flag.Value.Set(flag.DefValue)
+		}
+	})
 
 	// Console-wide pre-run hooks, cannot.
 	if err := c.runAllE(c.PreCmdRunHooks); err != nil {
