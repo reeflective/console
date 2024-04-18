@@ -9,23 +9,23 @@
 
 <!-- Badges -->
 <p align="center">
-  <a href="https://github.com/reeflective/console/actions/workflows/go.yml">
-    <img src="https://github.com/reeflective/console/actions/workflows/go.yml/badge.svg?branch=main"
+  <a href="https://github.com/alexj212/console/actions/workflows/go.yml">
+    <img src="https://github.com/alexj212/console/actions/workflows/go.yml/badge.svg?branch=main"
       alt="Github Actions (workflows)" />
   </a>
 
-  <a href="https://github.com/reeflective/console">
+  <a href="https://github.com/alexj212/console">
     <img src="https://img.shields.io/github/go-mod/go-version/reeflective/console.svg"
       alt="Go module version" />
   </a>
 
-  <a href="https://pkg.go.dev/github.com/reeflective/console">
+  <a href="https://pkg.go.dev/github.com/alexj212/console">
     <img src="https://img.shields.io/badge/godoc-reference-blue.svg"
       alt="GoDoc reference" />
   </a>
 
-  <a href="https://goreportcard.com/report/github.com/reeflective/console">
-    <img src="https://goreportcard.com/badge/github.com/reeflective/console"
+  <a href="https://goreportcard.com/report/github.com/alexj212/console">
+    <img src="https://goreportcard.com/badge/github.com/alexj212/console"
       alt="Go Report Card" />
   </a>
 
@@ -40,7 +40,7 @@
   </a>
 </p>
 
-Console is an all-in-one console application library built on top of a [readline](https://github.com/reeflective/readline) shell and using [Cobra](https://github.com/spf13/cobra) commands. 
+Console is an all-in-one console application library built on top of a [readline](https://github.com/alexj212/readline) shell and using [Cobra](https://github.com/spf13/cobra) commands. 
 It aims to provide users with a modern interface at at minimal cost while allowing them to focus on developing 
 their commands and application core: the console will then transparently interface with these commands, and provide
 the various features below almost for free.
@@ -55,7 +55,7 @@ the various features below almost for free.
 - Bind handlers to special interrupt errors (eg. `CtrlC`/`CtrlD`), per menu.
 
 ### Shell interface
-- Shell is powered by a [readline](https://github.com/reeflective/readline) instance, with full `inputrc` support and extended functionality.
+- Shell is powered by a [readline](https://github.com/alexj212/readline) instance, with full `inputrc` support and extended functionality.
 - All features of readline are supported in the console. It also allows the console to give:
 - Configurable bind keymaps, commands and options, sane defaults, and per-application configuration.
 - Out-of-the-box, advanced completions for commands, flags, positional and flag arguments.
@@ -71,23 +71,23 @@ the various features below almost for free.
 
 ## Documentation
 
-You can install and use the [example application console](https://github.com/reeflective/console/tree/main/example). This example application 
+You can install and use the [example application console](https://github.com/alexj212/console/tree/main/example). This example application 
 will give you a taste of the behavior and supported features. The following documentation 
-is also available in the [wiki](https://github.com/reeflective/console/wiki):
+is also available in the [wiki](https://github.com/alexj212/console/wiki):
 
-* [Getting started](https://github.com/reeflective/console/wiki/Getting-Started) 
-* [Menus](https://github.com/reeflective/console/wiki/Menus)
-* [Prompts](https://github.com/reeflective/console/wiki/Prompts)
-* [Binding commands](https://github.com/reeflective/console/wiki/Binding-Commands)
-* [Interrupt handlers](https://github.com/reeflective/console/wiki/Interrupt-Handlers)
-* [History Sources](https://github.com/reeflective/console/wiki/History-Sources)
-* [Logging](https://github.com/reeflective/console/wiki/Logging)
-* [Readline shell](https://github.com/reeflective/readline/wiki)
-* [Other utilities](https://github.com/reeflective/console/wiki/Other-Utililites)
+* [Getting started](https://github.com/alexj212/console/wiki/Getting-Started) 
+* [Menus](https://github.com/alexj212/console/wiki/Menus)
+* [Prompts](https://github.com/alexj212/console/wiki/Prompts)
+* [Binding commands](https://github.com/alexj212/console/wiki/Binding-Commands)
+* [Interrupt handlers](https://github.com/alexj212/console/wiki/Interrupt-Handlers)
+* [History Sources](https://github.com/alexj212/console/wiki/History-Sources)
+* [Logging](https://github.com/alexj212/console/wiki/Logging)
+* [Readline shell](https://github.com/alexj212/readline/wiki)
+* [Other utilities](https://github.com/alexj212/console/wiki/Other-Utililites)
 
 
 ## Showcase
-![console](https://github.com/reeflective/console/blob/assets/console.gif)
+![console](https://github.com/alexj212/console/blob/assets/console.gif)
 
 
 ## Status 

@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/reeflective/readline"
+	"github.com/alexj212/readline"
 )
 
 //go:embed .example-history

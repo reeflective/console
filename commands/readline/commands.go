@@ -3,7 +3,7 @@ package readline
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/reeflective/readline"
+	"github.com/alexj212/readline"
 )
 
 // Commands returns a command named `readline`, with subcommands dedicated

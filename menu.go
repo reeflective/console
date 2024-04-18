@@ -11,7 +11,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/reeflective/readline"
+	"github.com/alexj212/readline"
 )
 
 // Menu - A menu is a simple way to seggregate commands based on

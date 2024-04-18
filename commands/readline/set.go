@@ -11,8 +11,8 @@ import (
 	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
 
-	"github.com/reeflective/readline"
-	"github.com/reeflective/readline/inputrc"
+	"github.com/alexj212/readline"
+	"github.com/alexj212/readline/inputrc"
 )
 
 // We here must assume that all bind changes during the lifetime

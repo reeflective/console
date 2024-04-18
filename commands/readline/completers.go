@@ -24,8 +24,8 @@ import (
 	"github.com/rsteube/carapace"
 	"github.com/spf13/cobra"
 
-	"github.com/reeflective/readline"
-	"github.com/reeflective/readline/inputrc"
+	"github.com/alexj212/readline"
+	"github.com/alexj212/readline/inputrc"
 )
 
 func completeKeymaps(sh *readline.Shell, _ *cobra.Command) carapace.Action {

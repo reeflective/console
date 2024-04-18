@@ -1,1 +1,9 @@
 console.wiki
+build
+vendor
+go.work
+go.work.sum
+go.sum
+dist
+.idea
+venv

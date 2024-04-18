@@ -15,7 +15,7 @@ import (
 	completer "github.com/rsteube/carapace/pkg/x"
 	"github.com/rsteube/carapace/pkg/xdg"
 
-	"github.com/reeflective/readline"
+	"github.com/alexj212/readline"
 )
 
 func (c *Console) complete(line []rune, pos int) readline.Completions {

@@ -5,8 +5,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/reeflective/readline"
-	"github.com/reeflective/readline/inputrc"
+	"github.com/alexj212/readline"
+	"github.com/alexj212/readline/inputrc"
 )
 
 // Console is an integrated console application instance.

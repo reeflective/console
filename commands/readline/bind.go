@@ -9,8 +9,8 @@ import (
 	"github.com/rsteube/carapace"
 	"github.com/spf13/cobra"
 
-	"github.com/reeflective/readline"
-	"github.com/reeflective/readline/inputrc"
+	"github.com/alexj212/readline"
+	"github.com/alexj212/readline/inputrc"
 )
 
 // Bind returns a command named `bind`, for manipulating readline keymaps and bindings.

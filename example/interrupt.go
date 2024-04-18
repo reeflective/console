@@ -6,7 +6,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/reeflective/console"
+	"github.com/alexj212/console"
 )
 
 // exitCtrlD is a custom interrupt handler to use when the shell

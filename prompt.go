@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/reeflective/readline"
+	"github.com/alexj212/readline"
 )
 
 // Prompt - A prompt is a set of functions that return the strings to print

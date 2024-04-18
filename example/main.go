@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/reeflective/console"
+	"github.com/alexj212/console"
 )
 
 const (

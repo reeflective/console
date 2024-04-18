@@ -10,8 +10,8 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
-	"github.com/reeflective/console"
-	"github.com/reeflective/console/commands/readline"
+	"github.com/alexj212/console"
+	"github.com/alexj212/console/commands/readline"
 )
 
 // mainMenuCommands - Create the commands for the main menu.
