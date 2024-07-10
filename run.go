@@ -24,7 +24,7 @@ func (c *Console) Start() error {
 	}
 
 	firstRead := true // leave space between logo and first prompt on first read without fail, if NewlineAfter is set.
-	lastLine := "_"   // used to check if last read line is empty.
+	lastLine := ""    // used to check if last read line is empty.
 
 	for {
 		// Identical to printing it at the end of the loop, and
