@@ -12,14 +12,16 @@ import (
 // Console is an integrated console application instance.
 type Console struct {
 	// Application
-	name        string           // Used in the prompt, and for readline `.inputrc` application-specific settings.
-	shell       *readline.Shell  // Provides readline functionality (inputs, completions, hints, history)
-	printLogo   func(c *Console) // Simple logo printer.
-	menus       map[string]*Menu // Different command trees, prompt engines, etc.
-	filters     []string         // Hide commands based on their attributes and current context.
-	isExecuting bool             // Used by log functions, which need to adapt behavior (print the prompt, , etc)
-	printed     bool             // Used to adjust asynchronous messages too.
-	mutex       *sync.RWMutex    // Concurrency management.
+	name          string           // Used in the prompt, and for readline `.inputrc` application-specific settings.
+	shell         *readline.Shell  // Provides readline functionality (inputs, completions, hints, history)
+	printLogo     func(c *Console) // Simple logo printer.
+	cmdHighlight  string           // Ansi code for highlighting of command in default highlighter. Green by default.
+	flagHighlight string           // Ansi code for highlighting of flag in default highlighter. Green by default.
+	menus         map[string]*Menu // Different command trees, prompt engines, etc.
+	filters       []string         // Hide commands based on their attributes and current context.
+	isExecuting   bool             // Used by log functions, which need to adapt behavior (print the prompt, etc.)
+	printed       bool             // Used to adjust asynchronous messages too.
+	mutex         *sync.RWMutex    // Concurrency management.
 
 	// Execution
 
@@ -93,6 +95,8 @@ func New(app string) *Console {
 	}
 
 	// Syntax highlighting, multiline callbacks, etc.
+	console.cmdHighlight = seqFgGreen
+	console.flagHighlight = seqBrightWigth
 	console.shell.AcceptMultiline = console.acceptMultiline
 	console.shell.SyntaxHighlighter = console.highlightSyntax
 
