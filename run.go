@@ -36,7 +36,7 @@ func (c *Console) Start() error {
 			if !c.NewlineWhenEmpty && !firstRead {
 				// Print on the condition that the last input wasn't empty.
 				if !c.lineEmpty(lastLine) {
-					fmt.Println(lastLine)
+					fmt.Println()
 				}
 			} else {
 				fmt.Println()
@@ -63,7 +63,7 @@ func (c *Console) Start() error {
 		if c.NewlineBefore {
 			if !c.NewlineWhenEmpty {
 				if !c.lineEmpty(lastLine) {
-					fmt.Println(lastLine)
+					fmt.Println()
 				}
 			} else {
 				fmt.Println()
