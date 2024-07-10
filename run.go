@@ -42,9 +42,6 @@ func (c *Console) Start() error {
 				fmt.Println()
 			}
 		}
-		if firstRead {
-			firstRead = false
-		}
 
 		// Always ensure we work with the active menu, with freshly
 		// generated commands, bound prompts and some other things.
@@ -61,7 +58,7 @@ func (c *Console) Start() error {
 		// Block and read user input.
 		line, err := c.shell.Readline()
 		if c.NewlineBefore {
-			if !c.NewlineWhenEmpty {
+			if !c.NewlineWhenEmpty && !firstRead {
 				if !c.lineEmpty(lastLine) {
 					fmt.Println()
 				}
@@ -106,6 +103,9 @@ func (c *Console) Start() error {
 		// If it's an interrupt, we take care of it.
 		if err := c.execute(menu, args, false); err != nil {
 			fmt.Println(err)
+		}
+		if firstRead {
+			firstRead = false
 		}
 		lastLine = line
 	}
