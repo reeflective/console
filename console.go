@@ -33,6 +33,17 @@ type Console struct {
 	// know how to handle it in all situations.
 	NewlineAfter bool
 
+	// Leave empty lines with NewlineBefore and NewlineAfter, even if the provided input was empty.
+	// Empty characters are defined as any number of spaces and tabs. The 'empty' character set
+	// can be changed by modifying Console.EmptyChars
+	// This field is false by default.
+	NewlineWhenEmpty bool
+
+	// Characters that are used to determine whether an input line was empty. If a line is not entirely
+	// made up by any of these characters, then it is not considered empty. The default characters
+	// are ' ' and '\t'.
+	EmptyChars []rune
+
 	// PreReadlineHooks - All the functions in this list will be executed,
 	// in their respective orders, before the console starts reading
 	// any user input (ie, before redrawing the prompt).
@@ -89,6 +100,8 @@ func New(app string) *Console {
 	console.shell.Completer = console.complete
 	console.defaultStyleConfig()
 
+	// Defaults
+	console.EmptyChars = []rune{' ', '\t'}
 	return console
 }
 

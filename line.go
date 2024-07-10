@@ -267,3 +267,14 @@ func trimSpacesMatch(remain []string) (trimmed []string) {
 
 	return
 }
+
+func (c *Console) lineEmpty(line string) bool {
+	empty := true
+	for _, r := range line {
+		if !strings.ContainsRune(string(c.EmptyChars), r) {
+			empty = false
+			break
+		}
+	}
+	return empty
+}
