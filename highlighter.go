@@ -31,6 +31,22 @@ var (
 	reverseReset    = "\x1b[27m"
 )
 
+// SetDefaultCommandHighlight allows the user to change the highlight color for a command in the default syntax
+// highlighter using an ansi code.
+// This action has no effect if a custom syntax highlighter for the shell is set.
+// By default, the highlight code is green ("\x1b[32m").
+func (c *Console) SetDefaultCommandHighlight(seq string) {
+	c.cmdHighlight = seq
+}
+
+// SetDefaultFlagHighlight allows the user to change the highlight color for a flag in the default syntax
+// highlighter using an ansi color code.
+// This action has no effect if a custom syntax highlighter for the shell is set.
+// By default, the highlight code is grey ("\x1b[38;05;244m").
+func (c *Console) SetDefaultFlagHighlight(seq string) {
+	c.flagHighlight = seq
+}
+
 // highlightSyntax - Entrypoint to all input syntax highlighting in the Wiregost console.
 func (c *Console) highlightSyntax(input []rune) (line string) {
 	// Split the line as shellwords
@@ -82,7 +98,7 @@ func (c *Console) highlightCommand(done, args []string, _ *cobra.Command) ([]str
 		}
 
 		if cmdFound {
-			highlighted = append(highlighted, bold+seqFgGreen+args[0]+seqFgReset+boldReset)
+			highlighted = append(highlighted, bold+c.cmdHighlight+args[0]+seqFgReset+boldReset)
 			rest = args[1:]
 
 			return append(done, highlighted...), rest
@@ -102,7 +118,7 @@ func (c *Console) highlightCommandFlags(done, args []string, _ *cobra.Command) (
 
 	for _, arg := range args {
 		if strings.HasPrefix(arg, "-") || strings.HasPrefix(arg, "--") {
-			highlighted = append(highlighted, bold+seqBrightWigth+arg+seqFgReset+boldReset)
+			highlighted = append(highlighted, bold+c.flagHighlight+arg+seqFgReset+boldReset)
 		} else {
 			highlighted = append(highlighted, arg)
 		}
