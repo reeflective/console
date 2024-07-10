@@ -23,11 +23,27 @@ func (c *Console) Start() error {
 		c.printLogo(c)
 	}
 
+	firstRead := true // leave space between logo and first prompt on first read without fail, if NewlineAfter is set.
+	lastLine := "_"   // used to check if last read line is empty.
+
 	for {
 		// Identical to printing it at the end of the loop, and
 		// leaves some space between the logo and the first prompt.
+
+		// If NewlineAfter is set but NewlineWhenEmpty is not set, we do a check to see
+		// if the last line was empty. If it wasn't, then we can print.
 		if c.NewlineAfter {
-			fmt.Println()
+			if !c.NewlineWhenEmpty && !firstRead {
+				// Print on the condition that the last input wasn't empty.
+				if !c.lineEmpty(lastLine) {
+					fmt.Println(lastLine)
+				}
+			} else {
+				fmt.Println()
+			}
+		}
+		if firstRead {
+			firstRead = false
 		}
 
 		// Always ensure we work with the active menu, with freshly
@@ -44,9 +60,14 @@ func (c *Console) Start() error {
 
 		// Block and read user input.
 		line, err := c.shell.Readline()
-
 		if c.NewlineBefore {
-			fmt.Println()
+			if !c.NewlineWhenEmpty {
+				if !c.lineEmpty(lastLine) {
+					fmt.Println(lastLine)
+				}
+			} else {
+				fmt.Println()
+			}
 		}
 
 		if err != nil {
@@ -86,6 +107,7 @@ func (c *Console) Start() error {
 		if err := c.execute(menu, args, false); err != nil {
 			fmt.Println(err)
 		}
+		lastLine = line
 	}
 }
 
