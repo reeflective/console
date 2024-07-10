@@ -16,7 +16,7 @@ type Console struct {
 	shell         *readline.Shell  // Provides readline functionality (inputs, completions, hints, history)
 	printLogo     func(c *Console) // Simple logo printer.
 	cmdHighlight  string           // Ansi code for highlighting of command in default highlighter. Green by default.
-	flagHighlight string           // Ansi code for highlighting of flag in default highlighter. Green by default.
+	flagHighlight string           // Ansi code for highlighting of flag in default highlighter. Grey by default.
 	menus         map[string]*Menu // Different command trees, prompt engines, etc.
 	filters       []string         // Hide commands based on their attributes and current context.
 	isExecuting   bool             // Used by log functions, which need to adapt behavior (print the prompt, etc.)
