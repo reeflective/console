@@ -10,7 +10,6 @@ import (
 
 	"github.com/kballard/go-shellquote"
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 )
 
 // Start - Start the console application (readline loop). Blocking.
@@ -159,7 +158,6 @@ func (c *Console) execute(ctx context.Context, menu *Menu, args []string, async 
 
 	// Reset all flags to their default values.
 	resetFlagsDefaults(target)
-
 
 	// Console-wide pre-run hooks, cannot.
 	if err := c.runAllE(c.PreCmdRunHooks); err != nil {
