@@ -29,11 +29,24 @@ func (c *Console) StartContext(ctx context.Context) error {
 		c.printLogo(c)
 	}
 
-	for {
+	lastLine := "" // used to check if last read line is empty.
+
+	for i := 0; ; i++ {
 		// Identical to printing it at the end of the loop, and
 		// leaves some space between the logo and the first prompt.
+
+		// If NewlineAfter is set but NewlineWhenEmpty is not set, we do a check to see
+		// if the last line was empty. If it wasn't, then we can print.
+		//fmt.Println(lastLine, len(lastLine))
 		if c.NewlineAfter {
-			fmt.Println()
+			if !c.NewlineWhenEmpty && i != 0 {
+				// Print on the condition that the last input wasn't empty.
+				if !c.lineEmpty(lastLine) {
+					fmt.Println()
+				}
+			} else {
+				fmt.Println()
+			}
 		}
 
 		// Always ensure we work with the active menu, with freshly
@@ -51,13 +64,19 @@ func (c *Console) StartContext(ctx context.Context) error {
 
 		// Block and read user input.
 		line, err := c.shell.Readline()
-
 		if c.NewlineBefore {
-			fmt.Println()
+			if !c.NewlineWhenEmpty {
+				if !c.lineEmpty(line) {
+					fmt.Println()
+				}
+			} else {
+				fmt.Println()
+			}
 		}
 
 		if err != nil {
 			menu.handleInterrupt(err)
+			lastLine = line
 			continue
 		}
 
@@ -74,6 +93,7 @@ func (c *Console) StartContext(ctx context.Context) error {
 		}
 
 		if len(args) == 0 {
+			lastLine = line
 			continue
 		}
 
@@ -93,6 +113,7 @@ func (c *Console) StartContext(ctx context.Context) error {
 		if err := c.execute(ctx, menu, args, false); err != nil {
 			menu.ErrorHandler(ExecutionError{newError(err, "")})
 		}
+		lastLine = line
 	}
 }
 
