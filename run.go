@@ -31,7 +31,7 @@ func (c *Console) Start() error {
 
 		// If NewlineAfter is set but NewlineWhenEmpty is not set, we do a check to see
 		// if the last line was empty. If it wasn't, then we can print.
-		//fmt.Println(lastLine, len(lastLine))
+		// fmt.Println(lastLine, len(lastLine))
 		if c.NewlineAfter {
 			if !c.NewlineWhenEmpty && i != 0 {
 				// Print on the condition that the last input wasn't empty.

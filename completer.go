@@ -262,7 +262,6 @@ func splitCompWords(input string) (words []string, remainder string, err error) 
 
 		var word string
 		word, input, err = splitCompWord(input, &buf)
-
 		if err != nil {
 			return words, word + input, err
 		}
