@@ -26,6 +26,11 @@ type Menu struct {
 	// Maps interrupt signals (CtrlC/IOF, etc) to specific error handlers.
 	interruptHandlers map[error]func(c *Console)
 
+	// ErrorHandler is called when an error is encountered.
+	//
+	// If not set, the error is printed to the console on os.Stderr.
+	ErrorHandler ErrorHandler
+
 	// Input/output channels
 	out *bytes.Buffer
 
@@ -60,6 +65,7 @@ func newMenu(name string, console *Console) *Menu {
 		interruptHandlers: make(map[error]func(c *Console)),
 		histories:         make(map[string]readline.History),
 		mutex:             &sync.RWMutex{},
+		ErrorHandler:      defaultErrorHandler,
 	}
 
 	// Add a default in memory history to each menu
