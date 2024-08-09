@@ -31,30 +31,13 @@ func (c *Console) StartContext(ctx context.Context) error {
 
 	lastLine := "" // used to check if last read line is empty.
 
-	for i := 0; ; i++ {
-		// Identical to printing it at the end of the loop, and
-		// leaves some space between the logo and the first prompt.
-
-		// If NewlineAfter is set but NewlineWhenEmpty is not set, we do a check to see
-		// if the last line was empty. If it wasn't, then we can print.
-		//fmt.Println(lastLine, len(lastLine))
-		if c.NewlineAfter {
-			if !c.NewlineWhenEmpty && i != 0 {
-				// Print on the condition that the last input wasn't empty.
-				if !c.lineEmpty(lastLine) {
-					fmt.Println()
-				}
-			} else {
-				fmt.Println()
-			}
-		}
+	for {
+		c.displayPostRun(lastLine)
 
 		// Always ensure we work with the active menu, with freshly
 		// generated commands, bound prompts and some other things.
 		menu := c.activeMenu()
 		menu.resetPreRun()
-
-		c.printed = false
 
 		if err := c.runAllE(c.PreReadlineHooks); err != nil {
 			menu.ErrorHandler(PreReadError{newError(err, "Pre-read error")})
@@ -64,19 +47,14 @@ func (c *Console) StartContext(ctx context.Context) error {
 
 		// Block and read user input.
 		line, err := c.shell.Readline()
-		if c.NewlineBefore {
-			if !c.NewlineWhenEmpty {
-				if !c.lineEmpty(line) {
-					fmt.Println()
-				}
-			} else {
-				fmt.Println()
-			}
-		}
+
+		c.displayPostRun(line)
 
 		if err != nil {
 			menu.handleInterrupt(err)
+
 			lastLine = line
+
 			continue
 		}
 
@@ -113,6 +91,7 @@ func (c *Console) StartContext(ctx context.Context) error {
 		if err := c.execute(ctx, menu, args, false); err != nil {
 			menu.ErrorHandler(ExecutionError{newError(err, "")})
 		}
+
 		lastLine = line
 	}
 }
@@ -179,37 +158,8 @@ func (c *Console) execute(ctx context.Context, menu *Menu, args []string, async 
 	}
 
 	// Reset all flags to their default values.
-	//
-	// Slice flags accumulate per execution (and do not reset),
-	// so we must reset them manually.
-	//
-	// Example:
-	//
-	//  Given cmd.Flags().StringSlice("comment", nil, "")
-	//  If you run a command with --comment "a" --comment "b" you will get
-	//  the expected [a, b] slice.
-	//
-	//  If you run a command again with no --comment flags, you will get
-	//  [a, b] again instead of an empty slice.
-	//
-	//  If you run the command again with --comment "c" --comment "d" flags,
-	//  you will get [a, b, c, d] instead of just [c, d].
-	target.Flags().VisitAll(func(flag *pflag.Flag) {
-		flag.Changed = false
-		switch value := flag.Value.(type) {
-		case pflag.SliceValue:
-			var res []string
+	resetFlagsDefaults(target)
 
-			if len(flag.DefValue) > 0 && flag.DefValue != "[]" {
-				res = append(res, flag.DefValue)
-			}
-
-			value.Replace(res)
-
-		default:
-			flag.Value.Set(flag.DefValue)
-		}
-	})
 
 	// Console-wide pre-run hooks, cannot.
 	if err := c.runAllE(c.PreCmdRunHooks); err != nil {
@@ -300,6 +250,32 @@ func (c *Console) runLineHooks(args []string) ([]string, error) {
 	}
 
 	return processed, nil
+}
+
+func (c *Console) displayPreRun(line string) {
+	if c.NewlineBefore {
+		if !c.NewlineWhenEmpty {
+			if !c.lineEmpty(line) {
+				fmt.Println()
+			}
+		} else {
+			fmt.Println()
+		}
+	}
+}
+
+func (c *Console) displayPostRun(lastLine string) {
+	if c.NewlineAfter {
+		if !c.NewlineWhenEmpty {
+			if !c.lineEmpty(lastLine) {
+				fmt.Println()
+			}
+		} else {
+			fmt.Println()
+		}
+	}
+
+	c.printed = false
 }
 
 // monitorSignals - Monitor the signals that can be sent to the process

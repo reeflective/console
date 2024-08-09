@@ -32,6 +32,16 @@ func mainMenuCommands(app *console.Console) console.Commands {
 		// Readline subcommands
 		rootCmd.AddCommand(readline.Commands(app.Shell()))
 
+		exitCmd := &cobra.Command{
+			Use:     "exit",
+			Short:   "Exit the console application",
+			GroupID: "core",
+			Run: func(cmd *cobra.Command, args []string) {
+				exitCtrlD(app)
+			},
+		}
+		rootCmd.AddCommand(exitCmd)
+
 		// And let's add a command declared in a traditional "cobra" way.
 		clientMenuCommand := &cobra.Command{
 			Use:     "client",
