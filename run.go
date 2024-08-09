@@ -10,7 +10,6 @@ import (
 
 	"github.com/kballard/go-shellquote"
 	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 )
 
 // Start - Start the console application (readline loop). Blocking.
@@ -37,7 +36,6 @@ func (c *Console) StartContext(ctx context.Context) error {
 
 		// If NewlineAfter is set but NewlineWhenEmpty is not set, we do a check to see
 		// if the last line was empty. If it wasn't, then we can print.
-		//fmt.Println(lastLine, len(lastLine))
 		if c.NewlineAfter {
 			if !c.NewlineWhenEmpty && i != 0 {
 				// Print on the condition that the last input wasn't empty.
@@ -64,6 +62,7 @@ func (c *Console) StartContext(ctx context.Context) error {
 
 		// Block and read user input.
 		line, err := c.shell.Readline()
+
 		if c.NewlineBefore {
 			if !c.NewlineWhenEmpty {
 				if !c.lineEmpty(line) {
@@ -76,7 +75,9 @@ func (c *Console) StartContext(ctx context.Context) error {
 
 		if err != nil {
 			menu.handleInterrupt(err)
+
 			lastLine = line
+
 			continue
 		}
 
@@ -113,6 +114,7 @@ func (c *Console) StartContext(ctx context.Context) error {
 		if err := c.execute(ctx, menu, args, false); err != nil {
 			menu.ErrorHandler(ExecutionError{newError(err, "")})
 		}
+
 		lastLine = line
 	}
 }
@@ -179,37 +181,7 @@ func (c *Console) execute(ctx context.Context, menu *Menu, args []string, async 
 	}
 
 	// Reset all flags to their default values.
-	//
-	// Slice flags accumulate per execution (and do not reset),
-	// so we must reset them manually.
-	//
-	// Example:
-	//
-	//  Given cmd.Flags().StringSlice("comment", nil, "")
-	//  If you run a command with --comment "a" --comment "b" you will get
-	//  the expected [a, b] slice.
-	//
-	//  If you run a command again with no --comment flags, you will get
-	//  [a, b] again instead of an empty slice.
-	//
-	//  If you run the command again with --comment "c" --comment "d" flags,
-	//  you will get [a, b, c, d] instead of just [c, d].
-	target.Flags().VisitAll(func(flag *pflag.Flag) {
-		flag.Changed = false
-		switch value := flag.Value.(type) {
-		case pflag.SliceValue:
-			var res []string
-
-			if len(flag.DefValue) > 0 && flag.DefValue != "[]" {
-				res = append(res, flag.DefValue)
-			}
-
-			value.Replace(res)
-
-		default:
-			flag.Value.Set(flag.DefValue)
-		}
-	})
+	resetFlagsDefaults(target)
 
 	// Console-wide pre-run hooks, cannot.
 	if err := c.runAllE(c.PreCmdRunHooks); err != nil {
