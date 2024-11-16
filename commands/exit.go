@@ -34,7 +34,7 @@ func exitCtrlD() {
 	text, _ := reader.ReadString('\n')
 	answer := strings.TrimSpace(text)
 
-	if (answer == "Y") || (answer == "y") {
+	if strings.EqualFold(answer, "y") {
 		os.Exit(0)
 	}
 }

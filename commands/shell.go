@@ -17,10 +17,13 @@ func ExecuteShell() *cobra.Command {
 		Short:              "Execute the remaining arguments with system shell",
 		DisableFlagParsing: true,
 		RunE: func(_ *cobra.Command, args []string) error {
-			if len(args) == 0 {
+			// Only at least one argument is needed, since the command
+			// itself is stripped before those args are passed as an array.
+			if len(args) < 1 {
 				return errors.New("command requires one or more arguments")
 			}
 
+			// Above, the length of args is checked to be at least 2
 			path, err := exec.LookPath(args[0])
 			if err != nil {
 				return err
