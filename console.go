@@ -106,6 +106,7 @@ func New(app string) *Console {
 
 	// Defaults
 	console.EmptyChars = []rune{' ', '\t'}
+
 	return console
 }
 
