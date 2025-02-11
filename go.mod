@@ -4,7 +4,7 @@ go 1.23.6
 
 require (
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
-	github.com/reeflective/readline v1.1.1
+	github.com/reeflective/readline v1.1.2
 	github.com/rsteube/carapace v0.46.3-0.20231214181515-27e49f3c3b69
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/pflag v1.0.6
