@@ -10,10 +10,10 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/rsteube/carapace"
-	"github.com/rsteube/carapace/pkg/style"
-	completer "github.com/rsteube/carapace/pkg/x"
-	"github.com/rsteube/carapace/pkg/xdg"
+	"github.com/carapace-sh/carapace"
+	"github.com/carapace-sh/carapace/pkg/style"
+	completer "github.com/carapace-sh/carapace/pkg/x"
+	"github.com/carapace-sh/carapace/pkg/xdg"
 
 	"github.com/reeflective/readline"
 )
