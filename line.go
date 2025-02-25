@@ -22,15 +22,16 @@ var (
 	errUnterminatedSingleQuote = errors.New("unterminated single-quoted string")
 	errUnterminatedDoubleQuote = errors.New("unterminated double-quoted string")
 	errUnterminatedEscape      = errors.New("unterminated backslash-escape")
-	DisableParseErrors         = false
+	DisableParse               = false
 )
 
 // parse is in charge of removing all comments from the input line
 // before execution, and if successfully parsed, split into words.
 func (c *Console) parse(line string) (args []string, err error) {
 	// Split the line into words.
-	if DisableParseErrors {
-		return shellquote.Split(line)
+	if DisableParse {
+		args = strings.Split(line, " ")
+		return
 	}
 
 	lineReader := strings.NewReader(line)
