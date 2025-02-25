@@ -25,9 +25,13 @@ var (
 	DisableParseErrors         = false
 )
 
+func (c *Console) NoTouch(line string) (args []string, err error) {
+	return strings.Split(line, " "), nil
+}
+
 // parse is in charge of removing all comments from the input line
 // before execution, and if successfully parsed, split into words.
-func (c *Console) parse(line string) (args []string, err error) {
+func (c *Console) ShellQuote(line string) (args []string, err error) {
 	// Split the line into words.
 	if DisableParseErrors {
 		return shellquote.Split(line)
