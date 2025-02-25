@@ -11,9 +11,8 @@ require (
 	mvdan.cc/sh/v3 v3.8.0
 )
 
-require github.com/alexj212/readline v0.0.0-20240418041833-c23b1b9f33a3
-
 require (
+	github.com/alexj212/readline v0.0.0-20240418050107-8aadb99ad4c6 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/rsteube/carapace-shlex v0.1.2 // indirect

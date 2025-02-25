@@ -20,7 +20,7 @@ type Console struct {
 	isExecuting bool             // Used by log functions, which need to adapt behavior (print the prompt, , etc)
 	printed     bool             // Used to adjust asynchronous messages too.
 	mutex       *sync.RWMutex    // Concurrency management.
-
+	parse       func(line string) (args []string, err error)
 	// Execution
 
 	// Leave an empty line before executing the command.
@@ -67,6 +67,7 @@ func New(app string) *Console {
 		menus: make(map[string]*Menu),
 		mutex: &sync.RWMutex{},
 	}
+	console.parse = console.ShellQuote
 
 	// Quality of life improvements.
 	console.setupShell()
