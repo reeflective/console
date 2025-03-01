@@ -1,6 +1,7 @@
 package console
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -73,33 +74,7 @@ func (c *Console) Start() error {
 		// so we must be sure we use the good one.
 		menu = c.activeMenu()
 
-		// Parse the line with bash-syntax, removing comments.
-		args, err := c.parse(line)
-		if err != nil {
-			fmt.Printf("Parsing error: %s\n", err.Error())
-			continue
-		}
-
-		if len(args) == 0 {
-			continue
-		}
-
-		// Run user-provided pre-run line hooks,
-		// which may modify the input line args.
-		args, err = c.runLineHooks(args)
-		if err != nil {
-			fmt.Printf("Line error: %s\n", err.Error())
-			continue
-		}
-
-		// Run all pre-run hooks and the command itself
-		// Don't check the error: if its a cobra error,
-		// the library user is responsible for setting
-		// the cobra behavior.
-		// If it's an interrupt, we take care of it.
-		if err := c.execute(menu, args, false); err != nil {
-			fmt.Println(err)
-		}
+		c.executeLine(menu, line)
 	}
 }
 
@@ -109,27 +84,32 @@ func (c *Console) Start() error {
 // workflow.
 // Although state segregation is a priority for this library to be ensured as much
 // as possible, you should be cautious when using this function to run commands.
-func (m *Menu) RunCommandArgs(args []string) (err error) {
+func (m *Menu) RunCommandArgs(args []string) (string, error) {
 	// The menu used and reset is the active menu.
 	// Prepare its output buffer for the command.
 	m.resetPreRun()
-
+	out := &bytes.Buffer{}
 	// Run the command and associated helpers.
-	return m.console.execute(m, args, !m.console.isExecuting)
+	err := m.console.execute(m, m.Root(), args, nil, out, !m.console.isExecuting)
+	if err != nil {
+		return out.String(), err
+	}
+
+	return out.String(), nil
 }
 
 // RunCommandLine is the equivalent of menu.RunCommandArgs(), but accepts
 // an unsplit command line to execute. This line is split and processed in
 // *sh-compliant form, identically to how lines are in normal console usage.
-func (m *Menu) RunCommandLine(line string) (err error) {
+func (m *Menu) RunCommandLine(line string) (string, error) {
 	if len(line) == 0 {
-		return
+		return "", nil
 	}
 
 	// Split the line into shell words.
 	args, err := shellquote.Split(line)
 	if err != nil {
-		return fmt.Errorf("line error: %w", err)
+		return "", fmt.Errorf("line error: %w", err)
 	}
 
 	return m.RunCommandArgs(args)
@@ -141,7 +121,7 @@ func (m *Menu) RunCommandLine(line string) (err error) {
 // Our main object of interest is the menu's root command, and we explicitly use this reference
 // instead of the menu itself, because if RunCommand() is asynchronously triggered while another
 // command is running, the menu's root command will be overwritten.
-func (c *Console) execute(menu *Menu, args []string, async bool) (err error) {
+func (c *Console) execute(menu *Menu, rootCommand *cobra.Command, args []string, in *bytes.Buffer, out *bytes.Buffer, async bool) (err error) {
 	if !async {
 		c.mutex.RLock()
 		c.isExecuting = true
@@ -153,9 +133,9 @@ func (c *Console) execute(menu *Menu, args []string, async bool) (err error) {
 		c.isExecuting = false
 		c.mutex.RUnlock()
 	}()
-
+	//fmt.Printf("execute args: %v\n", strings.Join(args, "#"))
 	// Our root command of interest, used throughout this function.
-	cmd := menu.Command
+	cmd := rootCommand
 
 	// Find the target command: if this command is filtered, don't run it.
 	target, _, _ := cmd.Find(args)
@@ -171,6 +151,13 @@ func (c *Console) execute(menu *Menu, args []string, async bool) (err error) {
 
 	// Assign those arguments to our parser.
 	cmd.SetArgs(args)
+
+	cmd.SetOut(out)
+	cmd.SetErr(out)
+
+	if in != nil {
+		cmd.SetIn(in)
+	}
 
 	// The command execution should happen in a separate goroutine,
 	// and should notify the main goroutine when it is done.
