@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/alexj212/console/parser"
 	"github.com/spf13/cobra"
+	"io"
 	"os"
 	"strings"
 	"sync"
@@ -24,7 +25,7 @@ type Console struct {
 	isExecuting bool             // Used by log functions, which need to adapt behavior (print the prompt, , etc)
 	printed     bool             // Used to adjust asynchronous messages too.
 	mutex       *sync.RWMutex    // Concurrency management.
-
+	SaveFile    string
 	// Execution
 
 	// Leave an empty line before executing the command.
@@ -259,69 +260,70 @@ func (c *Console) executeLine(menu *Menu, line string) {
 
 	rootCmd := menu.Root()
 
-	var outputBuffer bytes.Buffer
-	for _, command := range commands {
-		// Run user-provided pre-run line hooks,
-		// which may modify the input line args.
-		args := append([]string{command.Cmd}, command.Args...)
-		args, err = c.runLineHooks(args)
-		if err != nil {
-			fmt.Printf("executeLine runLineHooks error: %s\n", err.Error())
-			continue
-		}
-
-		menu.Command = rootCmd
-
-		// Run all pre-run hooks and the command itself
-		// Don't check the error: if its a cobra error,
-		// the library user is responsible for setting
-		// the cobra behavior.
-		// If it's an interrupt, we take care of it.
-		output, err := c.executeSingleCommand(menu, rootCmd, command, args)
-		if err != nil {
-			fmt.Printf("executeLine %v\n", err)
-			break
-		}
-		outputBuffer.WriteString(output)
-	}
-
-	// Print the output of the last command
-	output := outputBuffer.String()
-	lines := strings.Split(output, "\n")
-	for _, line := range lines {
-		fmt.Printf("%s\n", string(line))
+	res, err := c.ExecuteCommand(rootCmd, commands)
+	if err != nil {
+		fmt.Printf("executeLine ExecuteCommand error: %s\n", err.Error())
+		return
 	}
 
 	// Handle output redirection if specified
 	if outFile != "" {
-		if err := os.WriteFile(outFile, outputBuffer.Bytes(), 0644); err != nil {
+		if err := os.WriteFile(outFile, []byte(res), 0644); err != nil {
 			fmt.Printf("executeLine failed to write to file `%v` error: %v", outFile, err)
 		}
 	}
-
+	if c.SaveFile != "" {
+		if err := os.WriteFile(c.SaveFile, []byte(res), 0644); err != nil {
+			fmt.Printf("executeLine failed to write to file `%v` error: %v", outFile, err)
+		}
+	}
+	fmt.Printf("%s\n", res)
+}
+func (c *Console) ExecuteLine(line string) (string, error) {
+	menu := c.ActiveMenu()
+	_, commands, err := parser.ParseCommands(line)
+	if err != nil {
+		return "", err
+	}
+	return c.ExecuteCommand(menu.Command, commands)
 }
 
-func (c *Console) executeSingleCommand(menu *Menu, rootCmd *cobra.Command, cmd *parser.ExecCmd, line []string) (string, error) {
-	out := &bytes.Buffer{}
-	var in *bytes.Buffer
+// ExecuteCommand executes parsed commands using a Cobra root command with piped execution
+func (c *Console) ExecuteCommand(rootCmd *cobra.Command, commands []*parser.ExecCmd) (string, error) {
 
-	if err := c.execute(menu, rootCmd, line, in, out, false); err != nil {
-		return out.String(), fmt.Errorf("failed to execute: `%s` error: %w", line, err)
-	}
+	var output bytes.Buffer
+	var input io.Reader
 
-	// If the command is part of a pipe, use the input from the previous command
-	if cmd.Pipe != nil {
-		//fmt.Printf("pipe command: %v\n", cmd.Pipe)
-		filtered := &bytes.Buffer{}
-		line := append([]string{cmd.Pipe.Cmd}, cmd.Pipe.Args...)
-		//fmt.Printf("line: %v\n", line)
-		if err := c.execute(menu, rootCmd, line, out, filtered, false); err != nil {
-			//fmt.Printf("failed to execute: `%s` error: %w", line, err)
-			return out.String(), fmt.Errorf("failed to execute: `%s` error: %w", line, err)
+	for _, cmd := range commands {
+		var buf bytes.Buffer
+		curCmd := cmd
+
+		for curCmd != nil {
+			args := append([]string{curCmd.Cmd}, curCmd.Args...)
+			args, err := c.runLineHooks(args)
+			if err != nil {
+				fmt.Printf("executeLine runLineHooks error: %s\n", err.Error())
+			}
+			args, _ = c.runLineHooks(args)
+
+			rootCmd.SetArgs(args)
+			rootCmd.SetOut(&buf)
+			rootCmd.SetErr(&buf)
+
+			if input != nil {
+				rootCmd.SetIn(input)
+			}
+
+			if err := rootCmd.Execute(); err != nil {
+				return "", err
+			}
+
+			input = &buf
+			curCmd = curCmd.Pipe
 		}
-		//fmt.Printf("filtered: %v\n", filtered.String())
-		return filtered.String(), nil
+
+		output.Write(buf.Bytes())
 	}
 
-	return out.String(), nil
+	return output.String(), nil
 }

@@ -13,6 +13,9 @@ type ExecCmd struct {
 }
 
 func (c *ExecCmd) String() string {
+	if c.Pipe != nil {
+		return c.Cmd + " " + strings.Join(c.Args, " ") + " | " + c.Pipe.String()
+	}
 	return c.Cmd + " " + strings.Join(c.Args, " ")
 }
 
