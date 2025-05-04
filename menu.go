@@ -4,15 +4,20 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io"
 	"strings"
 	"sync"
-	"text/template"
 
 	"github.com/spf13/cobra"
 
+	"github.com/reeflective/console/internal/strutil"
+	"github.com/reeflective/console/internal/ui"
 	"github.com/reeflective/readline"
 )
+
+// Prompt - A prompt is a set of functions that return the strings to print
+// for each prompt type. The console will call these functions to retrieve
+// the prompt strings to print. Each menu has its own prompt.
+type Prompt = ui.Prompt
 
 // Menu - A menu is a simple way to seggregate commands based on
 // the environment to which they belong. For instance, when using a menu
@@ -59,7 +64,6 @@ func newMenu(name string, console *Console) *Menu {
 	menu := &Menu{
 		console:           console,
 		name:              name,
-		prompt:            newPrompt(console),
 		Command:           &cobra.Command{},
 		out:               bytes.NewBuffer(nil),
 		interruptHandlers: make(map[error]func(c *Console)),
@@ -67,6 +71,10 @@ func newMenu(name string, console *Console) *Menu {
 		mutex:             &sync.RWMutex{},
 		ErrorHandler:      defaultErrorHandler,
 	}
+
+    // Prompt setup
+    prompt := (ui.NewPrompt(console.name, name, menu.out))
+	menu.prompt = (*Prompt)(prompt)
 
 	// Add a default in memory history to each menu
 	// This source is dropped if another source is added
@@ -214,9 +222,12 @@ func (m *Menu) CheckIsAvailable(cmd *cobra.Command) error {
 		return nil
 	}
 
+    errTemplate := m.errorFilteredCommandTemplate(filters)
+
 	var bufErr strings.Builder
 
-	err := tmpl(&bufErr, m.errorFilteredCommandTemplate(filters), map[string]interface{}{
+
+	err := strutil.Template(&bufErr, errTemplate, map[string]interface{}{
 		"menu":    m,
 		"cmd":     cmd,
 		"filters": filters,
@@ -289,9 +300,12 @@ func (m *Menu) resetPreRun() {
 	// Hide commands that are not available
 	m.hideFilteredCommands(m.Command)
 
-	// Menu setup
-	m.resetCmdOutput()             // Reset or adjust any buffered command output.
-	m.prompt.bind(m.console.shell) // Prompt binding
+    // Reset or adjust any buffered command output.
+	m.resetCmdOutput()             
+
+    // Prompt binding
+    prompt := (*ui.Prompt)(m.Prompt())
+	ui.BindPrompt(prompt, m.console.shell) 
 }
 
 // hide commands that are filtered so that they are not
@@ -340,17 +354,4 @@ func (m *Menu) errorFilteredCommandTemplate(filters []string) string {
 
 	return `Command {{.cmd.Name}} is only available for: {{range .filters }}
     - {{.}} {{end}}`
-}
-
-// tmpl executes the given template text on data, writing the result to w.
-func tmpl(w io.Writer, text string, data interface{}) error {
-	t := template.New("top")
-	t.Funcs(templateFuncs)
-	template.Must(t.Parse(text))
-
-	return t.Execute(w, data)
-}
-
-var templateFuncs = template.FuncMap{
-	"trim": strings.TrimSpace,
 }
