@@ -40,12 +40,12 @@ func (c *Console) complete(line []rune, pos int) readline.Completions {
 	// with everything it contains, regardless of errors.
 	raw := make([]readline.Completion, len(completions.Values))
 
-	for idx, val := range completions.Values.Decolor() {
+	for idx, val := range completions.Values {
 		raw[idx] = readline.Completion{
 			Value:       unescapeValue(prefixComp, prefixLine, val.Value),
 			Display:     val.Display,
 			Description: val.Description,
-			Style:       val.Style,
+			Style:       style.SGR(val.Style),
 			Tag:         val.Tag,
 		}
 
@@ -88,6 +88,9 @@ func (c *Console) complete(line []rune, pos int) readline.Completions {
 	return comps
 }
 
+// justifyCommandComps justifies the descriptions for all commands in all groups
+// to the same level, for prettiness. Also, removes any coloring from them, as currently,
+// the carapace engine does add coloring to each group, and we don't want this.
 func (c *Console) justifyCommandComps(comps readline.Completions) readline.Completions {
 	justified := []string{}
 
@@ -97,6 +100,7 @@ func (c *Console) justifyCommandComps(comps readline.Completions) readline.Compl
 		}
 
 		justified = append(justified, comp.Tag)
+		comp.Style = "" // Remove command coloring
 
 		return comp
 	})
