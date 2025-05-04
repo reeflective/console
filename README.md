@@ -99,12 +99,3 @@ The library is in a pre-release candidate status:
 
 Please open a PR or an issue if you wish to bring enhancements to it. 
 Other contributions, as well as bug fixes and reviews are also welcome.
-
-
-## Possible Improvements
-
-The following is a currently moving list of possible enhancements to be made in order to reach `v1.0`:
-- [ ] Ensure to the best extent possible a thread-safe access to the command API.
-- [ ] Clearer integration/alignment of the various I/O references between raw readline and commands.
-- [ ] Clearer and sane model for asynchronous control/cancel of commands (with OnKillRun in cobra)
-- [ ] Test suite for most important or risky code paths.
