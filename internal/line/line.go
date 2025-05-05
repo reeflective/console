@@ -1,4 +1,4 @@
-package console
+package line
 
 import (
 	"bytes"
@@ -11,22 +11,22 @@ import (
 )
 
 var (
-	splitChars        = " \n\t"
-	singleChar        = '\''
-	doubleChar        = '"'
-	escapeChar        = '\\'
-	doubleEscapeChars = "$`\"\n\\"
+	SplitChars        = " \n\t"
+	SingleChar        = '\''
+	DoubleChar        = '"'
+	EscapeChar        = '\\'
+	DoubleEscapeChars = "$`\"\n\\"
 )
 
 var (
-	errUnterminatedSingleQuote = errors.New("unterminated single-quoted string")
-	errUnterminatedDoubleQuote = errors.New("unterminated double-quoted string")
-	errUnterminatedEscape      = errors.New("unterminated backslash-escape")
+	ErrUnterminatedSingleQuote = errors.New("unterminated single-quoted string")
+	ErrUnterminatedDoubleQuote = errors.New("unterminated double-quoted string")
+	ErrUnterminatedEscape      = errors.New("unterminated backslash-escape")
 )
 
-// parse is in charge of removing all comments from the input line
+// Parse is in charge of removing all comments from the input line
 // before execution, and if successfully parsed, split into words.
-func (c *Console) parse(line string) (args []string, err error) {
+func Parse(line string) (args []string, err error) {
 	lineReader := strings.NewReader(line)
 	parser := syntax.NewParser(syntax.KeepComments(false))
 
@@ -49,18 +49,18 @@ func (c *Console) parse(line string) (args []string, err error) {
 
 // acceptMultiline determines if the line just accepted is complete (in which case
 // we should execute it), or incomplete (in which case we must read in multiline).
-func (c *Console) acceptMultiline(line []rune) (accept bool) {
+func AcceptMultiline(line []rune) (accept bool) {
 	// Errors are either: unterminated quotes, or unterminated escapes.
-	_, _, err := split(string(line), false)
+	_, _, err := Split(string(line), false)
 	if err == nil {
 		return true
 	}
 
 	// Currently, unterminated quotes are obvious to treat: keep reading.
 	switch err {
-	case errUnterminatedDoubleQuote, errUnterminatedSingleQuote:
+	case ErrUnterminatedDoubleQuote, ErrUnterminatedSingleQuote:
 		return false
-	case errUnterminatedEscape:
+	case ErrUnterminatedEscape:
 		if len(line) > 0 && line[len(line)-1] == '\\' {
 			return false
 		}
@@ -71,16 +71,55 @@ func (c *Console) acceptMultiline(line []rune) (accept bool) {
 	return true
 }
 
-// split has been copied from go-shellquote and slightly modified so as to also
+// IsEmpty checks if a given input line is empty.
+// It accepts a list of characters that we consider to be irrelevant,
+// that is, if the given line only contains these characters, it will
+// be considered empty.
+func IsEmpty(line string, emptyChars ...rune) bool {
+	empty := true
+
+	for _, r := range line {
+		if !strings.ContainsRune(string(emptyChars), r) {
+			empty = false
+			break
+		}
+	}
+
+	return empty
+}
+
+// UnescapeValue is used When the completer has returned us some completions, 
+// we sometimes need to post-process them a little before passing them to our shell.
+func UnescapeValue(prefixComp, prefixLine, val string) string {
+	quoted := strings.HasPrefix(prefixLine, "\"") ||
+		strings.HasPrefix(prefixLine, "'")
+
+	if quoted {
+		val = strings.ReplaceAll(val, "\\ ", " ")
+	}
+
+	return val
+}
+
+// TrimSpaces removes all leading/trailing spaces from words
+func TrimSpaces(remain []string) (trimmed []string) {
+	for _, word := range remain {
+		trimmed = append(trimmed, strings.TrimSpace(word))
+	}
+
+	return
+}
+
+// Split has been copied from go-shellquote and slightly modified so as to also
 // return the remainder when the parsing failed because of an unterminated quote.
-func split(input string, hl bool) (words []string, remainder string, err error) {
+func Split(input string, hl bool) (words []string, remainder string, err error) {
 	var buf bytes.Buffer
 	words = make([]string, 0)
 
 	for len(input) > 0 {
 		// skip any splitChars at the start
 		c, l := utf8.DecodeRuneInString(input)
-		if strings.ContainsRune(splitChars, c) {
+		if strings.ContainsRune(SplitChars, c) {
 			// Keep these characters in the result when higlighting the line.
 			if hl {
 				if len(words) == 0 {
@@ -93,15 +132,15 @@ func split(input string, hl bool) (words []string, remainder string, err error) 
 			input = input[l:]
 
 			continue
-		} else if c == escapeChar {
+		} else if c == EscapeChar {
 			// Look ahead for escaped newline so we can skip over it
 			next := input[l:]
 			if len(next) == 0 {
 				if hl {
-					remainder = string(escapeChar)
+					remainder = string(EscapeChar)
 				}
 
-				err = errUnterminatedEscape
+				err = ErrUnterminatedEscape
 
 				return words, remainder, err
 			}
@@ -147,22 +186,22 @@ raw:
 		for len(cur) > 0 {
 			c, l := utf8.DecodeRuneInString(cur)
 			cur = cur[l:]
-			if c == singleChar {
+			if c == SingleChar {
 				buf.WriteString(input[0 : len(input)-len(cur)-l])
 				input = cur
 				goto single
-			} else if c == doubleChar {
+			} else if c == DoubleChar {
 				buf.WriteString(input[0 : len(input)-len(cur)-l])
 				input = cur
 				goto double
-			} else if c == escapeChar {
+			} else if c == EscapeChar {
 				buf.WriteString(input[0 : len(input)-len(cur)-l])
 				if hl {
 					buf.WriteRune(c)
 				}
 				input = cur
 				goto escape
-			} else if strings.ContainsRune(splitChars, c) {
+			} else if strings.ContainsRune(SplitChars, c) {
 				buf.WriteString(input[0 : len(input)-len(cur)-l])
 				if hl {
 					buf.WriteRune(c)
@@ -184,7 +223,7 @@ escape:
 			if hl {
 				input = buf.String() + input
 			}
-			return "", input, errUnterminatedEscape
+			return "", input, ErrUnterminatedEscape
 		}
 		c, l := utf8.DecodeRuneInString(input)
 		if c == '\n' {
@@ -199,25 +238,25 @@ escape:
 
 single:
 	{
-		i := strings.IndexRune(input, singleChar)
+		i := strings.IndexRune(input, SingleChar)
 		if i == -1 {
 			if hl {
-				input = buf.String() + seqFgYellow + string(singleChar) + input
+				input = buf.String() + YellowFG + string(SingleChar) + input
 			}
-			return "", input, errUnterminatedSingleQuote
+			return "", input, ErrUnterminatedSingleQuote
 		}
 		// Catch up opening quote
 		if hl {
-			buf.WriteString(seqFgYellow)
-			buf.WriteRune(singleChar)
+			buf.WriteString(YellowFG)
+			buf.WriteRune(SingleChar)
 		}
 
 		buf.WriteString(input[0:i])
 		input = input[i+1:]
 
 		if hl {
-			buf.WriteRune(singleChar)
-			buf.WriteString(seqFgReset)
+			buf.WriteRune(SingleChar)
+			buf.WriteString(ResetFG)
 		}
 		goto raw
 	}
@@ -228,10 +267,10 @@ double:
 		for len(cur) > 0 {
 			c, l := utf8.DecodeRuneInString(cur)
 			cur = cur[l:]
-			if c == doubleChar {
+			if c == DoubleChar {
 				// Catch up opening quote
 				if hl {
-					buf.WriteString(seqFgYellow)
+					buf.WriteString(YellowFG)
 					buf.WriteRune(c)
 				}
 
@@ -239,15 +278,15 @@ double:
 
 				if hl {
 					buf.WriteRune(c)
-					buf.WriteString(seqFgReset)
+					buf.WriteString(ResetFG)
 				}
 				input = cur
 				goto raw
-			} else if c == escapeChar && !hl {
+			} else if c == EscapeChar && !hl {
 				// bash only supports certain escapes in double-quoted strings
 				c2, l2 := utf8.DecodeRuneInString(cur)
 				cur = cur[l2:]
-				if strings.ContainsRune(doubleEscapeChars, c2) {
+				if strings.ContainsRune(DoubleEscapeChars, c2) {
 					buf.WriteString(input[0 : len(input)-len(cur)-l-l2])
 					if c2 == '\n' {
 						// newline is special, skip the backslash entirely
@@ -260,33 +299,13 @@ double:
 		}
 
 		if hl {
-			input = buf.String() + seqFgYellow + string(doubleChar) + input
+			input = buf.String() + YellowFG + string(DoubleChar) + input
 		}
 
-		return "", input, errUnterminatedDoubleQuote
+		return "", input, ErrUnterminatedDoubleQuote
 	}
 
 done:
 	return buf.String(), input, nil
 }
 
-func trimSpacesMatch(remain []string) (trimmed []string) {
-	for _, word := range remain {
-		trimmed = append(trimmed, strings.TrimSpace(word))
-	}
-
-	return
-}
-
-func (c *Console) lineEmpty(line string) bool {
-	empty := true
-
-	for _, r := range line {
-		if !strings.ContainsRune(string(c.EmptyChars), r) {
-			empty = false
-			break
-		}
-	}
-
-	return empty
-}

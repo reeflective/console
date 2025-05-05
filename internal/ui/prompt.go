@@ -1,6 +1,7 @@
-package console
+package ui
 
 import (
+	"bytes"
 	"fmt"
 	"strings"
 
@@ -16,27 +17,27 @@ type Prompt struct {
 	Transient func() string            // Transient is used if the console shell is configured to be transient.
 	Right     func() string            // Right is the prompt printed on the right side of the screen.
 	Tooltip   func(word string) string // Tooltip is used to hint on the root command, replacing right prompts if not empty.
-
-	console *Console
 }
 
-func newPrompt(app *Console) *Prompt {
-	prompt := &Prompt{console: app}
+// NewPrompt requires the name of the application and the current menu,
+// as well as the current menu output buffer to produce a new, default prompt.
+func NewPrompt(appName, menuName string, stdout *bytes.Buffer) *Prompt {
+	prompt := &Prompt{}
 
 	prompt.Primary = func() string {
-		promptStr := app.name
+		promptStr := appName
 
-		menu := app.activeMenu()
+		// menu := app.activeMenu()
 
-		if menu.name == "" {
+		if menuName == "" {
 			return promptStr + " > "
 		}
 
-		promptStr += fmt.Sprintf(" [%s]", menu.name)
+		promptStr += fmt.Sprintf(" [%s]", menuName)
 
 		// If the buffered command output is not empty,
 		// add a special status indicator to the prompt.
-		if strings.TrimSpace(menu.out.String()) != "" {
+		if strings.TrimSpace(stdout.String()) != "" {
 			promptStr += " $(...)"
 		}
 
@@ -46,8 +47,8 @@ func newPrompt(app *Console) *Prompt {
 	return prompt
 }
 
-// bind reassigns the prompt printing functions to the shell helpers.
-func (p *Prompt) bind(shell *readline.Shell) {
+// BindPrompt reassigns the prompt printing functions to the shell helpers.
+func BindPrompt(p *Prompt, shell *readline.Shell) {
 	prompt := shell.Prompt
 
 	// If the user has bound its own primary prompt and the shell

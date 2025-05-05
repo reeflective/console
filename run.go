@@ -10,6 +10,9 @@ import (
 
 	"github.com/kballard/go-shellquote"
 	"github.com/spf13/cobra"
+
+	"github.com/reeflective/console/internal/completion"
+	"github.com/reeflective/console/internal/line"
 )
 
 // Start - Start the console application (readline loop). Blocking.
@@ -45,14 +48,14 @@ func (c *Console) StartContext(ctx context.Context) error {
 		}
 
 		// Block and read user input.
-		line, err := c.shell.Readline()
+		input , err := c.shell.Readline()
 
-		c.displayPostRun(line)
+		c.displayPostRun(input)
 
 		if err != nil {
 			menu.handleInterrupt(err)
 
-			lastLine = line
+			lastLine = input 
 
 			continue
 		}
@@ -63,14 +66,14 @@ func (c *Console) StartContext(ctx context.Context) error {
 		menu = c.activeMenu()
 
 		// Parse the line with bash-syntax, removing comments.
-		args, err := c.parse(line)
+		args, err := line.Parse(input)
 		if err != nil {
 			menu.ErrorHandler(ParseError{newError(err, "Parsing error")})
 			continue
 		}
 
 		if len(args) == 0 {
-			lastLine = line
+			lastLine = input 
 			continue
 		}
 
@@ -91,7 +94,7 @@ func (c *Console) StartContext(ctx context.Context) error {
 			menu.ErrorHandler(ExecutionError{newError(err, "")})
 		}
 
-		lastLine = line
+		lastLine = input 
 	}
 }
 
@@ -157,7 +160,7 @@ func (c *Console) execute(ctx context.Context, menu *Menu, args []string, async 
 	}
 
 	// Reset all flags to their default values.
-	resetFlagsDefaults(target)
+	completion.ResetFlagsDefaults(target)
 
 	// Console-wide pre-run hooks, cannot.
 	if err := c.runAllE(c.PreCmdRunHooks); err != nil {
@@ -250,10 +253,10 @@ func (c *Console) runLineHooks(args []string) ([]string, error) {
 	return processed, nil
 }
 
-func (c *Console) displayPreRun(line string) {
+func (c *Console) displayPreRun(input string) {
 	if c.NewlineBefore {
 		if !c.NewlineWhenEmpty {
-			if !c.lineEmpty(line) {
+			if !line.IsEmpty(input, c.EmptyChars...) {
 				fmt.Println()
 			}
 		} else {
@@ -265,7 +268,7 @@ func (c *Console) displayPreRun(line string) {
 func (c *Console) displayPostRun(lastLine string) {
 	if c.NewlineAfter {
 		if !c.NewlineWhenEmpty {
-			if !c.lineEmpty(lastLine) {
+			if !line.IsEmpty(lastLine, c.EmptyChars...) {
 				fmt.Println()
 			}
 		} else {
