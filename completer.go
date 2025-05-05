@@ -3,10 +3,10 @@ package console
 import (
 	"strings"
 
+	"github.com/carapace-sh/carapace"
+	"github.com/carapace-sh/carapace/pkg/style"
+	completer "github.com/carapace-sh/carapace/pkg/x"
 	"github.com/reeflective/readline"
-	"github.com/rsteube/carapace"
-	"github.com/rsteube/carapace/pkg/style"
-	completer "github.com/rsteube/carapace/pkg/x"
 
 	"github.com/reeflective/console/internal/completion"
 	"github.com/reeflective/console/internal/line"
@@ -131,7 +131,7 @@ func (c *Console) highlightSyntax(input []rune) string {
 	done = append(done, remain...)
 
 	// Join all words.
-    highlighted := strings.Join(done, "")
+	highlighted := strings.Join(done, "")
 
 	return highlighted
 }

@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/rsteube/carapace/pkg/style"
-	"github.com/rsteube/carapace/pkg/xdg"
+	"github.com/carapace-sh/carapace/pkg/style"
+	"github.com/carapace-sh/carapace/pkg/xdg"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
