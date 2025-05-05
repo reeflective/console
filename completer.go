@@ -46,6 +46,13 @@ func (c *Console) complete(input []rune, pos int) readline.Completions {
 		if !completions.Nospace.Matches(val.Value) {
 			raw[idx].Value = val.Value + " "
 		}
+
+		// Remove short/long flags grouping
+		// join to single tag group for classic zsh side-by-side view
+		switch val.Tag {
+		case "shorthand flags", "longhand flags":
+			raw[idx].Tag = "flags"
+		}
 	}
 
 	// Assign both completions and command/flags/args usage strings.
