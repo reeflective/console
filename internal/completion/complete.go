@@ -6,8 +6,6 @@ import (
 
 	"github.com/carapace-sh/carapace/pkg/style"
 	"github.com/carapace-sh/carapace/pkg/xdg"
-	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 )
 
 // DefaultStyleConfig sets some default styles for completion.
