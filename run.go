@@ -11,7 +11,6 @@ import (
 	"github.com/kballard/go-shellquote"
 	"github.com/spf13/cobra"
 
-	"github.com/reeflective/console/internal/completion"
 	"github.com/reeflective/console/internal/line"
 )
 
@@ -158,9 +157,6 @@ func (c *Console) execute(ctx context.Context, menu *Menu, args []string, async 
 	if err := menu.CheckIsAvailable(target); err != nil {
 		return err
 	}
-
-	// Reset all flags to their default values.
-	completion.ResetFlagsDefaults(target)
 
 	// Console-wide pre-run hooks, cannot.
 	if err := c.runAllE(c.PreCmdRunHooks); err != nil {
