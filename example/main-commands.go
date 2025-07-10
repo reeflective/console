@@ -403,6 +403,8 @@ func mainMenuCommands(app *console.Console) console.Commands {
 
 		rootCmd.AddCommand(searchCmd)
 
+		var mySlice = []string{"a", "b", "c"}
+
 		backupCmd := &cobra.Command{
 			Use:     "backup [flags] SOURCE DESTINATION",
 			Short:   "Create a backup of a file or directory",
@@ -412,7 +414,13 @@ func mainMenuCommands(app *console.Console) console.Commands {
 				source := args[0]
 				destination := args[1]
 
+				flagsVal, _ := cmd.Flags().GetStringSlice("test-slice")
+
 				// Implementation logic for backup command
+				fmt.Printf("mySlice: %v\n", mySlice)
+				fmt.Printf("mySlice flags: %v\n", flagsVal)
+				fmt.Printf("mySlice flags length: %v\n", len(flagsVal))
+				fmt.Printf("mySlice length: %v\n", len(mySlice))
 
 				fmt.Printf("Creating backup of %s to %s\n", source, destination)
 			},
@@ -421,6 +429,7 @@ func mainMenuCommands(app *console.Console) console.Commands {
 		backupCmd.Flags().BoolP("incremental", "i", false, "Perform incremental backup")
 		backupCmd.Flags().StringP("compression", "c", "gzip", "Specify the compression algorithm")
 		backupCmd.Flags().Bool("dry-run", false, "Perform a dry run without actually creating the backup")
+		backupCmd.Flags().StringSliceVarP(&mySlice, "test-slice", "T", mySlice, "Testing the shit")
 		rootCmd.AddCommand(backupCmd)
 
 		renameCmd := &cobra.Command{
