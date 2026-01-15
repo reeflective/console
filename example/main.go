@@ -17,7 +17,7 @@ func main() {
 	app := console.New("example")
 
 	// Global Setup ------------------------------------------------- //
-	app.NewlineBefore = true
+	app.NewlineBefore = false
 	app.NewlineAfter = true
 
 	app.SetPrintLogo(func(_ *console.Console) {
