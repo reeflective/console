@@ -63,7 +63,7 @@ func mainMenuCommands(app *console.Console) console.Commands {
 				message, _ := cmd.Flags().GetString("message")
 				count, _ := cmd.Flags().GetInt("count")
 
-				for i := 0; i < count; i++ {
+				for range count {
 					fmt.Println(message)
 				}
 			},
@@ -403,7 +403,7 @@ func mainMenuCommands(app *console.Console) console.Commands {
 
 		rootCmd.AddCommand(searchCmd)
 
-		var mySlice = []string{"a", "b", "c"}
+		mySlice := []string{"a", "b", "c"}
 
 		backupCmd := &cobra.Command{
 			Use:     "backup [flags] SOURCE DESTINATION",
@@ -590,7 +590,7 @@ func mainMenuCommands(app *console.Console) console.Commands {
 			if cmd.Name() == "ssh" {
 				// Generate a list of random hosts to use as positional arguments
 				hosts := make([]string, 0)
-				for i := 0; i < 10; i++ {
+				for i := range 10 {
 					hosts = append(hosts, fmt.Sprintf("host%d", i))
 				}
 
