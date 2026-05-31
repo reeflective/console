@@ -41,6 +41,10 @@ func main() {
 	// Set some custom prompt handlers for this menu.
 	setupPrompt(menu)
 
+	// Register a passive hint provider on the shell, demonstrating the readline
+	// hint lanes (passive provider / async transient / completion hints).
+	setupReadlineHints(app)
+
 	// All menus currently each have a distinct, in-memory history source.
 	// Replace the main (current) menu's history with one writing to our
 	// application history file. The default history is named after its menu.
