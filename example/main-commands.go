@@ -27,6 +27,7 @@ func mainMenuCommands(app *console.Console) console.Commands {
 			&cobra.Group{ID: "filesystem", Title: "filesystem"},
 			&cobra.Group{ID: "deployment", Title: "deployment"},
 			&cobra.Group{ID: "tools", Title: "tools"},
+			&cobra.Group{ID: featureGroupID, Title: "readline features"},
 		)
 
 		// Readline subcommands
@@ -606,6 +607,13 @@ func mainMenuCommands(app *console.Console) console.Commands {
 			}
 
 			c.FlagCompletion(flagMap)
+		}
+
+		// Add the readline-feature demo commands AFTER the generic completion
+		// loop above, so their custom (e.g. async) completers are not replaced
+		// by the default file completion applied to every command with args.
+		for _, cmd := range readlineFeatureCommands(app) {
+			rootCmd.AddCommand(cmd)
 		}
 
 		rootCmd.SetHelpCommandGroupID("core")

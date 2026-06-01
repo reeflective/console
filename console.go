@@ -2,8 +2,10 @@ package console
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	"github.com/reeflective/readline"
 
@@ -11,6 +13,12 @@ import (
 	"github.com/reeflective/console/internal/line"
 	"github.com/reeflective/readline/inputrc"
 )
+
+// highlightCache holds a memoized syntax-highlighting result for one input.
+type highlightCache struct {
+	input  string
+	output string
+}
 
 // Console is an integrated console application instance.
 type Console struct {
@@ -21,14 +29,24 @@ type Console struct {
 	cmdHighlight  string           // Ansi code for highlighting of command in default highlighter. Green by default.
 	flagHighlight string           // Ansi code for highlighting of flag in default highlighter. Grey by default.
 	menus         map[string]*Menu // Different command trees, prompt engines, etc.
+	current       *Menu            // Cached pointer to the active menu (guarded by mutex).
 	filters       []string         // Hide commands based on their attributes and current context.
-	isExecuting   bool             // Used by log functions, which need to adapt behavior (print the prompt, etc.)
+	isExecuting   atomic.Bool      // Used by log functions, which need to adapt behavior (print the prompt, etc.)
 	printed       bool             // Used to adjust asynchronous messages too.
 	mutex         *sync.RWMutex    // Concurrency management.
+
+	// hlCache memoizes the last syntax-highlighting result. The highlighter is
+	// called on every render (even when only the cursor moved), so caching the
+	// output for an unchanged input avoids re-splitting and re-walking the
+	// command tree. It is invalidated whenever the command tree is regenerated
+	// (see Menu.regenerate), so the input alone is a sufficient key.
+	hlCache atomic.Pointer[highlightCache]
 
 	// Execution
 
 	// Leave an empty line before executing the command.
+	// This is the console-wide default; a menu may override it with
+	// Menu.SetNewlineBefore.
 	NewlineBefore bool
 
 	// Leave an empty line after executing the command.
@@ -36,18 +54,30 @@ type Console struct {
 	// with TransientPrintf(), Printf() calls, you should leave this to false,
 	// and add a leading newline to your prompt instead: the readline shell will
 	// know how to handle it in all situations.
+	// This is the console-wide default; a menu may override it with
+	// Menu.SetNewlineAfter.
 	NewlineAfter bool
 
 	// Leave empty lines with NewlineBefore and NewlineAfter, even if the provided input was empty.
 	// Empty characters are defined as any number of spaces and tabs. The 'empty' character set
 	// can be changed by modifying Console.EmptyChars
 	// This field is false by default.
+	// This is the console-wide default; a menu may override it with
+	// Menu.SetNewlineWhenEmpty.
 	NewlineWhenEmpty bool
 
 	// Characters that are used to determine whether an input line was empty. If a line is not entirely
 	// made up by any of these characters, then it is not considered empty. The default characters
 	// are ' ' and '\t'.
+	// This is the console-wide default; a menu may override it with
+	// Menu.SetEmptyChars.
 	EmptyChars []rune
+
+	// Signals is the set of OS signals the console traps while a command is
+	// running. When one is received, the running command's context is
+	// cancelled (see StartContext for the cancellation model). If empty, the
+	// console defaults to SIGINT, SIGTERM and SIGQUIT.
+	Signals []os.Signal
 
 	// PreReadlineHooks - All the functions in this list will be executed,
 	// in their respective orders, before the console starts reading
@@ -91,6 +121,7 @@ func New(app string) *Console {
 	// Each menu is created with a default prompt engine.
 	defaultMenu := console.NewMenu("")
 	defaultMenu.active = true
+	console.current = defaultMenu
 
 	// Set the history for this menu
 	for _, name := range defaultMenu.historyNames {
@@ -109,6 +140,7 @@ func New(app string) *Console {
 
 	// Defaults
 	console.EmptyChars = []rune{' ', '\t'}
+	console.Signals = append([]os.Signal(nil), defaultTrapSignals...)
 
 	return console
 }
@@ -154,8 +186,8 @@ func (c *Console) SetDefaultFlagHighlight(seq string) {
 // well as some specific items like history sources, prompt
 // configurations, sets of expanded variables, and others.
 func (c *Console) NewMenu(name string) *Menu {
-	c.mutex.RLock()
-	defer c.mutex.RUnlock()
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
 	menu := newMenu(name, c)
 	c.menus[name] = menu
 
@@ -164,16 +196,13 @@ func (c *Console) NewMenu(name string) *Menu {
 
 // ActiveMenu - Return the currently used console menu.
 func (c *Console) ActiveMenu() *Menu {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-
 	return c.activeMenu()
 }
 
 // Menu returns one of the console menus by name, or nil if no menu is found.
 func (c *Console) Menu(name string) *Menu {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
 
 	return c.menus[name]
 }
@@ -184,33 +213,39 @@ func (c *Console) Menu(name string) *Menu {
 // are bound to this menu name, the current menu is kept.
 func (c *Console) SwitchMenu(menu string) {
 	c.mutex.Lock()
+
 	target, found := c.menus[menu]
+	current := c.current
+
+	// Only switch if the target menu was found and is not already current.
+	if !found || target == nil || target == current {
+		c.mutex.Unlock()
+		return
+	}
+
+	if current != nil {
+		current.active = false
+	}
+
+	target.active = true
+	c.current = target
+
 	c.mutex.Unlock()
 
-	if found && target != nil {
-		// Only switch if the target menu was found.
-		current := c.activeMenu()
-		if current != nil && target == current {
-			return
-		}
+	// The following touches the shell and regenerates the menu commands,
+	// which itself reacquires c.mutex (history/filters): it must run with
+	// the lock released to avoid a self-deadlock.
 
-		if current != nil {
-			current.active = false
-		}
+	// Remove the currently bound history sources
+	// (old menu) and bind the ones peculiar to this one.
+	c.shell.History.Delete()
 
-		target.active = true
-
-		// Remove the currently bound history sources
-		// (old menu) and bind the ones peculiar to this one.
-		c.shell.History.Delete()
-
-		for _, name := range target.historyNames {
-			c.shell.History.Add(name, target.histories[name])
-		}
-
-		// Regenerate the commands, outputs and everything related.
-		target.resetPreRun()
+	for _, name := range target.historyNames {
+		c.shell.History.Add(name, target.histories[name])
 	}
+
+	// Regenerate the commands, outputs and everything related.
+	target.resetPreRun()
 }
 
 //
@@ -224,18 +259,20 @@ func (c *Console) SwitchMenu(menu string) {
 // If this function is called while a command is running, the console will simply print the log
 // below the line, and will not print the prompt. In any other case this function works normally.
 func (c *Console) TransientPrintf(msg string, args ...any) (n int, err error) {
-	if c.isExecuting {
+	if c.isExecuting.Load() {
 		return fmt.Printf(msg, args...)
 	}
+
+	newlineAfter := c.activeMenu().newlineAfter()
 
 	// If the last message we printed asynchronously
 	// immediately precedes this new message, move up
 	// another row, so we don't waste too much space.
-	if c.printed && c.NewlineAfter {
+	if c.printed && newlineAfter {
 		fmt.Print("\x1b[1A")
 	}
 
-	if c.NewlineAfter {
+	if newlineAfter {
 		msg += "\n"
 	}
 
@@ -250,7 +287,7 @@ func (c *Console) TransientPrintf(msg string, args ...any) (n int, err error) {
 // If this function is called while a command is running, the console will simply print the log
 // below the line, and will not print the prompt. In any other case this function works normally.
 func (c *Console) Printf(msg string, args ...any) (n int, err error) {
-	if c.isExecuting {
+	if c.isExecuting.Load() {
 		return fmt.Printf(msg, args...)
 	}
 
@@ -294,10 +331,11 @@ func (c *Console) setupShell() {
 }
 
 func (c *Console) activeMenu() *Menu {
-	for _, menu := range c.menus {
-		if menu.active {
-			return menu
-		}
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
+
+	if c.current != nil {
+		return c.current
 	}
 
 	// Else return the default menu.

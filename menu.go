@@ -56,6 +56,13 @@ type Menu struct {
 	historyNames []string
 	histories    map[string]readline.History
 
+	// Per-menu overrides of the console newline behavior. When a *bool is nil
+	// (or emptyChars is nil), the corresponding Console default is used.
+	nlBefore    *bool
+	nlAfter     *bool
+	nlWhenEmpty *bool
+	emptyChars  []rune
+
 	// Concurrency management
 	mutex *sync.RWMutex
 }
@@ -98,11 +105,84 @@ func (m *Menu) Prompt() *Prompt {
 	return m.prompt
 }
 
+// SetNewlineBefore overrides Console.NewlineBefore for this menu only.
+func (m *Menu) SetNewlineBefore(v bool) {
+	m.mutex.Lock()
+	m.nlBefore = &v
+	m.mutex.Unlock()
+}
+
+// SetNewlineAfter overrides Console.NewlineAfter for this menu only.
+func (m *Menu) SetNewlineAfter(v bool) {
+	m.mutex.Lock()
+	m.nlAfter = &v
+	m.mutex.Unlock()
+}
+
+// SetNewlineWhenEmpty overrides Console.NewlineWhenEmpty for this menu only.
+func (m *Menu) SetNewlineWhenEmpty(v bool) {
+	m.mutex.Lock()
+	m.nlWhenEmpty = &v
+	m.mutex.Unlock()
+}
+
+// SetEmptyChars overrides Console.EmptyChars for this menu only. Passing no
+// arguments clears the override, restoring the console default.
+func (m *Menu) SetEmptyChars(chars ...rune) {
+	m.mutex.Lock()
+	m.emptyChars = chars
+	m.mutex.Unlock()
+}
+
+func (m *Menu) newlineBefore() bool {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+
+	if m.nlBefore != nil {
+		return *m.nlBefore
+	}
+
+	return m.console.NewlineBefore
+}
+
+func (m *Menu) newlineAfter() bool {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+
+	if m.nlAfter != nil {
+		return *m.nlAfter
+	}
+
+	return m.console.NewlineAfter
+}
+
+func (m *Menu) newlineWhenEmpty() bool {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+
+	if m.nlWhenEmpty != nil {
+		return *m.nlWhenEmpty
+	}
+
+	return m.console.NewlineWhenEmpty
+}
+
+func (m *Menu) emptyCharSet() []rune {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+
+	if m.emptyChars != nil {
+		return m.emptyChars
+	}
+
+	return m.console.EmptyChars
+}
+
 // AddHistorySource adds a source of history commands that will
 // be accessible to the shell when the menu is active.
 func (m *Menu) AddHistorySource(name string, source readline.History) {
-	m.mutex.RLock()
-	defer m.mutex.RUnlock()
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
 
 	if len(m.histories) == 1 && m.historyNames[0] == m.defaultHistoryName() {
 		delete(m.histories, m.defaultHistoryName())
@@ -117,8 +197,8 @@ func (m *Menu) AddHistorySource(name string, source readline.History) {
 // to the specified "filepath" parameter. On the first call to this function,
 // the default in-memory history source is removed.
 func (m *Menu) AddHistorySourceFile(name string, filepath string) {
-	m.mutex.RLock()
-	defer m.mutex.RUnlock()
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
 
 	if len(m.histories) == 1 && m.historyNames[0] == m.defaultHistoryName() {
 		delete(m.histories, m.defaultHistoryName())
@@ -242,23 +322,33 @@ func (m *Menu) CheckIsAvailable(cmd *cobra.Command) error {
 // ActiveFiltersFor returns all the active menu filters that a given command
 // does not declare as compliant with (added with console.Hide/ShowCommand()).
 func (m *Menu) ActiveFiltersFor(cmd *cobra.Command) []string {
+	// Snapshot the console filters once under a read lock, then walk the
+	// command tree lock-free. The previous version held a write lock and
+	// recursed into itself while holding it, which both serialized every
+	// completion/highlight render and risked a self-deadlock on the
+	// (non-reentrant) mutex whenever the parent-subtree branch was taken.
+	m.console.mutex.RLock()
+	consoleFilters := append([]string(nil), m.console.filters...)
+	m.console.mutex.RUnlock()
+
+	return activeFiltersFor(cmd, consoleFilters)
+}
+
+func activeFiltersFor(cmd *cobra.Command, consoleFilters []string) []string {
 	if cmd.Annotations == nil {
 		if cmd.HasParent() {
-			return m.ActiveFiltersFor(cmd.Parent())
+			return activeFiltersFor(cmd.Parent(), consoleFilters)
 		}
 
 		return nil
 	}
-
-	m.console.mutex.Lock()
-	defer m.console.mutex.Unlock()
 
 	// Get the filters on the command
 	filterStr := cmd.Annotations[CommandFilterKey]
 	var filters []string
 
 	for _, cmdFilter := range strings.Split(filterStr, ",") {
-		for _, filter := range m.console.filters {
+		for _, filter := range consoleFilters {
 			if cmdFilter != "" && cmdFilter == filter {
 				filters = append(filters, cmdFilter)
 			}
@@ -270,7 +360,7 @@ func (m *Menu) ActiveFiltersFor(cmd *cobra.Command) []string {
 	}
 
 	// Any parent that is hidden make its whole subtree hidden also.
-	return m.ActiveFiltersFor(cmd.Parent())
+	return activeFiltersFor(cmd.Parent(), consoleFilters)
 }
 
 // SetErrFilteredCommandTemplate sets the error template to be used
@@ -287,6 +377,30 @@ func (m *Menu) resetPreRun() {
 	defer m.mutex.Unlock()
 
 	// Commands
+	m.regenerate()
+
+	// Reset or adjust any buffered command output.
+	m.resetCmdOutput()
+
+	// Prompt binding
+	prompt := (*ui.Prompt)(m.Prompt())
+	ui.BindPrompt(prompt, m.console.shell)
+}
+
+// resetCommands regenerates the menu command tree and re-applies filtering,
+// without rebinding the prompt or touching the command-output buffer. It is the
+// lighter reset used on the completion hot path, where the prompt is already
+// bound and no command output was produced.
+func (m *Menu) resetCommands() {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	m.regenerate()
+}
+
+// regenerate rebuilds the command tree and hides filtered commands.
+// It assumes m.mutex is already held.
+func (m *Menu) regenerate() {
 	if m.cmds != nil {
 		m.Command = m.cmds()
 	}
@@ -297,15 +411,11 @@ func (m *Menu) resetPreRun() {
 		}
 	}
 
-	// Hide commands that are not available
+	// Hide commands that are not available.
 	m.hideFilteredCommands(m.Command)
 
-    // Reset or adjust any buffered command output.
-	m.resetCmdOutput()             
-
-    // Prompt binding
-    prompt := (*ui.Prompt)(m.Prompt())
-	ui.BindPrompt(prompt, m.console.shell) 
+	// The command tree just changed, so any memoized highlight is now stale.
+	m.console.hlCache.Store(nil)
 }
 
 // hide commands that are filtered so that they are not
@@ -327,7 +437,7 @@ func (m *Menu) resetCmdOutput() {
 	buf := strings.TrimSpace(m.out.String())
 
 	// If our command has printed everything to stdout, nothing to do.
-	if len(buf) == 0 || buf == "" {
+	if len(buf) == 0 {
 		m.out.Reset()
 		return
 	}
