@@ -101,8 +101,8 @@ func (m *Menu) Prompt() *Prompt {
 // AddHistorySource adds a source of history commands that will
 // be accessible to the shell when the menu is active.
 func (m *Menu) AddHistorySource(name string, source readline.History) {
-	m.mutex.RLock()
-	defer m.mutex.RUnlock()
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
 
 	if len(m.histories) == 1 && m.historyNames[0] == m.defaultHistoryName() {
 		delete(m.histories, m.defaultHistoryName())
@@ -117,8 +117,8 @@ func (m *Menu) AddHistorySource(name string, source readline.History) {
 // to the specified "filepath" parameter. On the first call to this function,
 // the default in-memory history source is removed.
 func (m *Menu) AddHistorySourceFile(name string, filepath string) {
-	m.mutex.RLock()
-	defer m.mutex.RUnlock()
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
 
 	if len(m.histories) == 1 && m.historyNames[0] == m.defaultHistoryName() {
 		delete(m.histories, m.defaultHistoryName())
@@ -242,23 +242,33 @@ func (m *Menu) CheckIsAvailable(cmd *cobra.Command) error {
 // ActiveFiltersFor returns all the active menu filters that a given command
 // does not declare as compliant with (added with console.Hide/ShowCommand()).
 func (m *Menu) ActiveFiltersFor(cmd *cobra.Command) []string {
+	// Snapshot the console filters once under a read lock, then walk the
+	// command tree lock-free. The previous version held a write lock and
+	// recursed into itself while holding it, which both serialized every
+	// completion/highlight render and risked a self-deadlock on the
+	// (non-reentrant) mutex whenever the parent-subtree branch was taken.
+	m.console.mutex.RLock()
+	consoleFilters := append([]string(nil), m.console.filters...)
+	m.console.mutex.RUnlock()
+
+	return activeFiltersFor(cmd, consoleFilters)
+}
+
+func activeFiltersFor(cmd *cobra.Command, consoleFilters []string) []string {
 	if cmd.Annotations == nil {
 		if cmd.HasParent() {
-			return m.ActiveFiltersFor(cmd.Parent())
+			return activeFiltersFor(cmd.Parent(), consoleFilters)
 		}
 
 		return nil
 	}
-
-	m.console.mutex.Lock()
-	defer m.console.mutex.Unlock()
 
 	// Get the filters on the command
 	filterStr := cmd.Annotations[CommandFilterKey]
 	var filters []string
 
 	for _, cmdFilter := range strings.Split(filterStr, ",") {
-		for _, filter := range m.console.filters {
+		for _, filter := range consoleFilters {
 			if cmdFilter != "" && cmdFilter == filter {
 				filters = append(filters, cmdFilter)
 			}
@@ -270,7 +280,7 @@ func (m *Menu) ActiveFiltersFor(cmd *cobra.Command) []string {
 	}
 
 	// Any parent that is hidden make its whole subtree hidden also.
-	return m.ActiveFiltersFor(cmd.Parent())
+	return activeFiltersFor(cmd.Parent(), consoleFilters)
 }
 
 // SetErrFilteredCommandTemplate sets the error template to be used

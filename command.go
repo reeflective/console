@@ -20,8 +20,8 @@ type Commands func() *cobra.Command
 
 // SetCommands requires a function returning a tree of cobra commands to be used.
 func (m *Menu) SetCommands(cmds Commands) {
-	m.mutex.RLock()
-	defer m.mutex.RUnlock()
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
 	m.cmds = cmds
 }
 
@@ -31,6 +31,9 @@ func (m *Menu) SetCommands(cmds Commands) {
 // If "windows" is used as the argument here, all windows commands for the current
 // menu are subsequently hidden, until ShowCommands("windows") is called.
 func (c *Console) HideCommands(filters ...string) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
 next:
 	for _, filt := range filters {
 		for _, filter := range c.filters {
@@ -50,8 +53,8 @@ next:
 // Use this function if you have previously called HideCommands("filter") and want
 // these commands to be available back under their respective menu.
 func (c *Console) ShowCommands(filters ...string) {
-	c.mutex.RLock()
-	defer c.mutex.RUnlock()
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
 
 	updated := make([]string, 0)
 
