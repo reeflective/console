@@ -13,6 +13,12 @@ import (
 	"github.com/reeflective/readline/inputrc"
 )
 
+// highlightCache holds a memoized syntax-highlighting result for one input.
+type highlightCache struct {
+	input  string
+	output string
+}
+
 // Console is an integrated console application instance.
 type Console struct {
 	// Application
@@ -27,6 +33,13 @@ type Console struct {
 	isExecuting   atomic.Bool      // Used by log functions, which need to adapt behavior (print the prompt, etc.)
 	printed       bool             // Used to adjust asynchronous messages too.
 	mutex         *sync.RWMutex    // Concurrency management.
+
+	// hlCache memoizes the last syntax-highlighting result. The highlighter is
+	// called on every render (even when only the cursor moved), so caching the
+	// output for an unchanged input avoids re-splitting and re-walking the
+	// command tree. It is invalidated whenever the command tree is regenerated
+	// (see Menu.regenerate), so the input alone is a sufficient key.
+	hlCache atomic.Pointer[highlightCache]
 
 	// Execution
 

@@ -297,6 +297,30 @@ func (m *Menu) resetPreRun() {
 	defer m.mutex.Unlock()
 
 	// Commands
+	m.regenerate()
+
+	// Reset or adjust any buffered command output.
+	m.resetCmdOutput()
+
+	// Prompt binding
+	prompt := (*ui.Prompt)(m.Prompt())
+	ui.BindPrompt(prompt, m.console.shell)
+}
+
+// resetCommands regenerates the menu command tree and re-applies filtering,
+// without rebinding the prompt or touching the command-output buffer. It is the
+// lighter reset used on the completion hot path, where the prompt is already
+// bound and no command output was produced.
+func (m *Menu) resetCommands() {
+	m.mutex.Lock()
+	defer m.mutex.Unlock()
+
+	m.regenerate()
+}
+
+// regenerate rebuilds the command tree and hides filtered commands.
+// It assumes m.mutex is already held.
+func (m *Menu) regenerate() {
 	if m.cmds != nil {
 		m.Command = m.cmds()
 	}
@@ -307,15 +331,11 @@ func (m *Menu) resetPreRun() {
 		}
 	}
 
-	// Hide commands that are not available
+	// Hide commands that are not available.
 	m.hideFilteredCommands(m.Command)
 
-    // Reset or adjust any buffered command output.
-	m.resetCmdOutput()             
-
-    // Prompt binding
-    prompt := (*ui.Prompt)(m.Prompt())
-	ui.BindPrompt(prompt, m.console.shell) 
+	// The command tree just changed, so any memoized highlight is now stale.
+	m.console.hlCache.Store(nil)
 }
 
 // hide commands that are filtered so that they are not

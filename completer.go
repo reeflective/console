@@ -81,10 +81,12 @@ func (c *Console) complete(input []rune, pos int) readline.Completions {
 	comps = comps.Prefix(prefixComp)
 	comps.PREFIX = prefixLine
 
-	// Finally, reset our command tree for the next call.
+	// Finally, reset our command tree for the next call. Only the commands need
+	// regenerating here: the prompt is already bound and no command output was
+	// produced, so the full resetPreRun would just be wasted work per keystroke.
+	// (resetCommands already re-hides filtered commands.)
 	completer.ClearStorage()
-	menu.resetPreRun()
-	menu.hideFilteredCommands(menu.Command)
+	menu.resetCommands()
 
 	return comps
 }
@@ -115,6 +117,21 @@ func (c *Console) justifyCommandComps(comps readline.Completions) readline.Compl
 
 // highlightSyntax - Entrypoint to all input syntax highlighting in the Wiregost console.
 func (c *Console) highlightSyntax(input []rune) string {
+	// Serve a memoized result when the input has not changed since the last
+	// render. The cache is cleared whenever the command tree is regenerated,
+	// so a stale tree can never produce a stale highlight.
+	key := string(input)
+	if cached := c.hlCache.Load(); cached != nil && cached.input == key {
+		return cached.output
+	}
+
+	highlighted := c.computeHighlight(input)
+	c.hlCache.Store(&highlightCache{input: key, output: highlighted})
+
+	return highlighted
+}
+
+func (c *Console) computeHighlight(input []rune) string {
 	// Split the line as shellwords
 	args, unprocessed, err := line.Split(string(input), true)
 	if err != nil {
