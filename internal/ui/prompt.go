@@ -27,8 +27,6 @@ func NewPrompt(appName, menuName string, stdout *bytes.Buffer) *Prompt {
 	prompt.Primary = func() string {
 		promptStr := appName
 
-		// menu := app.activeMenu()
-
 		if menuName == "" {
 			return promptStr + " > "
 		}
@@ -51,17 +49,14 @@ func NewPrompt(appName, menuName string, stdout *bytes.Buffer) *Prompt {
 func BindPrompt(p *Prompt, shell *readline.Shell) {
 	prompt := shell.Prompt
 
-	// If the user has bound its own primary prompt and the shell
-	// must leave a newline after command/log output, wrap its function
-	// to add a newline before the prompt.
+	// Guard against a nil primary prompt, since the shell calls this on
+	// every render. Newlines around the prompt are handled by readline.
 	primary := func() string {
 		if p.Primary == nil {
 			return ""
 		}
 
-		prompt := p.Primary()
-
-		return prompt
+		return p.Primary()
 	}
 
 	prompt.Primary(primary)

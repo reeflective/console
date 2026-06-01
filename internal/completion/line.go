@@ -11,19 +11,6 @@ import (
 	"github.com/reeflective/console/internal/line"
 )
 
-// when the completer has returned us some completions, we sometimes
-// needed to post-process them a little before passing them to our shell.
-func UnescapeValue(prefixComp, prefixLine, val string) string {
-	quoted := strings.HasPrefix(prefixLine, "\"") ||
-		strings.HasPrefix(prefixLine, "'")
-
-	if quoted {
-		val = strings.ReplaceAll(val, "\\ ", " ")
-	}
-
-	return val
-}
-
 // SplitArgs splits the line in valid words, prepares them in various ways before calling
 // the completer with them, and also determines which parts of them should be used as
 // prefixes, in the completions and/or in the line.

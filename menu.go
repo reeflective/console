@@ -337,7 +337,7 @@ func (m *Menu) resetCmdOutput() {
 	buf := strings.TrimSpace(m.out.String())
 
 	// If our command has printed everything to stdout, nothing to do.
-	if len(buf) == 0 || buf == "" {
+	if len(buf) == 0 {
 		m.out.Reset()
 		return
 	}
