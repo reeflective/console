@@ -36,3 +36,34 @@ func TestHighlightCommandAlias(t *testing.T) {
 		})
 	}
 }
+
+func TestHighlightCommandFlags(t *testing.T) {
+	args := []string{"--verbose", "target", "-x", "value"}
+	done, _ := HighlightCommandFlags(nil, args, BrightWhiteFG)
+
+	if len(done) != len(args) {
+		t.Fatalf("HighlightCommandFlags returned %d words, want %d: %q", len(done), len(args), done)
+	}
+
+	tests := []struct {
+		idx           int
+		shouldHighlit bool
+		raw           string
+	}{
+		{0, true, "--verbose"},
+		{1, false, "target"},
+		{2, true, "-x"},
+		{3, false, "value"},
+	}
+
+	for _, tc := range tests {
+		got := done[tc.idx]
+		colored := strings.Contains(got, BrightWhiteFG)
+		if colored != tc.shouldHighlit {
+			t.Errorf("word %q: highlighted=%v, want %v (got %q)", tc.raw, colored, tc.shouldHighlit, got)
+		}
+		if !strings.Contains(got, tc.raw) {
+			t.Errorf("word %d: %q does not contain original %q", tc.idx, got, tc.raw)
+		}
+	}
+}
