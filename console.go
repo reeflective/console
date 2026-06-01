@@ -2,6 +2,7 @@ package console
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -44,6 +45,8 @@ type Console struct {
 	// Execution
 
 	// Leave an empty line before executing the command.
+	// This is the console-wide default; a menu may override it with
+	// Menu.SetNewlineBefore.
 	NewlineBefore bool
 
 	// Leave an empty line after executing the command.
@@ -51,18 +54,30 @@ type Console struct {
 	// with TransientPrintf(), Printf() calls, you should leave this to false,
 	// and add a leading newline to your prompt instead: the readline shell will
 	// know how to handle it in all situations.
+	// This is the console-wide default; a menu may override it with
+	// Menu.SetNewlineAfter.
 	NewlineAfter bool
 
 	// Leave empty lines with NewlineBefore and NewlineAfter, even if the provided input was empty.
 	// Empty characters are defined as any number of spaces and tabs. The 'empty' character set
 	// can be changed by modifying Console.EmptyChars
 	// This field is false by default.
+	// This is the console-wide default; a menu may override it with
+	// Menu.SetNewlineWhenEmpty.
 	NewlineWhenEmpty bool
 
 	// Characters that are used to determine whether an input line was empty. If a line is not entirely
 	// made up by any of these characters, then it is not considered empty. The default characters
 	// are ' ' and '\t'.
+	// This is the console-wide default; a menu may override it with
+	// Menu.SetEmptyChars.
 	EmptyChars []rune
+
+	// Signals is the set of OS signals the console traps while a command is
+	// running. When one is received, the running command's context is
+	// cancelled (see StartContext for the cancellation model). If empty, the
+	// console defaults to SIGINT, SIGTERM and SIGQUIT.
+	Signals []os.Signal
 
 	// PreReadlineHooks - All the functions in this list will be executed,
 	// in their respective orders, before the console starts reading
@@ -125,6 +140,7 @@ func New(app string) *Console {
 
 	// Defaults
 	console.EmptyChars = []rune{' ', '\t'}
+	console.Signals = append([]os.Signal(nil), defaultTrapSignals...)
 
 	return console
 }
@@ -247,14 +263,16 @@ func (c *Console) TransientPrintf(msg string, args ...any) (n int, err error) {
 		return fmt.Printf(msg, args...)
 	}
 
+	newlineAfter := c.activeMenu().newlineAfter()
+
 	// If the last message we printed asynchronously
 	// immediately precedes this new message, move up
 	// another row, so we don't waste too much space.
-	if c.printed && c.NewlineAfter {
+	if c.printed && newlineAfter {
 		fmt.Print("\x1b[1A")
 	}
 
-	if c.NewlineAfter {
+	if newlineAfter {
 		msg += "\n"
 	}
 

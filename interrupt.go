@@ -1,10 +1,17 @@
 package console
 
+import "errors"
+
 // AddInterrupt registers a handler to run when the console receives
 // a given interrupt error from the underlying readline shell.
 //
 // On most systems, the following errors will be returned with keypresses:
 // - Linux/MacOS/Windows : Ctrl-C will return os.Interrupt.
+//
+// The incoming error is matched against the registered one with errors.Is
+// first (so wrapped errors and sentinel values work as expected), falling
+// back to comparing their messages for errors that are merely value-equal
+// (e.g. two distinct errors.New with the same text).
 //
 // Many will want to use this to switch menus. Note that these interrupt errors only
 // work when the console is NOT currently executing a command, only when reading input.
@@ -32,13 +39,9 @@ func (m *Menu) handleInterrupt(err error) {
 	m.console.isExecuting.Store(true)
 	defer m.console.isExecuting.Store(false)
 
-	// TODO: this is not a very, very safe way of comparing
-	// errors. I'm not sure what to right now with this, but
-	// from my (unreliable) expectations and usage, I see and
-	// use things like errors.New(os.Interrupt.String()), so
-	// the string itself is likely to change in the future.
-	//
-	// But if people use their own third-party errors... nothing is guaranteed.
+	// Match with errors.Is first so sentinel and wrapped errors behave
+	// correctly, then fall back to comparing messages for errors that are
+	// only value-equal (the historically supported errors.New(...) pattern).
 	//
 	// Snapshot the matching handlers under the lock, then run them once
 	// released: a handler is free to mutate the menu (e.g. SwitchMenu)
@@ -46,7 +49,7 @@ func (m *Menu) handleInterrupt(err error) {
 	m.mutex.RLock()
 	matched := make([]func(c *Console), 0, len(m.interruptHandlers))
 	for herr, handler := range m.interruptHandlers {
-		if err.Error() == herr.Error() {
+		if errors.Is(err, herr) || err.Error() == herr.Error() {
 			matched = append(matched, handler)
 		}
 	}

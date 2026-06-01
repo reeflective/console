@@ -56,6 +56,13 @@ type Menu struct {
 	historyNames []string
 	histories    map[string]readline.History
 
+	// Per-menu overrides of the console newline behavior. When a *bool is nil
+	// (or emptyChars is nil), the corresponding Console default is used.
+	nlBefore    *bool
+	nlAfter     *bool
+	nlWhenEmpty *bool
+	emptyChars  []rune
+
 	// Concurrency management
 	mutex *sync.RWMutex
 }
@@ -96,6 +103,79 @@ func (m *Menu) Name() string {
 // Prompt returns the prompt object for this menu.
 func (m *Menu) Prompt() *Prompt {
 	return m.prompt
+}
+
+// SetNewlineBefore overrides Console.NewlineBefore for this menu only.
+func (m *Menu) SetNewlineBefore(v bool) {
+	m.mutex.Lock()
+	m.nlBefore = &v
+	m.mutex.Unlock()
+}
+
+// SetNewlineAfter overrides Console.NewlineAfter for this menu only.
+func (m *Menu) SetNewlineAfter(v bool) {
+	m.mutex.Lock()
+	m.nlAfter = &v
+	m.mutex.Unlock()
+}
+
+// SetNewlineWhenEmpty overrides Console.NewlineWhenEmpty for this menu only.
+func (m *Menu) SetNewlineWhenEmpty(v bool) {
+	m.mutex.Lock()
+	m.nlWhenEmpty = &v
+	m.mutex.Unlock()
+}
+
+// SetEmptyChars overrides Console.EmptyChars for this menu only. Passing no
+// arguments clears the override, restoring the console default.
+func (m *Menu) SetEmptyChars(chars ...rune) {
+	m.mutex.Lock()
+	m.emptyChars = chars
+	m.mutex.Unlock()
+}
+
+func (m *Menu) newlineBefore() bool {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+
+	if m.nlBefore != nil {
+		return *m.nlBefore
+	}
+
+	return m.console.NewlineBefore
+}
+
+func (m *Menu) newlineAfter() bool {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+
+	if m.nlAfter != nil {
+		return *m.nlAfter
+	}
+
+	return m.console.NewlineAfter
+}
+
+func (m *Menu) newlineWhenEmpty() bool {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+
+	if m.nlWhenEmpty != nil {
+		return *m.nlWhenEmpty
+	}
+
+	return m.console.NewlineWhenEmpty
+}
+
+func (m *Menu) emptyCharSet() []rune {
+	m.mutex.RLock()
+	defer m.mutex.RUnlock()
+
+	if m.emptyChars != nil {
+		return m.emptyChars
+	}
+
+	return m.console.EmptyChars
 }
 
 // AddHistorySource adds a source of history commands that will

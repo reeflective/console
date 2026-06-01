@@ -21,7 +21,20 @@ func (c *Console) Start() error {
 	return c.StartContext(context.Background())
 }
 
-// StartContext is like console.Start(). with a user-provided context.
+// StartContext is like console.Start(), with a user-provided context.
+//
+// Cancellation model: each command runs with a context derived from ctx,
+// accessible from within the command via cmd.Context(). When the console
+// traps one of its Signals (SIGINT/SIGTERM/SIGQUIT by default) while a command
+// is running, that command's context is cancelled and any registered interrupt
+// handler for the menu is invoked. Cancelling ctx itself does the same on the
+// next command boundary.
+//
+// Because cobra cannot preempt a running command, a long-running command is
+// only actually interrupted if it observes cancellation itself: select on
+// cmd.Context().Done() (or pass cmd.Context() to context-aware callees) and
+// return promptly. A command that ignores its context keeps running in its
+// goroutine until it finishes, even though the prompt has already been freed.
 func (c *Console) StartContext(ctx context.Context) error {
 	c.loadActiveHistories()
 
@@ -249,29 +262,29 @@ func (c *Console) runLineHooks(args []string) ([]string, error) {
 }
 
 func (c *Console) displayPreRun(input string) {
-	if c.NewlineBefore {
-		if !c.NewlineWhenEmpty {
-			if !line.IsEmpty(input, c.EmptyChars...) {
-				fmt.Println()
-			}
-		} else {
-			fmt.Println()
-		}
+	menu := c.activeMenu()
+
+	if menu.newlineBefore() && (menu.newlineWhenEmpty() || !line.IsEmpty(input, menu.emptyCharSet()...)) {
+		fmt.Println()
 	}
 }
 
 func (c *Console) displayPostRun(lastLine string) {
-	if c.NewlineAfter {
-		if !c.NewlineWhenEmpty {
-			if !line.IsEmpty(lastLine, c.EmptyChars...) {
-				fmt.Println()
-			}
-		} else {
-			fmt.Println()
-		}
+	menu := c.activeMenu()
+
+	if menu.newlineAfter() && (menu.newlineWhenEmpty() || !line.IsEmpty(lastLine, menu.emptyCharSet()...)) {
+		fmt.Println()
 	}
 
 	c.printed = false
+}
+
+// defaultTrapSignals are the OS signals the console traps while a command is
+// running when Console.Signals has not been customized.
+var defaultTrapSignals = []os.Signal{
+	syscall.SIGINT,
+	syscall.SIGTERM,
+	syscall.SIGQUIT,
 }
 
 // monitorSignals - Monitor the signals that can be sent to the process
@@ -279,13 +292,12 @@ func (c *Console) displayPostRun(lastLine string) {
 func (c *Console) monitorSignals() chan os.Signal {
 	sigchan := make(chan os.Signal, 1)
 
-	signal.Notify(
-		sigchan,
-		syscall.SIGINT,
-		syscall.SIGTERM,
-		syscall.SIGQUIT,
-		// syscall.SIGKILL,
-	)
+	signals := c.Signals
+	if len(signals) == 0 {
+		signals = defaultTrapSignals
+	}
+
+	signal.Notify(sigchan, signals...)
 
 	return sigchan
 }
