@@ -143,6 +143,15 @@ func (m *Menu) RunCommandLine(ctx context.Context, line string) (err error) {
 	return m.RunCommandArgs(ctx, args)
 }
 
+// Execute runs a processed argument vector against a menu command tree.
+//
+// Most callers should prefer Menu.RunCommandArgs, which resets the active menu
+// before execution. Execute is useful for integrations that already prepared a
+// menu and need direct access to the lower-level execution path.
+func (c *Console) Execute(ctx context.Context, menu *Menu, args []string, async bool) error {
+	return c.execute(ctx, menu, args, async)
+}
+
 // execute - The user has entered a command input line, the arguments have been processed:
 // we synchronize a few elements of the console, then pass these arguments to the command
 // parser for execution and error handling.
