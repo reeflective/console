@@ -7,6 +7,8 @@ import (
 	"github.com/carapace-sh/carapace/pkg/style"
 	completer "github.com/carapace-sh/carapace/pkg/x"
 	"github.com/reeflective/readline"
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	"github.com/reeflective/console/internal/completion"
 	"github.com/reeflective/console/internal/line"
@@ -22,6 +24,7 @@ func (c *Console) complete(input []rune, pos int) readline.Completions {
 	// Split the line as shell words, only using
 	// what the right buffer (up to the cursor)
 	args, prefixComp, prefixLine := completion.SplitArgs(input, pos)
+	resetCompletionFlagState(menu.Command, args)
 
 	// Prepare arguments for the carapace completer
 	// (we currently need those two dummies for avoiding a panic).
@@ -89,6 +92,84 @@ func (c *Console) complete(input []rune, pos int) readline.Completions {
 	menu.resetCommands()
 
 	return comps
+}
+
+func resetCompletionFlagState(root *cobra.Command, args []string) {
+	if root == nil {
+		return
+	}
+
+	target := findCompletionTarget(root, args)
+	_ = target.LocalFlags()
+	resetCompletionFlagDefaults(target)
+	resetArgsLenAtDash(target)
+}
+
+func resetCompletionFlagDefaults(target *cobra.Command) {
+	if target == nil {
+		return
+	}
+
+	target.Flags().VisitAll(func(flag *pflag.Flag) {
+		flag.Changed = false
+		switch value := flag.Value.(type) {
+		case pflag.SliceValue:
+			var res []string
+			if len(flag.DefValue) > 0 && flag.DefValue != "[]" {
+				res = append(res, flag.DefValue)
+			}
+
+			_ = value.Replace(res)
+		default:
+			_ = flag.Value.Set(flag.DefValue)
+		}
+	})
+}
+
+func resetArgsLenAtDash(target *cobra.Command) {
+	for cmd := target; cmd != nil; cmd = cmd.Parent() {
+		resetFlagSetArgsLenAtDash(cmd.Flags(), cmd.DisplayName())
+		resetFlagSetArgsLenAtDash(cmd.PersistentFlags(), cmd.DisplayName())
+	}
+}
+
+func resetFlagSetArgsLenAtDash(fs *pflag.FlagSet, name string) {
+	if fs == nil {
+		return
+	}
+
+	fs.Init(name, pflag.ContinueOnError)
+}
+
+func findCompletionTarget(root *cobra.Command, args []string) *cobra.Command {
+	cmd := root
+	for _, arg := range args {
+		if arg == "--" || strings.HasPrefix(arg, "-") {
+			break
+		}
+
+		next := findSubcommand(cmd, arg)
+		if next == nil {
+			break
+		}
+		cmd = next
+	}
+
+	return cmd
+}
+
+func findSubcommand(cmd *cobra.Command, name string) *cobra.Command {
+	if cmd == nil {
+		return nil
+	}
+
+	for _, sub := range cmd.Commands() {
+		if sub.Name() == name || sub.HasAlias(name) {
+			return sub
+		}
+	}
+
+	return nil
 }
 
 // justifyCommandComps justifies the descriptions for all commands in all groups
