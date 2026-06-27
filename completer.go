@@ -1,6 +1,7 @@
 package console
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/carapace-sh/carapace"
@@ -12,8 +13,14 @@ import (
 	"github.com/reeflective/console/internal/line"
 )
 
-func (c *Console) complete(input []rune, pos int) readline.Completions {
+func (c *Console) complete(input []rune, pos int) (comps readline.Completions) {
 	menu := c.activeMenu()
+	defer func() {
+		if r := recover(); r != nil {
+			comps = readline.CompleteMessage(fmt.Sprintf("completion error: %v", r))
+			menu.resetPreRun()
+		}
+	}()
 
 	// Ensure the carapace library is called so that the function
 	// completer.Complete() variable is correctly initialized before use.
@@ -56,7 +63,7 @@ func (c *Console) complete(input []rune, pos int) readline.Completions {
 	}
 
 	// Assign both completions and command/flags/args usage strings.
-	comps := readline.CompleteRaw(raw)
+	comps = readline.CompleteRaw(raw)
 	comps = comps.Usage("%s", completions.Usage)
 	comps = c.justifyCommandComps(comps)
 
