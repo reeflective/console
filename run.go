@@ -166,6 +166,8 @@ func (c *Console) execute(ctx context.Context, menu *Menu, args []string, async 
 		return err
 	}
 
+	resetFlagsDefaults(target)
+
 	// Console-wide pre-run hooks, cannot.
 	if err := c.runAllE(c.PreCmdRunHooks); err != nil {
 		return fmt.Errorf("pre-run error: %s", err.Error())

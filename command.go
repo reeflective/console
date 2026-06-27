@@ -1,7 +1,11 @@
 package console
 
 import (
+	"encoding/csv"
+	"strings"
+
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 const (
@@ -75,4 +79,41 @@ next:
 	}
 
 	c.filters = updated
+}
+
+// resetFlagsDefaults resets all flags on a command to their default values.
+func resetFlagsDefaults(target *cobra.Command) {
+	if target == nil {
+		return
+	}
+
+	target.Flags().VisitAll(func(flag *pflag.Flag) {
+		flag.Changed = false
+
+		switch value := flag.Value.(type) {
+		case pflag.SliceValue:
+			_ = value.Replace(parseSliceDefault(flag.DefValue))
+		default:
+			_ = flag.Value.Set(flag.DefValue)
+		}
+	})
+}
+
+func parseSliceDefault(defValue string) []string {
+	if defValue == "" || defValue == "[]" {
+		return nil
+	}
+	if strings.HasPrefix(defValue, "[") && strings.HasSuffix(defValue, "]") {
+		defValue = defValue[1 : len(defValue)-1]
+	}
+	if defValue == "" {
+		return nil
+	}
+
+	values, err := csv.NewReader(strings.NewReader(defValue)).Read()
+	if err != nil {
+		return []string{defValue}
+	}
+
+	return values
 }
