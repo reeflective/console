@@ -5,7 +5,7 @@ go 1.25.0
 require (
 	github.com/carapace-sh/carapace v1.11.6
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
-	github.com/reeflective/readline v1.2.2
+	github.com/reeflective/readline v1.3.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
 	golang.org/x/exp v0.0.0-20260529124908-c761662dc8c9
