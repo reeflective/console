@@ -11,6 +11,7 @@ import (
 	"github.com/kballard/go-shellquote"
 	"github.com/spf13/cobra"
 
+	"github.com/reeflective/console/internal/command"
 	"github.com/reeflective/console/internal/line"
 )
 
@@ -182,7 +183,7 @@ func (c *Console) execute(ctx context.Context, menu *Menu, args []string, async 
 	// When the same command instance is reused (a caller-supplied tree with no
 	// generator), flag values and Changed state from an earlier run would
 	// otherwise leak into this execution.
-	resetFlagsDefaults(target)
+	command.ResetFlagsDefaults(target)
 
 	// Console-wide pre-run hooks, cannot.
 	if err := c.runAllE(c.PreCmdRunHooks); err != nil {

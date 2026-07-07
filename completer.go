@@ -7,9 +7,8 @@ import (
 	"github.com/carapace-sh/carapace/pkg/style"
 	completer "github.com/carapace-sh/carapace/pkg/x"
 	"github.com/reeflective/readline"
-	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 
+	"github.com/reeflective/console/internal/command"
 	"github.com/reeflective/console/internal/completion"
 	"github.com/reeflective/console/internal/line"
 )
@@ -20,12 +19,12 @@ func (c *Console) complete(input []rune, pos int) readline.Completions {
 	// Ensure the carapace library is called so that the function
 	// completer.Complete() variable is correctly initialized before use.
 	carapace.Gen(menu.Command)
-	hideCarapaceCommands(menu.Command)
+	command.HideCarapace(menu.Command)
 
 	// Split the line as shell words, only using
 	// what the right buffer (up to the cursor)
 	args, prefixComp, prefixLine := completion.SplitArgs(input, pos)
-	resetCompletionFlagState(menu.Command, args)
+	command.ResetCompletionFlagState(menu.Command, args)
 
 	// Prepare arguments for the carapace completer
 	// (we currently need those two dummies for avoiding a panic).
@@ -101,77 +100,6 @@ func (c *Console) complete(input []rune, pos int) readline.Completions {
 	return comps
 }
 
-// resetCompletionFlagState clears flag state left over from a previous
-// completion or execution on a reused command tree, before carapace parses the
-// current input. It restores the target command's flag defaults (shared with
-// the execution path) and resets ArgsLenAtDash along the command's lineage.
-func resetCompletionFlagState(root *cobra.Command, args []string) {
-	if root == nil {
-		return
-	}
-
-	target := findCompletionTarget(root, args)
-
-	// Force cobra to merge persistent/inherited flags into the full flag set
-	// so resetFlagsDefaults sees them all.
-	_ = target.LocalFlags()
-
-	resetFlagsDefaults(target)
-	resetArgsLenAtDash(target)
-}
-
-// resetArgsLenAtDash clears the "-- seen at index" bookkeeping on the target
-// command and every parent, which a previous parse may have left set.
-func resetArgsLenAtDash(target *cobra.Command) {
-	for cmd := target; cmd != nil; cmd = cmd.Parent() {
-		resetFlagSetArgsLenAtDash(cmd.Flags(), cmd.DisplayName())
-		resetFlagSetArgsLenAtDash(cmd.PersistentFlags(), cmd.DisplayName())
-	}
-}
-
-func resetFlagSetArgsLenAtDash(fs *pflag.FlagSet, name string) {
-	if fs == nil {
-		return
-	}
-
-	// FlagSet.Init resets argsLenAtDash to -1 without discarding registered
-	// flags; it is the only exported way to clear that internal state.
-	fs.Init(name, pflag.ContinueOnError)
-}
-
-// findCompletionTarget walks the command tree following the positional words in
-// args, stopping at the first flag or "--", to locate the command being completed.
-func findCompletionTarget(root *cobra.Command, args []string) *cobra.Command {
-	cmd := root
-	for _, arg := range args {
-		if arg == "--" || strings.HasPrefix(arg, "-") {
-			break
-		}
-
-		next := findSubcommand(cmd, arg)
-		if next == nil {
-			break
-		}
-		cmd = next
-	}
-
-	return cmd
-}
-
-func findSubcommand(cmd *cobra.Command, name string) *cobra.Command {
-	if cmd == nil {
-		return nil
-	}
-
-	for _, sub := range cmd.Commands() {
-		if sub.Name() == name || sub.HasAlias(name) {
-			return sub
-		}
-	}
-
-	return nil
-}
-
 // justifyCommandComps justifies the descriptions for all commands in all groups
 // to the same level, for prettiness. Also, removes any coloring from them, as currently,
 // the carapace engine does add coloring to each group, and we don't want this.
@@ -194,23 +122,6 @@ func (c *Console) justifyCommandComps(comps readline.Completions) readline.Compl
 	}
 
 	return comps
-}
-
-// hideCarapaceCommands recursively hides carapace's internal completion command
-// so it is never offered as a normal user command in an interactive console.
-func hideCarapaceCommands(root *cobra.Command) {
-	if root == nil {
-		return
-	}
-
-	for _, cmd := range root.Commands() {
-		if cmd.Name() == "_carapace" {
-			cmd.Hidden = true
-			continue
-		}
-
-		hideCarapaceCommands(cmd)
-	}
 }
 
 // highlightSyntax - Entrypoint to all input syntax highlighting in the Wiregost console.
