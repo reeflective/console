@@ -1,7 +1,11 @@
 package console
 
 import (
+	"encoding/csv"
+	"strings"
+
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 const (
@@ -75,4 +79,48 @@ next:
 	}
 
 	c.filters = updated
+}
+
+// resetFlagsDefaults resets every flag on a command back to its registered
+// default value and clears its Changed state. Console reuses cobra command
+// trees across completions and executions; when the application supplies a
+// command tree directly (no generator via SetCommands), flag state parsed by
+// an earlier run would otherwise leak into later ones. This is the single
+// shared implementation used by both the completion and execution paths.
+func resetFlagsDefaults(target *cobra.Command) {
+	if target == nil {
+		return
+	}
+
+	target.Flags().VisitAll(func(flag *pflag.Flag) {
+		flag.Changed = false
+
+		switch value := flag.Value.(type) {
+		case pflag.SliceValue:
+			_ = value.Replace(parseSliceDefault(flag.DefValue))
+		default:
+			_ = flag.Value.Set(flag.DefValue)
+		}
+	})
+}
+
+// parseSliceDefault turns a pflag slice flag's DefValue string representation
+// (e.g. "[a,b]") back into the individual default elements.
+func parseSliceDefault(defValue string) []string {
+	if defValue == "" || defValue == "[]" {
+		return nil
+	}
+	if strings.HasPrefix(defValue, "[") && strings.HasSuffix(defValue, "]") {
+		defValue = defValue[1 : len(defValue)-1]
+	}
+	if defValue == "" {
+		return nil
+	}
+
+	values, err := csv.NewReader(strings.NewReader(defValue)).Read()
+	if err != nil {
+		return []string{defValue}
+	}
+
+	return values
 }

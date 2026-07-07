@@ -8,6 +8,7 @@ import (
 	completer "github.com/carapace-sh/carapace/pkg/x"
 	"github.com/reeflective/readline"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
 	"github.com/reeflective/console/internal/completion"
 	"github.com/reeflective/console/internal/line"
@@ -24,6 +25,7 @@ func (c *Console) complete(input []rune, pos int) readline.Completions {
 	// Split the line as shell words, only using
 	// what the right buffer (up to the cursor)
 	args, prefixComp, prefixLine := completion.SplitArgs(input, pos)
+	resetCompletionFlagState(menu.Command, args)
 
 	// Prepare arguments for the carapace completer
 	// (we currently need those two dummies for avoiding a panic).
@@ -97,6 +99,77 @@ func (c *Console) complete(input []rune, pos int) readline.Completions {
 	menu.resetCommands()
 
 	return comps
+}
+
+// resetCompletionFlagState clears flag state left over from a previous
+// completion or execution on a reused command tree, before carapace parses the
+// current input. It restores the target command's flag defaults (shared with
+// the execution path) and resets ArgsLenAtDash along the command's lineage.
+func resetCompletionFlagState(root *cobra.Command, args []string) {
+	if root == nil {
+		return
+	}
+
+	target := findCompletionTarget(root, args)
+
+	// Force cobra to merge persistent/inherited flags into the full flag set
+	// so resetFlagsDefaults sees them all.
+	_ = target.LocalFlags()
+
+	resetFlagsDefaults(target)
+	resetArgsLenAtDash(target)
+}
+
+// resetArgsLenAtDash clears the "-- seen at index" bookkeeping on the target
+// command and every parent, which a previous parse may have left set.
+func resetArgsLenAtDash(target *cobra.Command) {
+	for cmd := target; cmd != nil; cmd = cmd.Parent() {
+		resetFlagSetArgsLenAtDash(cmd.Flags(), cmd.DisplayName())
+		resetFlagSetArgsLenAtDash(cmd.PersistentFlags(), cmd.DisplayName())
+	}
+}
+
+func resetFlagSetArgsLenAtDash(fs *pflag.FlagSet, name string) {
+	if fs == nil {
+		return
+	}
+
+	// FlagSet.Init resets argsLenAtDash to -1 without discarding registered
+	// flags; it is the only exported way to clear that internal state.
+	fs.Init(name, pflag.ContinueOnError)
+}
+
+// findCompletionTarget walks the command tree following the positional words in
+// args, stopping at the first flag or "--", to locate the command being completed.
+func findCompletionTarget(root *cobra.Command, args []string) *cobra.Command {
+	cmd := root
+	for _, arg := range args {
+		if arg == "--" || strings.HasPrefix(arg, "-") {
+			break
+		}
+
+		next := findSubcommand(cmd, arg)
+		if next == nil {
+			break
+		}
+		cmd = next
+	}
+
+	return cmd
+}
+
+func findSubcommand(cmd *cobra.Command, name string) *cobra.Command {
+	if cmd == nil {
+		return nil
+	}
+
+	for _, sub := range cmd.Commands() {
+		if sub.Name() == name || sub.HasAlias(name) {
+			return sub
+		}
+	}
+
+	return nil
 }
 
 // justifyCommandComps justifies the descriptions for all commands in all groups

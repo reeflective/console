@@ -166,6 +166,12 @@ func (c *Console) execute(ctx context.Context, menu *Menu, args []string, async 
 		return err
 	}
 
+	// Restore the target command's flags to their defaults before running it.
+	// When the same command instance is reused (a caller-supplied tree with no
+	// generator), flag values and Changed state from an earlier run would
+	// otherwise leak into this execution.
+	resetFlagsDefaults(target)
+
 	// Console-wide pre-run hooks, cannot.
 	if err := c.runAllE(c.PreCmdRunHooks); err != nil {
 		return fmt.Errorf("pre-run error: %s", err.Error())
