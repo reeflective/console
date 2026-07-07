@@ -143,6 +143,18 @@ func (m *Menu) RunCommandLine(ctx context.Context, line string) (err error) {
 	return m.RunCommandArgs(ctx, args)
 }
 
+// RunMenuCommand runs a processed argument vector against a caller-prepared
+// menu command tree, giving direct access to the lower-level execution path
+// used internally by StartContext and Menu.RunCommandArgs.
+//
+// Most callers should prefer Menu.RunCommandArgs, which resets the active menu
+// (regenerating its command tree and rebinding the prompt) before execution.
+// RunMenuCommand is for integrations that have already prepared a menu and want
+// to execute against it directly, controlling the async flag themselves.
+func (c *Console) RunMenuCommand(ctx context.Context, menu *Menu, args []string, async bool) error {
+	return c.execute(ctx, menu, args, async)
+}
+
 // execute - The user has entered a command input line, the arguments have been processed:
 // we synchronize a few elements of the console, then pass these arguments to the command
 // parser for execution and error handling.
