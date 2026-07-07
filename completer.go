@@ -8,6 +8,7 @@ import (
 	completer "github.com/carapace-sh/carapace/pkg/x"
 	"github.com/reeflective/readline"
 
+	"github.com/reeflective/console/internal/command"
 	"github.com/reeflective/console/internal/completion"
 	"github.com/reeflective/console/internal/line"
 )
@@ -18,10 +19,12 @@ func (c *Console) complete(input []rune, pos int) readline.Completions {
 	// Ensure the carapace library is called so that the function
 	// completer.Complete() variable is correctly initialized before use.
 	carapace.Gen(menu.Command)
+	command.HideCarapace(menu.Command)
 
 	// Split the line as shell words, only using
 	// what the right buffer (up to the cursor)
 	args, prefixComp, prefixLine := completion.SplitArgs(input, pos)
+	command.ResetCompletionFlagState(menu.Command, args)
 
 	// Prepare arguments for the carapace completer
 	// (we currently need those two dummies for avoiding a panic).
@@ -32,10 +35,14 @@ func (c *Console) complete(input []rune, pos int) readline.Completions {
 
 	// The completions are never nil: fill out our own object
 	// with everything it contains, regardless of errors.
-	raw := make([]readline.Completion, len(completions.Values))
+	raw := make([]readline.Completion, 0, len(completions.Values))
 
-	for idx, val := range completions.Values {
-		raw[idx] = readline.Completion{
+	for _, val := range completions.Values {
+		if strings.TrimSpace(val.Value) == "_carapace" {
+			continue
+		}
+
+		comp := readline.Completion{
 			Value:       line.UnescapeValue(prefixComp, prefixLine, val.Value),
 			Display:     val.Display,
 			Description: val.Description,
@@ -44,15 +51,17 @@ func (c *Console) complete(input []rune, pos int) readline.Completions {
 		}
 
 		if !completions.Nospace.Matches(val.Value) {
-			raw[idx].Value = val.Value + " "
+			comp.Value = val.Value + " "
 		}
 
 		// Remove short/long flags grouping
 		// join to single tag group for classic zsh side-by-side view
 		switch val.Tag {
 		case "shorthand flags", "longhand flags":
-			raw[idx].Tag = "flags"
+			comp.Tag = "flags"
 		}
+
+		raw = append(raw, comp)
 	}
 
 	// Assign both completions and command/flags/args usage strings.

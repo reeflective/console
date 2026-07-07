@@ -11,6 +11,7 @@ import (
 	"github.com/kballard/go-shellquote"
 	"github.com/spf13/cobra"
 
+	"github.com/reeflective/console/internal/command"
 	"github.com/reeflective/console/internal/line"
 )
 
@@ -143,6 +144,18 @@ func (m *Menu) RunCommandLine(ctx context.Context, line string) (err error) {
 	return m.RunCommandArgs(ctx, args)
 }
 
+// RunMenuCommand runs a processed argument vector against a caller-prepared
+// menu command tree, giving direct access to the lower-level execution path
+// used internally by StartContext and Menu.RunCommandArgs.
+//
+// Most callers should prefer Menu.RunCommandArgs, which resets the active menu
+// (regenerating its command tree and rebinding the prompt) before execution.
+// RunMenuCommand is for integrations that have already prepared a menu and want
+// to execute against it directly, controlling the async flag themselves.
+func (c *Console) RunMenuCommand(ctx context.Context, menu *Menu, args []string, async bool) error {
+	return c.execute(ctx, menu, args, async)
+}
+
 // execute - The user has entered a command input line, the arguments have been processed:
 // we synchronize a few elements of the console, then pass these arguments to the command
 // parser for execution and error handling.
@@ -165,6 +178,12 @@ func (c *Console) execute(ctx context.Context, menu *Menu, args []string, async 
 	if err := menu.CheckIsAvailable(target); err != nil {
 		return err
 	}
+
+	// Restore the target command's flags to their defaults before running it.
+	// When the same command instance is reused (a caller-supplied tree with no
+	// generator), flag values and Changed state from an earlier run would
+	// otherwise leak into this execution.
+	command.ResetFlagsDefaults(target)
 
 	// Console-wide pre-run hooks, cannot.
 	if err := c.runAllE(c.PreCmdRunHooks); err != nil {

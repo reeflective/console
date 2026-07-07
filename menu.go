@@ -9,6 +9,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/reeflective/console/internal/command"
 	"github.com/reeflective/console/internal/strutil"
 	"github.com/reeflective/console/internal/ui"
 	"github.com/reeflective/readline"
@@ -331,36 +332,7 @@ func (m *Menu) ActiveFiltersFor(cmd *cobra.Command) []string {
 	consoleFilters := append([]string(nil), m.console.filters...)
 	m.console.mutex.RUnlock()
 
-	return activeFiltersFor(cmd, consoleFilters)
-}
-
-func activeFiltersFor(cmd *cobra.Command, consoleFilters []string) []string {
-	if cmd.Annotations == nil {
-		if cmd.HasParent() {
-			return activeFiltersFor(cmd.Parent(), consoleFilters)
-		}
-
-		return nil
-	}
-
-	// Get the filters on the command
-	filterStr := cmd.Annotations[CommandFilterKey]
-	var filters []string
-
-	for _, cmdFilter := range strings.Split(filterStr, ",") {
-		for _, filter := range consoleFilters {
-			if cmdFilter != "" && cmdFilter == filter {
-				filters = append(filters, cmdFilter)
-			}
-		}
-	}
-
-	if len(filters) > 0 || !cmd.HasParent() {
-		return filters
-	}
-
-	// Any parent that is hidden make its whole subtree hidden also.
-	return activeFiltersFor(cmd.Parent(), consoleFilters)
+	return command.ActiveFilters(cmd, consoleFilters)
 }
 
 // SetErrFilteredCommandTemplate sets the error template to be used
@@ -421,16 +393,11 @@ func (m *Menu) regenerate() {
 // hide commands that are filtered so that they are not
 // shown in the help strings or proposed as completions.
 func (m *Menu) hideFilteredCommands(root *cobra.Command) {
-	for _, cmd := range root.Commands() {
-		// Don't override commands if they are already hidden
-		if cmd.Hidden {
-			continue
-		}
+	m.console.mutex.RLock()
+	consoleFilters := append([]string(nil), m.console.filters...)
+	m.console.mutex.RUnlock()
 
-		if filters := m.ActiveFiltersFor(cmd); len(filters) > 0 {
-			cmd.Hidden = true
-		}
-	}
+	command.HideFiltered(root, consoleFilters)
 }
 
 func (m *Menu) resetCmdOutput() {

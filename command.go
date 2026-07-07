@@ -2,6 +2,8 @@ package console
 
 import (
 	"github.com/spf13/cobra"
+
+	"github.com/reeflective/console/internal/command"
 )
 
 const (
@@ -9,7 +11,7 @@ const (
 	// The value will be used as a filter to disable commands when the console
 	// calls the Filter("name") method on the console.
 	// The string value will be comma-splitted, with each split being a filter.
-	CommandFilterKey = "console-hidden"
+	CommandFilterKey = command.FilterKey
 )
 
 // Commands is a simple function a root cobra command containing an arbitrary tree
