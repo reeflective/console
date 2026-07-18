@@ -24,10 +24,30 @@ var (
 	ErrUnterminatedEscape      = errors.New("unterminated backslash-escape")
 )
 
+// EscapeMode controls how the line parser treats backslashes when splitting an
+// input line into words.
+type EscapeMode int
+
+const (
+	// EscapeShell is the default POSIX-shell behaviour: a backslash escapes the
+	// following character, so `C:\Windows` becomes `C:Windows`, and a trailing
+	// backslash marks the line as an incomplete continuation.
+	EscapeShell EscapeMode = iota
+
+	// EscapeLiteral preserves backslashes as ordinary characters. Quotes still
+	// group words and are removed, but `C:\Windows\Temp` is passed through
+	// verbatim and a trailing backslash does not request another line.
+	EscapeLiteral
+)
+
 // Parse is in charge of removing all comments from the input line
 // before execution, and if successfully parsed, split into words.
-func Parse(line string) (args []string, err error) {
-	lineReader := strings.NewReader(line)
+//
+// The mode governs how backslashes are treated when the (comment-stripped)
+// line is split into words: EscapeShell applies POSIX escape rules, while
+// EscapeLiteral preserves backslashes verbatim.
+func Parse(input string, mode EscapeMode) (args []string, err error) {
+	lineReader := strings.NewReader(input)
 	parser := syntax.NewParser(syntax.KeepComments(false))
 
 	// Parse the shell string a syntax, removing all comments.
@@ -43,15 +63,26 @@ func Parse(line string) (args []string, err error) {
 		return nil, err
 	}
 
+	// In literal mode, split with our own splitter so that backslashes (e.g. in
+	// Windows paths) are preserved instead of being consumed as shell escapes.
+	if mode == EscapeLiteral {
+		args, _, err = Split(parsedLine.String(), false, EscapeLiteral)
+
+		return args, err
+	}
+
 	// Split the line into shell words.
 	return shellquote.Split(parsedLine.String())
 }
 
 // acceptMultiline determines if the line just accepted is complete (in which case
 // we should execute it), or incomplete (in which case we must read in multiline).
-func AcceptMultiline(line []rune) (accept bool) {
+//
+// The mode controls escape handling: in EscapeLiteral, a trailing backslash is an
+// ordinary character and never requests another line (only unterminated quotes do).
+func AcceptMultiline(line []rune, mode EscapeMode) (accept bool) {
 	// Errors are either: unterminated quotes, or unterminated escapes.
-	_, _, err := Split(string(line), false)
+	_, _, err := Split(string(line), false, mode)
 	if err == nil {
 		return true
 	}
@@ -112,7 +143,10 @@ func TrimSpaces(remain []string) (trimmed []string) {
 
 // Split has been copied from go-shellquote and slightly modified so as to also
 // return the remainder when the parsing failed because of an unterminated quote.
-func Split(input string, hl bool) (words []string, remainder string, err error) {
+//
+// In EscapeLiteral mode, backslashes are treated as ordinary characters: they
+// are neither consumed as escapes nor able to mark a line continuation.
+func Split(input string, hl bool, mode EscapeMode) (words []string, remainder string, err error) {
 	var buf bytes.Buffer
 	words = make([]string, 0)
 
@@ -132,7 +166,7 @@ func Split(input string, hl bool) (words []string, remainder string, err error) 
 			input = input[l:]
 
 			continue
-		} else if c == EscapeChar {
+		} else if c == EscapeChar && mode == EscapeShell {
 			// Look ahead for escaped newline so we can skip over it
 			next := input[l:]
 			if len(next) == 0 {
@@ -163,7 +197,7 @@ func Split(input string, hl bool) (words []string, remainder string, err error) 
 
 		var word string
 
-		word, input, err = splitWord(input, &buf, hl)
+		word, input, err = splitWord(input, &buf, hl, mode)
 		if err != nil {
 			remainder = input
 			return words, remainder, err
@@ -177,7 +211,7 @@ func Split(input string, hl bool) (words []string, remainder string, err error) 
 
 // splitWord has been modified to return the remainder of the input (the part that has not been
 // added to the buffer) even when an error is returned.
-func splitWord(input string, buf *bytes.Buffer, hl bool) (word string, remainder string, err error) {
+func splitWord(input string, buf *bytes.Buffer, hl bool, mode EscapeMode) (word string, remainder string, err error) {
 	buf.Reset()
 
 raw:
@@ -194,7 +228,7 @@ raw:
 				buf.WriteString(input[0 : len(input)-len(cur)-l])
 				input = cur
 				goto double
-			} else if c == EscapeChar {
+			} else if c == EscapeChar && mode == EscapeShell {
 				buf.WriteString(input[0 : len(input)-len(cur)-l])
 				if hl {
 					buf.WriteRune(c)
@@ -282,7 +316,7 @@ double:
 				}
 				input = cur
 				goto raw
-			} else if c == EscapeChar && !hl {
+			} else if c == EscapeChar && !hl && mode == EscapeShell {
 				// bash only supports certain escapes in double-quoted strings
 				c2, l2 := utf8.DecodeRuneInString(cur)
 				cur = cur[l2:]

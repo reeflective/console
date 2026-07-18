@@ -76,7 +76,7 @@ func (c *Console) StartContext(ctx context.Context) error {
 		menu = c.activeMenu()
 
 		// Parse the line with bash-syntax, removing comments.
-		args, err := line.Parse(input)
+		args, err := line.Parse(input, c.getEscapeMode())
 		if err != nil {
 			menu.ErrorHandler(ParseError{newError(err, "Parsing error")})
 			continue
@@ -130,13 +130,21 @@ func (m *Menu) RunCommandArgs(ctx context.Context, args []string) (err error) {
 // RunCommandLine is the equivalent of menu.RunCommandArgs(), but accepts
 // an unsplit command line to execute. This line is split and processed in
 // *sh-compliant form, identically to how lines are in normal console usage.
-func (m *Menu) RunCommandLine(ctx context.Context, line string) (err error) {
-	if len(line) == 0 {
+func (m *Menu) RunCommandLine(ctx context.Context, input string) (err error) {
+	if len(input) == 0 {
 		return
 	}
 
-	// Split the line into shell words.
-	args, err := shellquote.Split(line)
+	// Split the line into shell words, honoring the console's escape mode so
+	// that this path stays consistent with normal interactive execution.
+	var args []string
+
+	if m.console.getEscapeMode() == line.EscapeLiteral {
+		args, _, err = line.Split(input, false, line.EscapeLiteral)
+	} else {
+		args, err = shellquote.Split(input)
+	}
+
 	if err != nil {
 		return fmt.Errorf("line error: %w", err)
 	}
