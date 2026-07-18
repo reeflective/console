@@ -27,7 +27,7 @@ func TestParse(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := Parse(tc.input)
+			got, err := Parse(tc.input, EscapeShell)
 			if tc.wantErr {
 				if err == nil {
 					t.Fatalf("Parse(%q): expected error, got nil (words=%q)", tc.input, got)
@@ -66,7 +66,7 @@ func TestSplit(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			words, _, err := Split(tc.input, false)
+			words, _, err := Split(tc.input, false, EscapeShell)
 			if !errors.Is(err, tc.wantErr) {
 				t.Fatalf("Split(%q) err = %v, want %v", tc.input, err, tc.wantErr)
 			}
@@ -93,8 +93,57 @@ func TestAcceptMultiline(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			if got := AcceptMultiline([]rune(tc.input)); got != tc.want {
+			if got := AcceptMultiline([]rune(tc.input), EscapeShell); got != tc.want {
 				t.Fatalf("AcceptMultiline(%q) = %v, want %v", tc.input, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestParseLiteral(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  []string
+	}{
+		{"windows path", `ls C:\Windows\Temp`, []string{"ls", `C:\Windows\Temp`}},
+		{"trailing backslash", `ls C:\Windows\Temp\`, []string{"ls", `C:\Windows\Temp\`}},
+		{"escaped space kept literal", `echo a\ b`, []string{"echo", `a\`, "b"}},
+		{"quotes still group", `echo "a b" c`, []string{"echo", "a b", "c"}},
+		{"comment still stripped", `ls C:\Temp # note`, []string{"ls", `C:\Temp`}},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := Parse(tc.input, EscapeLiteral)
+			if err != nil {
+				t.Fatalf("Parse(%q, literal): unexpected error: %v", tc.input, err)
+			}
+			if !reflect.DeepEqual(got, tc.want) {
+				t.Fatalf("Parse(%q, literal) = %q, want %q", tc.input, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestAcceptMultilineLiteral(t *testing.T) {
+	// A trailing backslash must never request another line in literal mode,
+	// but unterminated quotes still do.
+	tests := []struct {
+		name  string
+		input string
+		want  bool
+	}{
+		{"trailing backslash accepted", `ls C:\Temp\`, true},
+		{"windows path accepted", `ls C:\Windows\Temp`, true},
+		{"unterminated single still waits", "echo 'oops", false},
+		{"unterminated double still waits", `echo "oops`, false},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := AcceptMultiline([]rune(tc.input), EscapeLiteral); got != tc.want {
+				t.Fatalf("AcceptMultiline(%q, literal) = %v, want %v", tc.input, got, tc.want)
 			}
 		})
 	}

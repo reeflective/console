@@ -23,7 +23,7 @@ func (c *Console) complete(input []rune, pos int) readline.Completions {
 
 	// Split the line as shell words, only using
 	// what the right buffer (up to the cursor)
-	args, prefixComp, prefixLine := completion.SplitArgs(input, pos)
+	args, prefixComp, prefixLine := completion.SplitArgs(input, pos, c.getEscapeMode())
 	command.ResetCompletionFlagState(menu.Command, args)
 
 	// Prepare arguments for the carapace completer
@@ -142,7 +142,7 @@ func (c *Console) highlightSyntax(input []rune) string {
 
 func (c *Console) computeHighlight(input []rune) string {
 	// Split the line as shellwords
-	args, unprocessed, err := line.Split(string(input), true)
+	args, unprocessed, err := line.Split(string(input), true, c.getEscapeMode())
 	if err != nil {
 		args = append(args, unprocessed)
 	}

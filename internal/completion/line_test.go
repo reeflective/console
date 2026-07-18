@@ -26,7 +26,7 @@ func TestSplitCompWords(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			words, remainder, err := splitCompWords(tc.input)
+			words, remainder, err := splitCompWords(tc.input, line.EscapeShell)
 			if err != tc.wantErr {
 				t.Fatalf("splitCompWords(%q) err = %v, want %v", tc.input, err, tc.wantErr)
 			}
@@ -35,6 +35,36 @@ func TestSplitCompWords(t *testing.T) {
 			}
 			if remainder != tc.wantRemainder {
 				t.Fatalf("splitCompWords(%q) remainder = %q, want %q", tc.input, remainder, tc.wantRemainder)
+			}
+		})
+	}
+}
+
+func TestSplitCompWordsLiteral(t *testing.T) {
+	// In literal mode, backslashes are kept verbatim so completing a Windows
+	// path never collapses separators or triggers an unterminated-escape error.
+	tests := []struct {
+		name          string
+		input         string
+		wantWords     []string
+		wantRemainder string
+	}{
+		{"windows path", `cd C:\Windows`, []string{"cd", `C:\Windows`}, ""},
+		{"trailing backslash", `cd C:\Windows\`, []string{"cd", `C:\Windows\`}, ""},
+		{"quotes still group", `cd "a b"`, []string{"cd", "a b"}, ""},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			words, remainder, err := splitCompWords(tc.input, line.EscapeLiteral)
+			if err != nil {
+				t.Fatalf("splitCompWords(%q, literal) err = %v, want nil", tc.input, err)
+			}
+			if !reflect.DeepEqual(words, tc.wantWords) {
+				t.Fatalf("splitCompWords(%q, literal) words = %q, want %q", tc.input, words, tc.wantWords)
+			}
+			if remainder != tc.wantRemainder {
+				t.Fatalf("splitCompWords(%q, literal) remainder = %q, want %q", tc.input, remainder, tc.wantRemainder)
 			}
 		})
 	}
@@ -94,7 +124,7 @@ func TestSplitArgs(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			runes := []rune(tc.input)
-			args, prefixComp, prefixLine := SplitArgs(runes, len(runes))
+			args, prefixComp, prefixLine := SplitArgs(runes, len(runes), line.EscapeShell)
 			if !reflect.DeepEqual(args, tc.wantArgs) {
 				t.Fatalf("SplitArgs(%q) args = %q, want %q", tc.input, args, tc.wantArgs)
 			}

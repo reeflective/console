@@ -31,6 +31,7 @@ type Console struct {
 	menus         map[string]*Menu // Different command trees, prompt engines, etc.
 	current       *Menu            // Cached pointer to the active menu (guarded by mutex).
 	filters       []string         // Hide commands based on their attributes and current context.
+	escapeMode    line.EscapeMode  // How input lines are split into words (guarded by mutex).
 	isExecuting   atomic.Bool      // Used by log functions, which need to adapt behavior (print the prompt, etc.)
 	printed       bool             // Used to adjust asynchronous messages too.
 	mutex         *sync.RWMutex    // Concurrency management.
@@ -131,7 +132,9 @@ func New(app string) *Console {
 	// Syntax highlighting, multiline callbacks, etc.
 	console.cmdHighlight = line.GreenFG 
 	console.flagHighlight = line.BrightWhiteFG 
-	console.shell.AcceptMultiline = line.AcceptMultiline
+	console.shell.AcceptMultiline = func(input []rune) bool {
+		return line.AcceptMultiline(input, console.getEscapeMode())
+	}
 	console.shell.SyntaxHighlighter = console.highlightSyntax 
 
 	// Completion
@@ -149,6 +152,40 @@ func New(app string) *Console {
 // further configure it or use some of its API for lower-level stuff.
 func (c *Console) Shell() *readline.Shell {
 	return c.shell
+}
+
+// EscapeMode controls how the console splits an input line into command words.
+// See EscapeShell (the default) and EscapeLiteral.
+type EscapeMode = line.EscapeMode
+
+const (
+	// EscapeShell is the default POSIX-shell behaviour: a backslash escapes the
+	// following character (so `C:\Windows` becomes `C:Windows`), and a trailing
+	// backslash marks the line as an incomplete continuation.
+	EscapeShell = line.EscapeShell
+
+	// EscapeLiteral preserves backslashes as ordinary characters, so values such
+	// as Windows paths (`C:\Windows\Temp`) are passed to commands verbatim
+	// without quoting or doubling. Quotes still group words, and a trailing
+	// backslash no longer requests another line. Use this when the console is a
+	// general Cobra frontend rather than a shell.
+	EscapeLiteral = line.EscapeLiteral
+)
+
+// SetEscapeMode selects how the console splits input lines into command words.
+// It applies to command execution, multiline-continuation detection, and
+// completion/highlighting alike. The default is EscapeShell.
+func (c *Console) SetEscapeMode(mode EscapeMode) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+	c.escapeMode = mode
+}
+
+func (c *Console) getEscapeMode() line.EscapeMode {
+	c.mutex.RLock()
+	defer c.mutex.RUnlock()
+
+	return c.escapeMode
 }
 
 
